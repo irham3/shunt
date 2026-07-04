@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SplitNode } from "../components/SplitNode";
 import { txSetRules } from "../lib/stellar";
-import { totalPct, useShunt } from "../store";
+import { CORE_BUCKET_IDS, totalPct, useShunt } from "../store";
 
 const LOCK_OPTIONS = [
   { label: "30 days", secs: 30 * 86400 },
@@ -40,7 +40,11 @@ export function ConfigureShunt() {
     try {
       if (address) {
         const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
-        await txSetRules(address, pct("needs"), pct("savings"), pct("buffer"), lockSecs);
+        // The deployed contract splits three ways; Needs and Invest both stay
+        // wallet-side, so the contract receives their sum as the wallet-tier
+        // share. The invest slice is then DCA-converted by a follow-up path
+        // payment (F12) — the vault contract stays frozen (11 tests intact).
+        await txSetRules(address, pct("needs") + pct("invest"), pct("savings"), pct("buffer"), lockSecs);
       }
       markRulesSaved();
       persistLockSecs(lockSecs);
@@ -114,7 +118,7 @@ export function ConfigureShunt() {
                   >
                     +
                   </button>
-                  {!["needs", "savings", "buffer"].includes(b.id) && (
+                  {!CORE_BUCKET_IDS.includes(b.id) && (
                     <button className="chip" aria-label={`Remove ${b.name}`} onClick={() => removeBucket(b.id)}>
                       ✕
                     </button>
@@ -129,6 +133,11 @@ export function ConfigureShunt() {
                 aria-label={`${b.name} percent`}
                 onChange={(e) => setBucketPct(b.id, Number(e.target.value))}
               />
+              {b.id === "invest" && (
+                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                  Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product.
+                </p>
+              )}
             </div>
           ))}
 

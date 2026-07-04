@@ -8,13 +8,13 @@ import { fmtIdr, fmtUsdc, useShunt } from "../store";
 
 export function Home() {
   const nav = useNavigate();
-  const { address, buckets, balances, activity, xlmBalance, setXlmBalance, showToast } = useShunt();
+  const { address, buckets, balances, investXlm, activity, xlmBalance, setXlmBalance, showToast } = useShunt();
   const [idr, setIdr] = useState<number | null>(null);
   const [pending, setPending] = useState<PendingSplit[]>([]);
   const [fundingBot, setFundingBot] = useState(false);
   const [lastEventCursor, setLastEventCursor] = useState<string>("");
 
-  const total = balances.needs + balances.savings + balances.buffer;
+  const total = balances.needs + balances.savings + balances.buffer + balances.invest;
 
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
@@ -60,7 +60,15 @@ export function Home() {
   }, [address, lastEventCursor, showToast]);
 
   const bucketBalance = (id: string) =>
-    id === "needs" ? balances.needs : id === "savings" ? balances.savings : id === "buffer" ? balances.buffer : 0;
+    id === "needs"
+      ? balances.needs
+      : id === "savings"
+        ? balances.savings
+        : id === "buffer"
+          ? balances.buffer
+          : id === "invest"
+            ? balances.invest
+            : 0;
 
   async function onFundbot() {
     if (!address) return;
@@ -175,7 +183,14 @@ export function Home() {
                   <div style={{ fontWeight: 600 }}>{b.name}</div>
                   <div className="muted" style={{ fontSize: 12 }}>{b.pct}% of each income</div>
                 </span>
-                <span className="numeric" style={{ fontWeight: 600, fontSize: 20 }}>${fmtUsdc(bucketBalance(b.id))}</span>
+                <span className="numeric" style={{ fontWeight: 600, fontSize: 20 }}>
+                  ${fmtUsdc(bucketBalance(b.id))}
+                  {b.id === "invest" && investXlm > 0 && (
+                    <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
+                      {investXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM held
+                    </span>
+                  )}
+                </span>
               </Link>
             ))}
           </section>

@@ -25,3 +25,32 @@ export async function getIdrRate(): Promise<{ rate: number; stale: boolean }> {
   }
   return { rate: cached?.rate ?? FALLBACK_IDR_PER_USD, stale: true };
 }
+
+/**
+ * Display/estimate-only XLM/USD rate for the Invest lane (F12). The real
+ * conversion price is whatever the path payment executes at on-chain; this
+ * rate only sizes the slippage floor and the demo-mode simulation.
+ */
+const FALLBACK_XLM_USD = 0.4;
+
+let cachedXlm: { rate: number; at: number } | null = null;
+
+export async function getXlmUsdRate(): Promise<{ rate: number; stale: boolean }> {
+  if (cachedXlm && Date.now() - cachedXlm.at < 10 * 60 * 1000) {
+    return { rate: cachedXlm.rate, stale: false };
+  }
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=usd",
+    );
+    const data = await res.json();
+    const rate = data?.stellar?.usd;
+    if (typeof rate === "number" && rate > 0) {
+      cachedXlm = { rate, at: Date.now() };
+      return { rate, stale: false };
+    }
+  } catch {
+    // fall through to fallback
+  }
+  return { rate: cachedXlm?.rate ?? FALLBACK_XLM_USD, stale: true };
+}

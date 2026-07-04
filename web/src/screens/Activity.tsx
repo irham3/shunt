@@ -5,6 +5,7 @@ import { fmtUsdc, useShunt, type ActivityItem } from "../store";
 const FILTERS = [
   { id: "all", label: "All" },
   { id: "split", label: "Split" },
+  { id: "invest", label: "Invest" },
   { id: "withdraw", label: "Withdraw" },
   { id: "offramp", label: "Off-ramp" },
 ] as const;
@@ -14,6 +15,7 @@ const KIND_ICON: Record<ActivityItem["kind"], string> = {
   withdraw: "↓",
   offramp: "↗",
   deposit: "＋",
+  invest: "📈",
 };
 
 export function Activity() {

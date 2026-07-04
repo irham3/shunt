@@ -31,6 +31,13 @@ export const NETWORK_PASSPHRASE =
 
 export const VAULT_CONTRACT_ID = import.meta.env.VITE_VAULT_CONTRACT_ID ?? "";
 
+/** Classic USDC asset (code + issuer G-address) for path payments (F12). */
+export const USDC_CODE = import.meta.env.VITE_USDC_CODE ?? "USDC";
+export const USDC_ISSUER =
+  import.meta.env.VITE_USDC_ISSUER ??
+  // Circle's well-known testnet issuer
+  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
 export const HORIZON_URL =
   NETWORK === "testnet"
     ? "https://horizon-testnet.stellar.org"
@@ -123,6 +130,54 @@ export async function sendXlmPayment(
     const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
       xdr: tx.toEnvelope().toXDR("base64"),
       network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
+    });
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    return result.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
+/**
+ * F12 Invest lane: spot-convert USDC -> XLM to self via a classic
+ * `pathPaymentStrictSend` through the Stellar DEX. Deliberately a separate
+ * classic transaction: a Soroban tx is single-operation by protocol, so the
+ * conversion can't ride inside `distribute` — honest two-tap UX (README).
+ */
+export async function convertUsdcToXlm(
+  sender: string,
+  usdcAmount: string,
+  minXlm: string,
+): Promise<string> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Sender account not found on network.");
+  }
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      Operation.pathPaymentStrictSend({
+        sendAsset: new Asset(USDC_CODE, USDC_ISSUER),
+        sendAmount: usdcAmount,
+        destination: sender,
+        destAsset: Asset.native(),
+        destMin: minXlm,
+      }),
+    )
+    .setTimeout(300)
+    .build();
+
+  try {
+    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
+      xdr: tx.toEnvelope().toXDR("base64"),
+      network: NETWORK_PASSPHRASE,
     });
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const result = await horizon.submitTransaction(sendTx as any) as any;

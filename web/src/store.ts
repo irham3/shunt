@@ -16,7 +16,7 @@ export interface Bucket {
 
 export interface ActivityItem {
   id: string;
-  kind: "split" | "withdraw" | "offramp" | "deposit";
+  kind: "split" | "withdraw" | "offramp" | "deposit" | "invest";
   title: string;
   amountUsdc: number;
   txHash?: string;
@@ -32,8 +32,10 @@ interface ShuntState {
   rulesSavedOnChain: boolean;
   lockUntil: number; // unix seconds
   lockSecs: number; // timelock duration chosen in Configure Shunt
-  /** wallet + vault balances in USDC (display) */
-  balances: { needs: number; savings: number; buffer: number };
+  /** wallet + vault balances in USDC (display); invest = DCA cost basis */
+  balances: { needs: number; savings: number; buffer: number; invest: number };
+  /** XLM units accumulated by the Invest lane's DCA conversions (F12) */
+  investXlm: number;
   /** On-chain native XLM balance (Level 1 requirement) */
   xlmBalance: string | null;
   activity: ActivityItem[];
@@ -53,6 +55,8 @@ interface ShuntState {
   offramp: (amount: number) => void;
   /** F11: record a Top Up request sent to the anchor (funds land later as a normal inflow). */
   recordTopUp: (amount: number) => void;
+  /** F12: record a DCA conversion of the invest slice (real tx or labeled simulation). */
+  applyInvestConversion: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
   setLockUntil: (t: number) => void;
   showToast: (msg: string) => void;
   clearToast: () => void;
@@ -61,10 +65,14 @@ interface ShuntState {
 const EXTRA_COLORS = ["var(--color-bucket-extra-1)", "var(--color-bucket-extra-2)"];
 
 export const DEFAULT_BUCKETS: Bucket[] = [
-  { id: "needs", name: "Needs", pct: 60, color: "var(--color-bucket-needs)" },
+  { id: "needs", name: "Needs", pct: 50, color: "var(--color-bucket-needs)" },
   { id: "savings", name: "Savings", pct: 25, color: "var(--color-bucket-savings)" },
   { id: "buffer", name: "Buffer", pct: 15, color: "var(--color-bucket-buffer)" },
+  { id: "invest", name: "Invest", pct: 10, color: "var(--color-bucket-extra-1)" },
 ];
+
+/** Core lanes that cannot be removed in Configure Shunt. */
+export const CORE_BUCKET_IDS = ["needs", "savings", "buffer", "invest"];
 
 export const useShunt = create<ShuntState>()(
   persist(
@@ -76,7 +84,8 @@ export const useShunt = create<ShuntState>()(
       rulesSavedOnChain: false,
       lockUntil: 0,
       lockSecs: 30 * 86400,
-      balances: { needs: 0, savings: 0, buffer: 0 },
+      balances: { needs: 0, savings: 0, buffer: 0, invest: 0 },
+      investXlm: 0,
       xlmBalance: null,
       activity: [],
       toast: null,
@@ -107,8 +116,7 @@ export const useShunt = create<ShuntState>()(
         });
       },
       removeBucket: (id) => {
-        const core = ["needs", "savings", "buffer"];
-        if (core.includes(id)) return;
+        if (CORE_BUCKET_IDS.includes(id)) return;
         set({ buckets: get().buckets.filter((b) => b.id !== id) });
       },
       markRulesSaved: () => set({ rulesSavedOnChain: true }),
@@ -120,7 +128,8 @@ export const useShunt = create<ShuntState>()(
         const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
         const savings = (amount * pct("savings")) / 100;
         const buffer = (amount * pct("buffer")) / 100;
-        const needs = amount - savings - buffer;
+        const invest = (amount * pct("invest")) / 100;
+        const needs = amount - savings - buffer - invest;
         // mirror the contract: each savings deposit extends the timelock
         const newLock = Math.floor(Date.now() / 1000) + lockSecs;
         set({
@@ -129,6 +138,7 @@ export const useShunt = create<ShuntState>()(
             needs: balances.needs + needs,
             savings: balances.savings + savings,
             buffer: balances.buffer + buffer,
+            invest: balances.invest + invest,
           },
           activity: [
             {
@@ -188,6 +198,25 @@ export const useShunt = create<ShuntState>()(
         });
       },
 
+      applyInvestConversion: (usd, xlm, txHash, simulated) => {
+        const { investXlm, activity } = get();
+        set({
+          investXlm: investXlm + xlm,
+          activity: [
+            {
+              id: `${Date.now()}-inv`,
+              kind: "invest",
+              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM${simulated ? " (simulated rate)" : ""}`,
+              amountUsdc: usd,
+              txHash,
+              at: new Date().toISOString(),
+              bucket: "invest",
+            },
+            ...activity,
+          ],
+        });
+      },
+
       recordTopUp: (amount) => {
         const { activity } = get();
         set({
@@ -208,7 +237,26 @@ export const useShunt = create<ShuntState>()(
       showToast: (toast) => set({ toast }),
       clearToast: () => set({ toast: null }),
     }),
-    { name: "shunt-store" },
+    {
+      name: "shunt-store",
+      version: 1,
+      // v0 -> v1: introduce the Invest lane (F12). Existing users get it at
+      // 0% so their saved 100% allocation stays valid; fresh installs get
+      // the 50/25/15/10 default.
+      migrate: (persisted: any, version) => {
+        if (version < 1 && persisted) {
+          if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
+            persisted.buckets = [
+              ...persisted.buckets,
+              { id: "invest", name: "Invest", pct: 0, color: "var(--color-bucket-extra-1)" },
+            ];
+          }
+          persisted.balances = { invest: 0, ...(persisted.balances ?? {}) };
+          persisted.investXlm = persisted.investXlm ?? 0;
+        }
+        return persisted;
+      },
+    },
   ),
 );
 

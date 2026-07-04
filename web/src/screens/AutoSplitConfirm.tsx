@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SplitNode } from "../components/SplitNode";
 import { markComplete, type PendingSplit } from "../lib/keeper";
-import { signAndSubmitXdr, EXPLORER_TX } from "../lib/stellar";
+import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX } from "../lib/stellar";
+import { getXlmUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
 /**
@@ -13,22 +14,53 @@ export function AutoSplitConfirm() {
   const nav = useNavigate();
   const { state } = useLocation();
   const pending = state as PendingSplit | null;
-  const { buckets, applySplit, showToast } = useShunt();
+  const { address, buckets, applySplit, applyInvestConversion, showToast } = useShunt();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [doneHash, setDoneHash] = useState<string | null>(null);
 
   const amount = pending ? Number(pending.amount) : 500;
+  const investAmt = useMemo(() => {
+    const pct = buckets.find((b) => b.id === "invest")?.pct ?? 0;
+    return (amount * pct) / 100;
+  }, [amount, buckets]);
   const rows = useMemo(() => {
     const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
     const savings = (amount * pct("savings")) / 100;
     const buffer = (amount * pct("buffer")) / 100;
-    return [
-      { id: "needs", label: "Needs → wallet", amt: amount - savings - buffer },
+    const invest = (amount * pct("invest")) / 100;
+    const out = [
+      { id: "needs", label: "Needs → wallet", amt: amount - savings - buffer - invest },
       { id: "savings", label: "Savings → vault (timelock)", amt: savings },
       { id: "buffer", label: "Buffer → wallet", amt: buffer },
     ];
+    if (invest > 0) out.push({ id: "invest", label: "Invest → XLM (DCA)", amt: invest });
+    return out;
   }, [amount, buckets]);
+
+  /**
+   * F12: convert the invest slice after the split. A Soroban tx is
+   * single-operation, so this is a separate classic path payment (2nd tap
+   * on-chain); when no wallet/liquidity is available it falls back to a
+   * *labeled* simulated conversion — same honesty pattern as the IDR rate.
+   */
+  async function runInvestConversion(splitWasOnChain: boolean) {
+    if (investAmt <= 0) return;
+    const { rate, stale } = await getXlmUsdRate();
+    const estXlm = investAmt / rate;
+    if (splitWasOnChain && address) {
+      try {
+        const minXlm = (estXlm * 0.95).toFixed(7); // 5% slippage floor
+        const hash = await convertUsdcToXlm(address, investAmt.toFixed(7), minXlm);
+        applyInvestConversion(investAmt, estXlm, hash, false);
+        showToast("Invest slice converted to XLM");
+        return;
+      } catch {
+        showToast(`DEX conversion unavailable — recorded at ${stale ? "fallback" : "market"} rate`);
+      }
+    }
+    applyInvestConversion(investAmt, estXlm, undefined, true);
+  }
 
   async function onApprove() {
     setBusy(true);
@@ -40,6 +72,7 @@ export function AutoSplitConfirm() {
         await markComplete(pending.txHash);
       }
       applySplit(amount, hash ?? pending?.txHash);
+      await runInvestConversion(Boolean(pending?.xdr));
       setDoneHash(hash ?? null);
       showToast("Income landed — auto-split complete");
     } catch (e) {
@@ -74,6 +107,7 @@ export function AutoSplitConfirm() {
 
       <p className="muted" style={{ fontSize: 13, margin: 0 }}>
         Atomic split in a single transaction · sub-cent network fee
+        {investAmt > 0 && " · invest slice converts via a follow-up path payment"}
       </p>
 
       {doneHash === null && !pending?.xdr && (
