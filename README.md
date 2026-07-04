@@ -71,6 +71,15 @@ As part of the Level 1 — White Belt requirements, here are screenshots of the 
 | **3. Successful Transaction**<br>Native XLM transfer | `<img src="design/screenshots/3-tx-success.png" width="300" alt="Transaction success">` |
 | **4. Transaction Result**<br>Hash & Explorer Link | `<img src="design/screenshots/4-tx-result.png" width="300" alt="Transaction result">` |
 
+### Blue Belt Compliance (Screenshots)
+
+As part of the Level 2 — Blue Belt requirements, here are the screenshots of the multi-wallet functionality and event handling:
+
+| Requirement | Screenshot |
+|---|---|
+| **Multi-Wallet Options**<br>Showing Freighter, Albedo, xBull | `<img src="design/screenshots/blue-1-wallets.png" width="300" alt="Wallet options">` |
+| **Real-time Event Toast**<br>Soroban split event detected | `<img src="design/screenshots/blue-2-events.png" width="300" alt="Event listening">` |
+
 ## Live on testnet
 
 | Item | Value |

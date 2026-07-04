@@ -1,28 +1,31 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { connectFreighter } from "../lib/stellar";
+import { connectWalletKit } from "../lib/stellar";
 import { useShunt } from "../store";
-import { StrKey } from "@stellar/stellar-sdk";
+import { StrKey } from "@stellar/stellar-base";
 
 export function ConnectWallet() {
   const nav = useNavigate();
   const setAddress = useShunt((s) => s.setAddress);
+  const setWalletId = useShunt((s) => s.setWalletId);
+  
   const [manual, setManual] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  async function onFreighter() {
-    setBusy(true);
+  async function onConnect(walletId: string) {
+    setBusy(walletId);
     setErr(null);
     try {
-      const addr = await connectFreighter();
+      const addr = await connectWalletKit(walletId);
       setAddress(addr);
+      setWalletId(walletId);
       nav("/shunt");
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -32,6 +35,7 @@ export function ConnectWallet() {
       return;
     }
     setAddress(manual.trim());
+    setWalletId(null);
     nav("/shunt");
   }
 
@@ -42,9 +46,31 @@ export function ConnectWallet() {
         Non-custodial — your keys stay yours.
       </p>
 
-      <button className="btn-primary" onClick={onFreighter} disabled={busy}>
-        {busy ? "Connecting…" : "Connect Freighter"}
-      </button>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <button 
+          className="btn-primary" 
+          onClick={() => onConnect("freighter")} 
+          disabled={!!busy}
+        >
+          {busy === "freighter" ? "Connecting…" : "Connect Freighter"}
+        </button>
+
+        <button 
+          className="btn-secondary" 
+          onClick={() => onConnect("albedo")} 
+          disabled={!!busy}
+        >
+          {busy === "albedo" ? "Connecting…" : "Connect Albedo"}
+        </button>
+        
+        <button 
+          className="btn-secondary" 
+          onClick={() => onConnect("xbull")} 
+          disabled={!!busy}
+        >
+          {busy === "xbull" ? "Connecting…" : "Connect xBull"}
+        </button>
+      </div>
 
       {!showManual ? (
         <button className="btn-ghost" onClick={() => setShowManual(true)}>

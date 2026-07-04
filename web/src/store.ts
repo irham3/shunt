@@ -26,6 +26,7 @@ export interface ActivityItem {
 
 interface ShuntState {
   address: string | null;
+  walletId: string | null;
   network: "testnet" | "mainnet";
   buckets: Bucket[];
   rulesSavedOnChain: boolean;
@@ -39,6 +40,7 @@ interface ShuntState {
   toast: string | null;
 
   setAddress: (a: string | null) => void;
+  setWalletId: (w: string | null) => void;
   setBuckets: (b: Bucket[]) => void;
   setBucketPct: (id: string, pct: number) => void;
   addBucket: () => void;
@@ -66,6 +68,7 @@ export const useShunt = create<ShuntState>()(
   persist(
     (set, get) => ({
       address: null,
+      walletId: null,
       network: "testnet",
       buckets: DEFAULT_BUCKETS,
       rulesSavedOnChain: false,
@@ -77,6 +80,7 @@ export const useShunt = create<ShuntState>()(
       toast: null,
 
       setAddress: (address) => set({ address }),
+      setWalletId: (walletId) => set({ walletId }),
       setBuckets: (buckets) => set({ buckets }),
       setBucketPct: (id, pct) =>
         set({

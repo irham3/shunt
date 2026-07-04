@@ -1,8 +1,4 @@
-import {
-  isConnected,
-  requestAccess,
-  signTransaction,
-} from "@stellar/freighter-api";
+import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
 import {
   Address,
   Contract,
@@ -47,7 +43,38 @@ export const EXPLORER_ACCOUNT = (addr: string) =>
   `https://stellar.expert/explorer/${NETWORK === "testnet" ? "testnet" : "public"}/account/${addr}`;
 
 // ---------------------------------------------------------------------------
-// Level 1 — XLM balance & payment
+// Wallet Kit Initialization
+// ---------------------------------------------------------------------------
+
+export const kit = null; // Removed
+
+/** Formats wallet kit errors for better UX (Level 2). */
+function parseWalletError(e: unknown): never {
+  const msg = String(e).toLowerCase();
+  if (msg.includes("not installed") || msg.includes("not found")) {
+    throw new Error("Wallet not found. Please install the extension.");
+  }
+  if (msg.includes("reject") || msg.includes("decline") || msg.includes("cancel")) {
+    throw new Error("Transaction rejected by user.");
+  }
+  if (msg.includes("tx_insufficient_balance") || msg.includes("underfunded")) {
+    throw new Error("Insufficient XLM balance for this transaction.");
+  }
+  throw new Error(e instanceof Error ? e.message : String(e));
+}
+
+export async function connectWalletKit(walletId: string): Promise<string> {
+  try {
+    (StellarWalletsKit as any).setWallet(walletId);
+    const { address } = await (StellarWalletsKit as any).getAddress();
+    return address;
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Level 1 & 2 — XLM balance & payment
 // ---------------------------------------------------------------------------
 
 /** Fetch the native XLM balance for a Stellar account via Horizon. */
@@ -64,14 +91,19 @@ export async function fetchXlmBalance(address: string): Promise<string> {
   return native?.balance ?? "0";
 }
 
-/** Build, sign (Freighter), and submit a native XLM payment on Horizon. */
+/** Build, sign (WalletKit), and submit a native XLM payment on Horizon. */
 export async function sendXlmPayment(
   sender: string,
   destination: string,
   amount: string,
 ): Promise<string> {
   const horizon = new Horizon.Server(HORIZON_URL);
-  const source = await horizon.loadAccount(sender);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Sender account not found on network.");
+  }
 
   const tx = new TransactionBuilder(source, {
     fee: "100",
@@ -87,19 +119,17 @@ export async function sendXlmPayment(
     .setTimeout(300)
     .build();
 
-  const signed = await signTransaction(tx.toEnvelope().toXDR("base64"), {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
-  if (signed.error) throw new Error(String(signed.error));
-
-  const sendTx = TransactionBuilder.fromXDR(
-    signed.signedTxXdr,
-    NETWORK_PASSPHRASE,
-  );
-  const result = await horizon.submitTransaction(
-    sendTx as unknown as Parameters<typeof horizon.submitTransaction>[0],
-  );
-  return (result as unknown as { hash: string }).hash;
+  try {
+    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
+      xdr: tx.toEnvelope().toXDR("base64"),
+      network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
+    });
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    return result.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
 }
 
 /** Fund a testnet account with the Friendbot faucet (10,000 XLM). */
@@ -113,16 +143,6 @@ export async function fundWithFriendbot(address: string): Promise<void> {
   }
 }
 
-export async function connectFreighter(): Promise<string> {
-  const conn = await isConnected();
-  if (!conn.isConnected) {
-    throw new Error("Freighter not detected. Install the Freighter extension first.");
-  }
-  const access = await requestAccess();
-  if (access.error) throw new Error(access.error);
-  return access.address;
-}
-
 async function invoke(
   userAddress: string,
   method: string,
@@ -132,7 +152,13 @@ async function invoke(
     throw new Error("VAULT_CONTRACT_ID is not configured (local demo mode).");
   }
   const server = new rpc.Server(RPC_URL);
-  const source = await server.getAccount(userAddress);
+  let source;
+  try {
+    source = await server.getAccount(userAddress);
+  } catch {
+    throw new Error("Account not funded yet.");
+  }
+
   const contract = new Contract(VAULT_CONTRACT_ID);
   const tx = new TransactionBuilder(source, {
     fee: "1000000",
@@ -142,24 +168,28 @@ async function invoke(
     .setTimeout(300)
     .build();
 
-  const prepared = await server.prepareTransaction(tx);
-  const signed = await signTransaction(prepared.toEnvelope().toXDR("base64"), {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
-  if (signed.error) throw new Error(String(signed.error));
+  try {
+    const prepared = await server.prepareTransaction(tx);
+    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
+      xdr: prepared.toEnvelope().toXDR("base64"),
+      network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
+    });
+    
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const res = await server.sendTransaction(sendTx) as any;
+    if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
 
-  const sendTx = TransactionBuilder.fromXDR(signed.signedTxXdr, NETWORK_PASSPHRASE);
-  const res = await server.sendTransaction(sendTx);
-  if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
-
-  // poll until confirmed
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 1500));
-    const g = await server.getTransaction(res.hash);
-    if (g.status === "SUCCESS") return res.hash;
-    if (g.status === "FAILED") throw new Error("Transaction failed on the ledger.");
+    // poll until confirmed
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const g = await server.getTransaction(res.hash) as any;
+      if (g.status === "SUCCESS") return res.hash;
+      if (g.status === "FAILED") throw new Error("Transaction failed on the ledger.");
+    }
+    throw new Error("Timed out waiting for confirmation.");
+  } catch (e) {
+    parseWalletError(e);
   }
-  throw new Error("Timed out waiting for confirmation.");
 }
 
 const toI128 = (usdc: number) =>
@@ -186,15 +216,19 @@ export async function txSetRules(
 
 /** Sign & submit a distribute tx prepared by the keeper (one-tap approve). */
 export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
-  const server = new rpc.Server(RPC_URL);
-  const signed = await signTransaction(preparedXdr, {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
-  if (signed.error) throw new Error(String(signed.error));
-  const sendTx = TransactionBuilder.fromXDR(signed.signedTxXdr, NETWORK_PASSPHRASE);
-  const res = await server.sendTransaction(sendTx);
-  if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
-  return res.hash;
+  try {
+    const server = new rpc.Server(RPC_URL);
+    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
+      xdr: preparedXdr,
+      network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
+    });
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const res = await server.sendTransaction(sendTx) as any;
+    if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
+    return res.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
 }
 
 export async function txWithdrawSavings(user: string, usdc: number): Promise<string> {
@@ -211,4 +245,38 @@ export async function txOfframp(
     new Address(anchor).toScVal(),
     toI128(usdc),
   ]);
+}
+
+// ---------------------------------------------------------------------------
+// Level 2 — Real-time Soroban Event Polling
+// ---------------------------------------------------------------------------
+
+/** Polls Soroban getEvents for real-time state synchronization. */
+export async function fetchLatestSplitEvent(cursor: string = ""): Promise<{ cursor: string; hash: string } | null> {
+  if (!VAULT_CONTRACT_ID) return null;
+  const server = new rpc.Server(RPC_URL);
+  try {
+    const res = await server.getEvents({
+      startLedger: 0,
+      filters: [
+        {
+          type: "contract",
+          contractIds: [VAULT_CONTRACT_ID],
+          topics: [
+            [xdr.ScVal.scvSymbol("split").toXDR("base64")],
+          ],
+        },
+      ],
+      cursor,
+      limit: 10,
+    });
+    
+    if (res.events.length > 0) {
+      const latest = res.events[res.events.length - 1] as any;
+      return { cursor: latest.pagingToken, hash: latest.txHash };
+    }
+  } catch {
+    // Ignore RPC parsing errors, try again next poll
+  }
+  return null;
 }
