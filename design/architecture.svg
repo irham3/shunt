@@ -1,4 +1,13 @@
 <svg width="920" height="410" viewBox="0 0 920 410" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <!--
+    Relay timeline (12s cycle) — each hop departs only after the previous one arrives:
+      0.02-0.12  payer -> wallet          | wallet flash 0.12
+      0.16-0.26  wallet -> keeper         | keeper flash 0.26
+      0.30-0.40  keeper -> web app (XDR)  | app flash    0.40
+      0.46-0.56  web app -> vault (sign)  | vault flash  0.56
+      0.60-0.70  vault -> wallet (needs+buffer back)
+      0.74-0.84  vault -> anchor (off-ramp)
+  -->
   <defs>
     <filter id="g3" x="-80%" y="-80%" width="260%" height="260%">
       <feGaussianBlur stdDeviation="3" result="b"/>
@@ -27,9 +36,11 @@
     <text x="100" y="135" font-size="11" fill="#8A93A3" text-anchor="middle">client abroad · USDC</text>
   </g>
 
-  <!-- User wallet -->
+  <!-- User wallet — flashes when USDC arrives (0.12) and when needs+buffer come back (0.70) -->
   <g>
-    <rect x="250" y="60" width="180" height="110" rx="12" fill="#141A21" stroke="#38BDF8" stroke-opacity=".5"/>
+    <rect x="250" y="60" width="180" height="110" rx="12" fill="#141A21" stroke="#38BDF8" stroke-opacity=".5">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.5;1;0.5;1;0.5" keyTimes="0;0.12;0.2;0.70;0.78" dur="12s" repeatCount="indefinite"/>
+    </rect>
     <text x="340" y="82" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Your wallet</text>
     <rect x="264" y="92" width="152" height="22" rx="7" fill="#1b2431"/>
     <circle cx="277" cy="103" r="4" fill="#FBBF24"/>
@@ -40,38 +51,46 @@
     <text x="340" y="160" font-size="10" fill="#5c6b7d" text-anchor="middle">non-custodial · keys are yours</text>
   </g>
 
-  <!-- Keeper -->
+  <!-- Keeper — flashes when it spots the inflow (0.26) -->
   <g>
-    <rect x="240" y="240" width="170" height="90" rx="12" fill="#141A21" stroke="#2a3648"/>
+    <rect x="240" y="240" width="170" height="90" rx="12" fill="#141A21" stroke="#2a3648">
+      <animate attributeName="stroke" calcMode="discrete" values="#2a3648;#BEF264;#2a3648" keyTimes="0;0.26;0.34" dur="12s" repeatCount="indefinite"/>
+    </rect>
     <text x="325" y="265" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Keeper</text>
     <text x="325" y="285" font-size="11" fill="#8A93A3" text-anchor="middle">watches Horizon 24/7</text>
     <text x="325" y="302" font-size="11" fill="#8A93A3" text-anchor="middle">prepares the split tx</text>
     <text x="325" y="321" font-size="10" font-weight="600" fill="#BEF264" text-anchor="middle">holds zero keys</text>
   </g>
 
-  <!-- Web app -->
+  <!-- Web app — flashes when the unsigned XDR lands (0.40) -->
   <g>
-    <rect x="500" y="240" width="170" height="90" rx="12" fill="#141A21" stroke="#2a3648"/>
+    <rect x="500" y="240" width="170" height="90" rx="12" fill="#141A21" stroke="#2a3648">
+      <animate attributeName="stroke" calcMode="discrete" values="#2a3648;#BEF264;#2a3648" keyTimes="0;0.40;0.48" dur="12s" repeatCount="indefinite"/>
+    </rect>
     <text x="585" y="265" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Shunt web app</text>
     <text x="585" y="285" font-size="11" fill="#8A93A3" text-anchor="middle">shows the breakdown</text>
     <text x="585" y="302" font-size="11" fill="#8A93A3" text-anchor="middle">you approve with</text>
     <text x="585" y="319" font-size="11" font-weight="600" fill="#BEF264" text-anchor="middle">one tap (Freighter)</text>
   </g>
 
-  <!-- Vault -->
+  <!-- Vault — flashes when the signed distribute arrives (0.56) -->
   <g>
-    <rect x="500" y="60" width="180" height="110" rx="12" fill="#141A21" stroke="#BEF264" stroke-opacity=".6"/>
+    <rect x="500" y="60" width="180" height="110" rx="12" fill="#141A21" stroke="#BEF264" stroke-opacity=".6">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.6;1;0.6" keyTimes="0;0.56;0.66" dur="12s" repeatCount="indefinite"/>
+    </rect>
     <text x="590" y="84" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">ShuntVault · Soroban</text>
-    <text x="590" y="103" font-size="11" fill="#8A93A3" text-anchor="middle">atomic 3-lane split</text>
+    <text x="590" y="103" font-size="11" fill="#8A93A3" text-anchor="middle">atomic split</text>
     <rect x="516" y="112" width="148" height="24" rx="7" fill="#20301a"/>
     <circle cx="529" cy="124" r="4" fill="#BEF264"/>
     <text x="540" y="128" font-size="11" fill="#F5F7FA">Savings 🔒 timelocked</text>
     <text x="590" y="156" font-size="10" fill="#5c6b7d" text-anchor="middle">only you can withdraw — enforced by code</text>
   </g>
 
-  <!-- Anchor -->
+  <!-- Anchor — flashes when the off-ramp pulse arrives (0.84) -->
   <g>
-    <rect x="755" y="85" width="140" height="70" rx="12" fill="#141A21" stroke="#A78BFA" stroke-opacity=".5"/>
+    <rect x="755" y="85" width="140" height="70" rx="12" fill="#141A21" stroke="#A78BFA" stroke-opacity=".5">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.5;1;0.5" keyTimes="0;0.84;0.94" dur="12s" repeatCount="indefinite"/>
+    </rect>
     <text x="825" y="115" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Anchor</text>
     <text x="825" y="135" font-size="11" fill="#8A93A3" text-anchor="middle">SEP-24 → IDR / PHP</text>
   </g>
@@ -103,41 +122,40 @@
     <text x="717" y="108" text-anchor="middle">off-ramp</text>
   </g>
 
-  <!-- ===== animated pulses (12s story loop) ===== -->
+  <!-- ===== relay pulses — one shared 12s clock; each hop waits for the previous arrival ===== -->
   <!-- 1. payment arrives -->
-  <circle r="5" fill="#F5F7FA" filter="url(#g3)" opacity="0">
-    <animateMotion begin="0s" dur="1.4s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1"
-      calcMode="linear" path="M 170,120 H 250"/>
-    <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.02;0.1;0.13;1" dur="12s" repeatCount="indefinite"/>
+  <circle r="5" fill="#F5F7FA" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.02;0.12;1"><mpath href="#eIn"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.02;0.12" dur="12s" repeatCount="indefinite"/>
   </circle>
   <!-- 2. keeper notices -->
-  <circle r="4" fill="#38BDF8" filter="url(#g3)" opacity="0">
-    <animateMotion begin="2s;14s" dur="1.2s" path="M 325,170 V 240"/>
-    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.166;0.19;0.25;0.27;1" dur="12s" repeatCount="indefinite"/>
+  <circle r="4" fill="#38BDF8" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.16;0.26;1"><mpath href="#eWatch"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.16;0.26" dur="12s" repeatCount="indefinite"/>
   </circle>
   <!-- 3. unsigned XDR to app -->
-  <circle r="4" fill="#8A93A3" filter="url(#g3)" opacity="0">
-    <animateMotion begin="4s;16s" dur="1.2s" path="M 410,290 H 500"/>
-    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.33;0.36;0.41;0.43;1" dur="12s" repeatCount="indefinite"/>
+  <circle r="4" fill="#8A93A3" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.30;0.40;1"><mpath href="#eXdr"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.30;0.40" dur="12s" repeatCount="indefinite"/>
   </circle>
   <!-- 4. signed distribute up to vault -->
-  <circle r="5" fill="#BEF264" filter="url(#g3)" opacity="0">
-    <animateMotion begin="6s;18s" dur="1.2s" path="M 585,240 V 170"/>
-    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.5;0.53;0.58;0.6;1" dur="12s" repeatCount="indefinite"/>
+  <circle r="5" fill="#BEF264" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.46;0.56;1"><mpath href="#eSign"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.46;0.56" dur="12s" repeatCount="indefinite"/>
   </circle>
-  <!-- 5. needs + buffer back to wallet -->
-  <circle r="4" fill="#FBBF24" filter="url(#g3)" opacity="0">
-    <animateMotion begin="8s;20s" dur="1.2s" path="M 500,100 C 460,100 470,95 430,95"/>
-    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.66;0.69;0.74;0.76;1" dur="12s" repeatCount="indefinite"/>
+  <!-- 5. needs + buffer back to wallet (after the split executes) -->
+  <circle r="4" fill="#FBBF24" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.60;0.70;1"><mpath href="#eNeeds"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.60;0.70" dur="12s" repeatCount="indefinite"/>
   </circle>
-  <circle r="4" fill="#38BDF8" filter="url(#g3)" opacity="0">
-    <animateMotion begin="8s;20s" dur="1.2s" path="M 500,140 C 460,140 470,145 430,145"/>
-    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.66;0.69;0.74;0.76;1" dur="12s" repeatCount="indefinite"/>
+  <circle r="4" fill="#38BDF8" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.60;0.70;1"><mpath href="#eBuf"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.60;0.70" dur="12s" repeatCount="indefinite"/>
   </circle>
   <!-- 6. off-ramp -->
-  <circle r="4" fill="#A78BFA" filter="url(#g3)" opacity="0">
-    <animateMotion begin="10s;22s" dur="1.2s" path="M 680,120 H 755"/>
-    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.83;0.86;0.91;0.93;1" dur="12s" repeatCount="indefinite"/>
+  <circle r="4" fill="#A78BFA" filter="url(#g3)">
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.74;0.84;1"><mpath href="#eRamp"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.74;0.84" dur="12s" repeatCount="indefinite"/>
   </circle>
 
   <text x="460" y="390" font-size="12" fill="#5c6b7d" text-anchor="middle">the keeper automates detection &amp; preparation — every movement of money is signed by you, and only you</text>

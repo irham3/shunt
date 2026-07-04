@@ -108,12 +108,7 @@ Mobile-first (~390px column, PWA-installable), scaling to a desktop nav rail at 
 
 ### Level 1 — White Belt (testnet proof)
 
-| Requirement | Screenshot |
-|---|---|
-| **1. Wallet Connected**<br>Showing Freighter connection | <img src="design/screenshots/1-wallet-connected.png" width="300" alt="Wallet connected"> |
-| **2. Balance Displayed**<br>Fetching XLM balance from Horizon | <img src="design/screenshots/2-balance-displayed.png" width="300" alt="XLM balance"> |
-| **3. Successful Transaction**<br>Native XLM transfer | <img src="design/screenshots/3-tx-success.png" width="300" alt="Transaction success"> |
-| **4. Transaction Result**<br>Hash & Explorer Link | <img src="design/screenshots/4-tx-result.png" width="300" alt="Transaction result"> |
+All four requirements are live in the app: wallet connect, XLM balance fetched from Horizon (visible on Home with a Friendbot fund button for empty accounts), native XLM transfer from the Send & Pay screen, and the resulting hash with a Stellar Expert explorer link. The on-chain lifecycle proof in [Live on testnet](#live-on-testnet) is independently verifiable on the explorer.
 
 ### Level 2 — Blue Belt (multi-wallet + events)
 
@@ -203,18 +198,17 @@ design/                  Diagrams (animated SVG) + app screenshots
 
 ## Honest limitations
 
-- **One tap per income, by design.** Soroban's `require_auth` wants a signature per invocation; safe unattended delegation (session keys / smart accounts) is on the roadmap, not over-claimed today.
-- **Split + Invest are two sequential signatures**, because a Soroban transaction is single-operation by protocol. Merging them into one invoke via an AMM router is roadmap — we won't claim atomicity we don't have.
-- **The keeper is centralized** in this version. Mitigations shipped: idempotency, cursor-resumed reconnects, and a manual trigger that makes the keeper optional. Decentralizing it comes later.
+- **One tap per income, by design.** Soroban's `require_auth` wants a signature per invocation — and the Invest conversion is a second signature (a Soroban tx is single-operation by protocol). Never over-claimed as hands-free.
+- **The keeper is centralized** in this version — but it holds zero keys, and a manual trigger makes it optional.
 - **Anchor settlement is not instant** — KYC is involved, and the UI says so instead of hiding it.
-- **Card checkout for payment links** (so non-crypto clients can pay by card) needs an on-ramp partner's approval — shown as "coming soon" until it's real.
 - **The vault is unaudited.** Keep real amounts trivial until it is.
 
 ## Roadmap
 
-**Shipped this sprint** — Top Up (SEP-24 deposit), Invest lane (XLM DCA via path payment, labeled simulated-rate fallback when DEX liquidity is absent), payment request links (SEP-7 + QR).
-**Next** — production IDR corridor (IDRX trustline verification), card-checkout partner for payment links, full anchor status webhooks, allocated-gold Invest option.
-**Later** — session-key auth for true hands-free splitting, AMM-router merge of split+invest into one signature, native mobile, goal-based savings, notifications, keeper decentralization, BTC DCA when an audited liquid wrapped-BTC issuer exists on Stellar.
+| | |
+|---|---|
+| **Next** | Production IDR corridor (IDRX) · card checkout on payment links (on-ramp partner) · anchor status webhooks |
+| **Later** | Session keys — truly hands-free splits · split + invest in one signature (AMM router) · allocated-gold invest option · goal-based savings · native mobile · keeper decentralization |
 
 ---
 

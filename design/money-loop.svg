@@ -1,4 +1,11 @@
 <svg viewBox="0 0 920 400" xmlns="http://www.w3.org/2000/svg" font-family="'Space Grotesk','Segoe UI',system-ui,sans-serif">
+  <!--
+    Relay timeline (10s cycle) — each leg departs only after the previous leg arrives:
+      0.02-0.20  inbound (payment link + top up) -> wallet     | wallet flash 0.20
+      0.26-0.36  wallet -> split node                          | node pulse   0.36
+      0.44-0.62  split node -> four lanes (fan out together)   | lane flash   0.62
+      0.72-0.86  needs -> anchor                               | anchor flash 0.86
+  -->
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#3B4654"/>
@@ -8,18 +15,13 @@
   <rect width="920" height="400" rx="16" fill="#0B0F14"/>
 
   <!-- ======== flow paths (drawn first, under nodes) ======== -->
-  <!-- in: payment link -> wallet -->
   <path id="p-link" d="M 218 108 C 268 108, 268 168, 318 172" fill="none" stroke="#3B4654" stroke-width="1.5" marker-end="url(#arr)"/>
-  <!-- in: top up -> wallet -->
   <path id="p-topup" d="M 218 292 C 268 292, 268 232, 318 226" fill="none" stroke="#3B4654" stroke-width="1.5" marker-end="url(#arr)"/>
-  <!-- wallet -> split node -->
   <path id="p-split" d="M 462 199 L 508 199" fill="none" stroke="#3B4654" stroke-width="1.5"/>
-  <!-- split -> four lanes -->
   <path id="p-needs"   d="M 528 190 C 560 130, 560 72,  608 72"  fill="none" stroke="#FBBF24" stroke-width="1.5" opacity="0.55" marker-end="url(#arr)"/>
   <path id="p-savings" d="M 530 194 C 562 168, 566 158, 608 158" fill="none" stroke="#BEF264" stroke-width="1.5" opacity="0.55" marker-end="url(#arr)"/>
   <path id="p-buffer"  d="M 530 204 C 562 230, 566 240, 608 240" fill="none" stroke="#38BDF8" stroke-width="1.5" opacity="0.55" marker-end="url(#arr)"/>
   <path id="p-invest"  d="M 528 208 C 560 268, 560 326, 608 326" fill="none" stroke="#A78BFA" stroke-width="1.5" opacity="0.55" marker-end="url(#arr)"/>
-  <!-- needs -> anchor out -->
   <path id="p-out" d="M 768 72 L 806 72" fill="none" stroke="#3B4654" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- ======== inbound nodes ======== -->
@@ -34,58 +36,99 @@
     <text x="130" y="306" text-anchor="middle" fill="#8A93A3" font-size="11">IDR in via anchor</text>
   </g>
 
-  <!-- ======== wallet ======== -->
+  <!-- ======== wallet (flashes when the inbound pulses arrive) ======== -->
   <g>
-    <rect x="318" y="164" width="144" height="70" rx="12" fill="#141A21" stroke="#2B3542"/>
+    <rect x="318" y="164" width="144" height="70" rx="12" fill="#141A21" stroke="#2B3542">
+      <animate attributeName="stroke" calcMode="discrete" values="#2B3542;#F5F7FA;#2B3542" keyTimes="0;0.20;0.28" dur="10s" repeatCount="indefinite"/>
+    </rect>
     <text x="390" y="193" text-anchor="middle" fill="#F5F7FA" font-size="13" font-weight="600">Your wallet</text>
     <text x="390" y="212" text-anchor="middle" fill="#8A93A3" font-size="11">USDC lands · keeper sees it</text>
   </g>
 
-  <!-- ======== split node ======== -->
-  <circle cx="518" cy="199" r="10" fill="none" stroke="#BEF264" stroke-width="2">
-    <animate attributeName="r" values="9;11;9" dur="2s" repeatCount="indefinite"/>
+  <!-- ======== split node (pulses when the wallet pulse arrives) ======== -->
+  <circle cx="518" cy="199" r="9" fill="none" stroke="#BEF264" stroke-width="2">
+    <animate attributeName="r" values="9;9;13;9;9" keyTimes="0;0.36;0.40;0.44;1" dur="10s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-opacity" values="0.6;0.6;1;0.6;0.6" keyTimes="0;0.36;0.40;0.44;1" dur="10s" repeatCount="indefinite"/>
   </circle>
   <circle cx="518" cy="199" r="3.5" fill="#BEF264"/>
   <text x="518" y="236" text-anchor="middle" fill="#8A93A3" font-size="10.5">one tap</text>
 
-  <!-- ======== lanes ======== -->
+  <!-- ======== lanes (flash when their pulse arrives) ======== -->
   <g>
-    <rect x="608" y="46" width="160" height="52" rx="12" fill="#141A21" stroke="#FBBF24" stroke-opacity="0.5"/>
+    <rect x="608" y="46" width="160" height="52" rx="12" fill="#141A21" stroke="#FBBF24" stroke-opacity="0.5">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.5;1;0.5" keyTimes="0;0.62;0.72" dur="10s" repeatCount="indefinite"/>
+    </rect>
     <text x="688" y="68" text-anchor="middle" fill="#FBBF24" font-size="12.5" font-weight="600">Needs · spend</text>
     <text x="688" y="86" text-anchor="middle" fill="#8A93A3" font-size="10.5">stays in wallet</text>
   </g>
   <g>
-    <rect x="608" y="132" width="160" height="52" rx="12" fill="#141A21" stroke="#BEF264" stroke-opacity="0.5"/>
+    <rect x="608" y="132" width="160" height="52" rx="12" fill="#141A21" stroke="#BEF264" stroke-opacity="0.5">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.5;1;0.5" keyTimes="0;0.62;0.72" dur="10s" repeatCount="indefinite"/>
+    </rect>
     <text x="688" y="154" text-anchor="middle" fill="#BEF264" font-size="12.5" font-weight="600">Savings · locked ⑃</text>
     <text x="688" y="172" text-anchor="middle" fill="#8A93A3" font-size="10.5">vault contract, timelock</text>
   </g>
   <g>
-    <rect x="608" y="214" width="160" height="52" rx="12" fill="#141A21" stroke="#38BDF8" stroke-opacity="0.5"/>
+    <rect x="608" y="214" width="160" height="52" rx="12" fill="#141A21" stroke="#38BDF8" stroke-opacity="0.5">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.5;1;0.5" keyTimes="0;0.62;0.72" dur="10s" repeatCount="indefinite"/>
+    </rect>
     <text x="688" y="236" text-anchor="middle" fill="#38BDF8" font-size="12.5" font-weight="600">Buffer · emergency</text>
     <text x="688" y="254" text-anchor="middle" fill="#8A93A3" font-size="10.5">instant, no lock</text>
   </g>
   <g>
-    <rect x="608" y="300" width="160" height="52" rx="12" fill="#141A21" stroke="#A78BFA" stroke-opacity="0.5"/>
+    <rect x="608" y="300" width="160" height="52" rx="12" fill="#141A21" stroke="#A78BFA" stroke-opacity="0.5">
+      <animate attributeName="stroke-opacity" calcMode="discrete" values="0.5;1;0.5" keyTimes="0;0.62;0.72" dur="10s" repeatCount="indefinite"/>
+    </rect>
     <text x="688" y="322" text-anchor="middle" fill="#A78BFA" font-size="12.5" font-weight="600">Invest · DCA</text>
     <text x="688" y="340" text-anchor="middle" fill="#8A93A3" font-size="10.5">spot XLM, path payment</text>
   </g>
 
-  <!-- ======== outbound ======== -->
+  <!-- ======== outbound (flashes when the off-ramp pulse arrives) ======== -->
   <g>
-    <rect x="806" y="46" width="98" height="52" rx="12" fill="#141A21" stroke="#232B36"/>
+    <rect x="806" y="46" width="98" height="52" rx="12" fill="#141A21" stroke="#232B36">
+      <animate attributeName="stroke" calcMode="discrete" values="#232B36;#FBBF24;#232B36" keyTimes="0;0.86;0.96" dur="10s" repeatCount="indefinite"/>
+    </rect>
     <text x="855" y="68" text-anchor="middle" fill="#F5F7FA" font-size="12" font-weight="600">Anchor</text>
     <text x="855" y="86" text-anchor="middle" fill="#8A93A3" font-size="10.5">IDR/PHP bank</text>
   </g>
 
-  <!-- ======== animated pulses ======== -->
-  <circle r="4" fill="#F5F7FA"><animateMotion dur="3s" repeatCount="indefinite" begin="0s"><mpath href="#p-link"/></animateMotion></circle>
-  <circle r="4" fill="#F5F7FA"><animateMotion dur="3s" repeatCount="indefinite" begin="1.5s"><mpath href="#p-topup"/></animateMotion></circle>
-  <circle r="4" fill="#BEF264"><animateMotion dur="1.2s" repeatCount="indefinite" begin="0s"><mpath href="#p-split"/></animateMotion></circle>
-  <circle r="4" fill="#FBBF24"><animateMotion dur="2.2s" repeatCount="indefinite" begin="0.2s"><mpath href="#p-needs"/></animateMotion></circle>
-  <circle r="4" fill="#BEF264"><animateMotion dur="2.2s" repeatCount="indefinite" begin="0.7s"><mpath href="#p-savings"/></animateMotion></circle>
-  <circle r="4" fill="#38BDF8"><animateMotion dur="2.2s" repeatCount="indefinite" begin="1.2s"><mpath href="#p-buffer"/></animateMotion></circle>
-  <circle r="4" fill="#A78BFA"><animateMotion dur="2.2s" repeatCount="indefinite" begin="1.7s"><mpath href="#p-invest"/></animateMotion></circle>
-  <circle r="4" fill="#FBBF24"><animateMotion dur="1.6s" repeatCount="indefinite" begin="0.9s"><mpath href="#p-out"/></animateMotion></circle>
+  <!-- ======== relay pulses — one shared 10s clock, keyPoints hold position outside each leg ======== -->
+  <!-- leg 1: inbound (both arrive at 0.20, then the wallet flashes) -->
+  <circle r="4" fill="#F5F7FA">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.02;0.20;1"><mpath href="#p-link"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.02;0.20" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4" fill="#F5F7FA">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.02;0.20;1"><mpath href="#p-topup"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.02;0.20" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <!-- leg 2: wallet -> split node (departs after the wallet flash) -->
+  <circle r="4" fill="#BEF264">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.26;0.36;1"><mpath href="#p-split"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.26;0.36" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <!-- leg 3: the split — all four fan out together, only after the node pulse -->
+  <circle r="4" fill="#FBBF24">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.44;0.62;1"><mpath href="#p-needs"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.62" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4" fill="#BEF264">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.44;0.62;1"><mpath href="#p-savings"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.62" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4" fill="#38BDF8">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.44;0.62;1"><mpath href="#p-buffer"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.62" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4" fill="#A78BFA">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.44;0.62;1"><mpath href="#p-invest"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.62" dur="10s" repeatCount="indefinite"/>
+  </circle>
+  <!-- leg 4: needs -> anchor (cash-out, departs last) -->
+  <circle r="4" fill="#FBBF24">
+    <animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.72;0.86;1"><mpath href="#p-out"/></animateMotion>
+    <animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.72;0.86" dur="10s" repeatCount="indefinite"/>
+  </circle>
 
   <!-- caption -->
   <text x="460" y="384" text-anchor="middle" fill="#5B6675" font-size="11.5" font-family="Inter,system-ui,sans-serif">money in → structured → money out — one app, licensed anchors handle all fiat</text>
