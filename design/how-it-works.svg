@@ -1,0 +1,145 @@
+<svg width="920" height="320" viewBox="0 0 920 320" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <filter id="g2" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <path id="rail" d="M 60,262 H 860"/>
+  </defs>
+
+  <rect width="920" height="320" rx="18" fill="#0B0F14"/>
+  <rect x="0.5" y="0.5" width="919" height="319" rx="17.5" fill="none" stroke="#1d2734"/>
+
+  <!-- ======== step cards ======== -->
+  <!-- card template: x = 24,198,372,546,720  w=156 h=170 y=36 -->
+
+  <!-- 1 Connect -->
+  <g>
+    <rect x="24" y="36" width="156" height="170" rx="14" fill="#141A21" stroke="#BEF264" stroke-width="1.5">
+      <animate attributeName="stroke-opacity" values="1;1;0.15;0.15" keyTimes="0;0.19;0.21;1" dur="15s" repeatCount="indefinite"/>
+    </rect>
+    <circle cx="48" cy="62" r="12" fill="#BEF264">
+      <animate attributeName="fill-opacity" values="1;1;0.25;0.25" keyTimes="0;0.19;0.21;1" dur="15s" repeatCount="indefinite"/>
+    </circle>
+    <text x="48" y="67" font-size="13" font-weight="700" fill="#0B0F14" text-anchor="middle">1</text>
+    <text x="70" y="67" font-size="15" font-weight="700" fill="#F5F7FA">Connect</text>
+    <text x="40" y="98" font-size="11.5" fill="#8A93A3">
+      <tspan x="40" dy="0">Link Freighter in one</tspan>
+      <tspan x="40" dy="16">click — your keys</tspan>
+      <tspan x="40" dy="16">never leave the wallet.</tspan>
+    </text>
+    <text x="40" y="185" font-size="20" fill="#BEF264">⬡</text>
+    <text x="66" y="184" font-size="11" fill="#5c6b7d">non-custodial</text>
+  </g>
+
+  <!-- 2 Set rules -->
+  <g>
+    <rect x="198" y="36" width="156" height="170" rx="14" fill="#141A21" stroke="#BEF264" stroke-width="1.5">
+      <animate attributeName="stroke-opacity" values="0.15;0.15;1;1;0.15;0.15" keyTimes="0;0.19;0.21;0.39;0.41;1" dur="15s" repeatCount="indefinite"/>
+    </rect>
+    <circle cx="222" cy="62" r="12" fill="#BEF264">
+      <animate attributeName="fill-opacity" values="0.25;0.25;1;1;0.25;0.25" keyTimes="0;0.19;0.21;0.39;0.41;1" dur="15s" repeatCount="indefinite"/>
+    </circle>
+    <text x="222" y="67" font-size="13" font-weight="700" fill="#0B0F14" text-anchor="middle">2</text>
+    <text x="244" y="67" font-size="15" font-weight="700" fill="#F5F7FA">Set rules</text>
+    <text x="214" y="98" font-size="11.5" fill="#8A93A3">
+      <tspan x="214" dy="0">Slide your split once:</tspan>
+      <tspan x="214" dy="16">it's stored on-chain</tspan>
+      <tspan x="214" dy="16">in the contract.</tspan>
+    </text>
+    <!-- mini sliders -->
+    <g stroke-linecap="round">
+      <line x1="214" y1="168" x2="334" y2="168" stroke="#2a3648" stroke-width="5"/>
+      <line x1="214" y1="168" x2="286" y2="168" stroke="#FBBF24" stroke-width="5"/>
+      <line x1="214" y1="182" x2="334" y2="182" stroke="#2a3648" stroke-width="5"/>
+      <line x1="214" y1="182" x2="244" y2="182" stroke="#BEF264" stroke-width="5"/>
+      <line x1="214" y1="196" x2="334" y2="196" stroke="#2a3648" stroke-width="5"/>
+      <line x1="214" y1="196" x2="232" y2="196" stroke="#38BDF8" stroke-width="5"/>
+    </g>
+  </g>
+
+  <!-- 3 Income lands -->
+  <g>
+    <rect x="372" y="36" width="156" height="170" rx="14" fill="#141A21" stroke="#BEF264" stroke-width="1.5">
+      <animate attributeName="stroke-opacity" values="0.15;0.15;1;1;0.15;0.15" keyTimes="0;0.39;0.41;0.59;0.61;1" dur="15s" repeatCount="indefinite"/>
+    </rect>
+    <circle cx="396" cy="62" r="12" fill="#BEF264">
+      <animate attributeName="fill-opacity" values="0.25;0.25;1;1;0.25;0.25" keyTimes="0;0.39;0.41;0.59;0.61;1" dur="15s" repeatCount="indefinite"/>
+    </circle>
+    <text x="396" y="67" font-size="13" font-weight="700" fill="#0B0F14" text-anchor="middle">3</text>
+    <text x="418" y="67" font-size="15" font-weight="700" fill="#F5F7FA">Income lands</text>
+    <text x="388" y="98" font-size="11.5" fill="#8A93A3">
+      <tspan x="388" dy="0">A client pays you in</tspan>
+      <tspan x="388" dy="16">USDC. The keeper</tspan>
+      <tspan x="388" dy="16">spots it in seconds.</tspan>
+    </text>
+    <g font-size="12">
+      <text x="388" y="185" fill="#BEF264" font-weight="700">+500 USDC</text>
+      <text x="465" y="185" fill="#5c6b7d">detected</text>
+    </g>
+  </g>
+
+  <!-- 4 One tap -->
+  <g>
+    <rect x="546" y="36" width="156" height="170" rx="14" fill="#141A21" stroke="#BEF264" stroke-width="1.5">
+      <animate attributeName="stroke-opacity" values="0.15;0.15;1;1;0.15;0.15" keyTimes="0;0.59;0.61;0.79;0.81;1" dur="15s" repeatCount="indefinite"/>
+    </rect>
+    <circle cx="570" cy="62" r="12" fill="#BEF264">
+      <animate attributeName="fill-opacity" values="0.25;0.25;1;1;0.25;0.25" keyTimes="0;0.59;0.61;0.79;0.81;1" dur="15s" repeatCount="indefinite"/>
+    </circle>
+    <text x="570" y="67" font-size="13" font-weight="700" fill="#0B0F14" text-anchor="middle">4</text>
+    <text x="592" y="67" font-size="15" font-weight="700" fill="#F5F7FA">One tap</text>
+    <text x="562" y="98" font-size="11.5" fill="#8A93A3">
+      <tspan x="562" dy="0">Review the prepared</tspan>
+      <tspan x="562" dy="16">split and approve —</tspan>
+      <tspan x="562" dy="16">you sign, nobody else.</tspan>
+    </text>
+    <rect x="562" y="168" width="124" height="26" rx="8" fill="#BEF264">
+      <animate attributeName="fill-opacity" values="0.3;0.3;1;1;0.3;0.3" keyTimes="0;0.59;0.61;0.79;0.81;1" dur="15s" repeatCount="indefinite"/>
+    </rect>
+    <text x="624" y="185" font-size="12" font-weight="700" fill="#0B0F14" text-anchor="middle">Approve split</text>
+  </g>
+
+  <!-- 5 Auto-split -->
+  <g>
+    <rect x="720" y="36" width="156" height="170" rx="14" fill="#141A21" stroke="#BEF264" stroke-width="1.5">
+      <animate attributeName="stroke-opacity" values="0.15;0.15;1;1;0.15" keyTimes="0;0.79;0.81;0.99;1" dur="15s" repeatCount="indefinite"/>
+    </rect>
+    <circle cx="744" cy="62" r="12" fill="#BEF264">
+      <animate attributeName="fill-opacity" values="0.25;0.25;1;1;0.25" keyTimes="0;0.79;0.81;0.99;1" dur="15s" repeatCount="indefinite"/>
+    </circle>
+    <text x="744" y="67" font-size="13" font-weight="700" fill="#0B0F14" text-anchor="middle">5</text>
+    <text x="766" y="67" font-size="15" font-weight="700" fill="#F5F7FA">Auto-split ⑃</text>
+    <text x="736" y="98" font-size="11.5" fill="#8A93A3">
+      <tspan x="736" dy="0">Three lanes funded in</tspan>
+      <tspan x="736" dy="16">one atomic tx. Savings</tspan>
+      <tspan x="736" dy="16">locked by code.</tspan>
+    </text>
+    <!-- bars fill during window 0.81..0.99 -->
+    <g>
+      <rect x="736" y="164" width="0" height="8" rx="4" fill="#FBBF24">
+        <animate attributeName="width" values="0;0;120;120;0" keyTimes="0;0.81;0.9;0.99;1" dur="15s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="736" y="178" width="0" height="8" rx="4" fill="#BEF264">
+        <animate attributeName="width" values="0;0;50;50;0" keyTimes="0;0.83;0.92;0.99;1" dur="15s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="736" y="192" width="0" height="8" rx="4" fill="#38BDF8">
+        <animate attributeName="width" values="0;0;30;30;0" keyTimes="0;0.85;0.94;0.99;1" dur="15s" repeatCount="indefinite"/>
+      </rect>
+    </g>
+  </g>
+
+  <!-- ======== progress rail ======== -->
+  <use href="#rail" stroke="#2a3648" stroke-width="2"/>
+  <g fill="#2a3648">
+    <circle cx="102" cy="262" r="5"/>
+    <circle cx="276" cy="262" r="5"/>
+    <circle cx="450" cy="262" r="5"/>
+    <circle cx="624" cy="262" r="5"/>
+    <circle cx="798" cy="262" r="5"/>
+  </g>
+  <circle r="6" fill="#BEF264" filter="url(#g2)">
+    <animateMotion dur="15s" repeatCount="indefinite" calcMode="linear"><mpath href="#rail"/></animateMotion>
+  </circle>
+  <text x="460" y="300" font-size="12" fill="#5c6b7d" text-anchor="middle">set once · confirm once per income · savings the rupiah can't erode</text>
+</svg>

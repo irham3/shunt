@@ -1,0 +1,88 @@
+<svg width="900" height="250" viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B0F14"/>
+      <stop offset="1" stop-color="#101822"/>
+    </linearGradient>
+    <path id="laneIn"  d="M 375,125 H 520"/>
+    <path id="laneA"   d="M 520,125 C 570,125 570,60  620,60  H 700"/>
+    <path id="laneB"   d="M 520,125 H 700"/>
+    <path id="laneC"   d="M 520,125 C 570,125 570,190 620,190 H 700"/>
+  </defs>
+
+  <rect width="900" height="250" rx="18" fill="url(#bgGrad)"/>
+  <rect x="0.5" y="0.5" width="899" height="249" rx="17.5" fill="none" stroke="#1d2734"/>
+
+  <!-- faint circuit texture -->
+  <g stroke="#16202c" stroke-width="1" fill="none">
+    <path d="M 40,220 H 180 V 200"/><path d="M 860,30 H 740 V 52"/>
+    <circle cx="180" cy="196" r="3"/><circle cx="740" cy="56" r="3"/>
+  </g>
+
+  <!-- wordmark -->
+  <g>
+    <text x="48" y="118" font-size="54" font-weight="700" fill="#F5F7FA" letter-spacing="-1">Shunt</text>
+    <text x="218" y="118" font-size="44" fill="#BEF264">⑃</text>
+    <text x="48" y="152" font-size="17" fill="#8A93A3">Income lands, instantly split.</text>
+    <text x="48" y="176" font-size="13" fill="#5c6b7d">Non-custodial USDC autopilot on Stellar</text>
+  </g>
+
+  <!-- circuit lanes -->
+  <g fill="none" stroke-linecap="round">
+    <use href="#laneIn" stroke="#2a3648" stroke-width="3"/>
+    <use href="#laneA" stroke="#3a3323" stroke-width="3"/>
+    <use href="#laneB" stroke="#2c3a22" stroke-width="3"/>
+    <use href="#laneC" stroke="#1f3340" stroke-width="3"/>
+  </g>
+
+  <!-- split node -->
+  <circle cx="520" cy="125" r="9" fill="#0B0F14" stroke="#BEF264" stroke-width="2.5" filter="url(#glow)">
+    <animate attributeName="r" values="8;10;8" dur="2.4s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- moving pulses -->
+  <circle r="5" fill="#F5F7FA" filter="url(#glow)">
+    <animateMotion dur="2.4s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear"><mpath href="#laneIn"/></animateMotion>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.1;.85;1" dur="2.4s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4.5" fill="#FBBF24" filter="url(#glow)">
+    <animateMotion begin="1.2s" dur="1.6s" repeatCount="indefinite"><mpath href="#laneA"/></animateMotion>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" begin="1.2s" dur="1.6s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4.5" fill="#BEF264" filter="url(#glow)">
+    <animateMotion begin="1.2s" dur="1.6s" repeatCount="indefinite"><mpath href="#laneB"/></animateMotion>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" begin="1.2s" dur="1.6s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4.5" fill="#38BDF8" filter="url(#glow)">
+    <animateMotion begin="1.2s" dur="1.6s" repeatCount="indefinite"><mpath href="#laneC"/></animateMotion>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" begin="1.2s" dur="1.6s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- lane chips -->
+  <g font-size="14" font-weight="600">
+    <rect x="706" y="42" width="150" height="36" rx="10" fill="#141A21" stroke="#FBBF24" stroke-opacity=".55"/>
+    <circle cx="726" cy="60" r="5" fill="#FBBF24"/>
+    <text x="740" y="65" fill="#F5F7FA">Needs</text>
+    <text x="846" y="65" fill="#FBBF24" text-anchor="end">60%</text>
+
+    <rect x="706" y="107" width="150" height="36" rx="10" fill="#141A21" stroke="#BEF264" stroke-opacity=".55"/>
+    <circle cx="726" cy="125" r="5" fill="#BEF264"/>
+    <text x="740" y="130" fill="#F5F7FA">Savings</text>
+    <text x="846" y="130" fill="#BEF264" text-anchor="end">25%</text>
+    <text x="706" y="158" font-size="10" font-weight="400" fill="#8A93A3">🔒 timelocked in contract</text>
+
+    <rect x="706" y="172" width="150" height="36" rx="10" fill="#141A21" stroke="#38BDF8" stroke-opacity=".55"/>
+    <circle cx="726" cy="190" r="5" fill="#38BDF8"/>
+    <text x="740" y="195" fill="#F5F7FA">Buffer</text>
+    <text x="846" y="195" fill="#38BDF8" text-anchor="end">15%</text>
+  </g>
+
+  <!-- incoming label -->
+  <g font-size="12" fill="#8A93A3">
+    <text x="378" y="112">USDC in</text>
+  </g>
+</svg>

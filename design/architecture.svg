@@ -1,0 +1,144 @@
+<svg width="920" height="410" viewBox="0 0 920 410" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <filter id="g3" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3d4c5e"/>
+    </marker>
+    <path id="eIn"    d="M 170,120 H 250"/>
+    <path id="eWatch" d="M 325,170 V 240"/>
+    <path id="eXdr"   d="M 410,290 H 500"/>
+    <path id="eSign"  d="M 585,240 V 170"/>
+    <path id="eNeeds" d="M 500,100 C 460,100 470,95 430,95"/>
+    <path id="eBuf"   d="M 500,140 C 460,140 470,145 430,145"/>
+    <path id="eRamp"  d="M 680,120 H 755"/>
+  </defs>
+
+  <rect width="920" height="410" rx="18" fill="#0B0F14"/>
+  <rect x="0.5" y="0.5" width="919" height="409" rx="17.5" fill="none" stroke="#1d2734"/>
+
+  <!-- ===== boxes ===== -->
+  <!-- Payer -->
+  <g>
+    <rect x="30" y="85" width="140" height="70" rx="12" fill="#141A21" stroke="#2a3648"/>
+    <text x="100" y="115" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Payer</text>
+    <text x="100" y="135" font-size="11" fill="#8A93A3" text-anchor="middle">client abroad · USDC</text>
+  </g>
+
+  <!-- User wallet -->
+  <g>
+    <rect x="250" y="60" width="180" height="110" rx="12" fill="#141A21" stroke="#38BDF8" stroke-opacity=".5"/>
+    <text x="340" y="82" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Your wallet</text>
+    <rect x="264" y="92" width="152" height="22" rx="7" fill="#1b2431"/>
+    <circle cx="277" cy="103" r="4" fill="#FBBF24"/>
+    <text x="288" y="107" font-size="11" fill="#F5F7FA">Needs — spendable</text>
+    <rect x="264" y="120" width="152" height="22" rx="7" fill="#1b2431"/>
+    <circle cx="277" cy="131" r="4" fill="#38BDF8"/>
+    <text x="288" y="135" font-size="11" fill="#F5F7FA">Buffer — instant access</text>
+    <text x="340" y="160" font-size="10" fill="#5c6b7d" text-anchor="middle">non-custodial · keys are yours</text>
+  </g>
+
+  <!-- Keeper -->
+  <g>
+    <rect x="240" y="240" width="170" height="90" rx="12" fill="#141A21" stroke="#2a3648"/>
+    <text x="325" y="265" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Keeper</text>
+    <text x="325" y="285" font-size="11" fill="#8A93A3" text-anchor="middle">watches Horizon 24/7</text>
+    <text x="325" y="302" font-size="11" fill="#8A93A3" text-anchor="middle">prepares the split tx</text>
+    <text x="325" y="321" font-size="10" font-weight="600" fill="#BEF264" text-anchor="middle">holds zero keys</text>
+  </g>
+
+  <!-- Web app -->
+  <g>
+    <rect x="500" y="240" width="170" height="90" rx="12" fill="#141A21" stroke="#2a3648"/>
+    <text x="585" y="265" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Shunt web app</text>
+    <text x="585" y="285" font-size="11" fill="#8A93A3" text-anchor="middle">shows the breakdown</text>
+    <text x="585" y="302" font-size="11" fill="#8A93A3" text-anchor="middle">you approve with</text>
+    <text x="585" y="319" font-size="11" font-weight="600" fill="#BEF264" text-anchor="middle">one tap (Freighter)</text>
+  </g>
+
+  <!-- Vault -->
+  <g>
+    <rect x="500" y="60" width="180" height="110" rx="12" fill="#141A21" stroke="#BEF264" stroke-opacity=".6"/>
+    <text x="590" y="84" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">ShuntVault · Soroban</text>
+    <text x="590" y="103" font-size="11" fill="#8A93A3" text-anchor="middle">atomic 3-lane split</text>
+    <rect x="516" y="112" width="148" height="24" rx="7" fill="#20301a"/>
+    <circle cx="529" cy="124" r="4" fill="#BEF264"/>
+    <text x="540" y="128" font-size="11" fill="#F5F7FA">Savings 🔒 timelocked</text>
+    <text x="590" y="156" font-size="10" fill="#5c6b7d" text-anchor="middle">only you can withdraw — enforced by code</text>
+  </g>
+
+  <!-- Anchor -->
+  <g>
+    <rect x="755" y="85" width="140" height="70" rx="12" fill="#141A21" stroke="#A78BFA" stroke-opacity=".5"/>
+    <text x="825" y="115" font-size="14" font-weight="700" fill="#F5F7FA" text-anchor="middle">Anchor</text>
+    <text x="825" y="135" font-size="11" fill="#8A93A3" text-anchor="middle">SEP-24 → IDR / PHP</text>
+  </g>
+
+  <!-- Rate note -->
+  <g>
+    <rect x="740" y="250" width="155" height="60" rx="12" fill="none" stroke="#2a3648" stroke-dasharray="5 4"/>
+    <text x="817" y="275" font-size="11" fill="#8A93A3" text-anchor="middle">FX rate — display only,</text>
+    <text x="817" y="292" font-size="11" fill="#8A93A3" text-anchor="middle">funds stay in USDC</text>
+  </g>
+
+  <!-- ===== edges ===== -->
+  <g fill="none" stroke="#3d4c5e" stroke-width="2">
+    <use href="#eIn" marker-end="url(#arr)"/>
+    <use href="#eWatch" marker-end="url(#arr)" stroke-dasharray="4 4"/>
+    <use href="#eXdr" marker-end="url(#arr)"/>
+    <use href="#eSign" marker-end="url(#arr)"/>
+    <use href="#eNeeds" marker-end="url(#arr)"/>
+    <use href="#eBuf" marker-end="url(#arr)"/>
+    <use href="#eRamp" marker-end="url(#arr)"/>
+  </g>
+
+  <!-- edge labels -->
+  <g font-size="10" fill="#5c6b7d">
+    <text x="210" y="108" text-anchor="middle">USDC in</text>
+    <text x="352" y="210">detects inflow</text>
+    <text x="455" y="280" text-anchor="middle">unsigned tx</text>
+    <text x="613" y="210">distribute()</text>
+    <text x="717" y="108" text-anchor="middle">off-ramp</text>
+  </g>
+
+  <!-- ===== animated pulses (12s story loop) ===== -->
+  <!-- 1. payment arrives -->
+  <circle r="5" fill="#F5F7FA" filter="url(#g3)" opacity="0">
+    <animateMotion begin="0s" dur="1.4s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1"
+      calcMode="linear" path="M 170,120 H 250"/>
+    <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.02;0.1;0.13;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <!-- 2. keeper notices -->
+  <circle r="4" fill="#38BDF8" filter="url(#g3)" opacity="0">
+    <animateMotion begin="2s;14s" dur="1.2s" path="M 325,170 V 240"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.166;0.19;0.25;0.27;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <!-- 3. unsigned XDR to app -->
+  <circle r="4" fill="#8A93A3" filter="url(#g3)" opacity="0">
+    <animateMotion begin="4s;16s" dur="1.2s" path="M 410,290 H 500"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.33;0.36;0.41;0.43;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <!-- 4. signed distribute up to vault -->
+  <circle r="5" fill="#BEF264" filter="url(#g3)" opacity="0">
+    <animateMotion begin="6s;18s" dur="1.2s" path="M 585,240 V 170"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.5;0.53;0.58;0.6;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <!-- 5. needs + buffer back to wallet -->
+  <circle r="4" fill="#FBBF24" filter="url(#g3)" opacity="0">
+    <animateMotion begin="8s;20s" dur="1.2s" path="M 500,100 C 460,100 470,95 430,95"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.66;0.69;0.74;0.76;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <circle r="4" fill="#38BDF8" filter="url(#g3)" opacity="0">
+    <animateMotion begin="8s;20s" dur="1.2s" path="M 500,140 C 460,140 470,145 430,145"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.66;0.69;0.74;0.76;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+  <!-- 6. off-ramp -->
+  <circle r="4" fill="#A78BFA" filter="url(#g3)" opacity="0">
+    <animateMotion begin="10s;22s" dur="1.2s" path="M 680,120 H 755"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.83;0.86;0.91;0.93;1" dur="12s" repeatCount="indefinite"/>
+  </circle>
+
+  <text x="460" y="390" font-size="12" fill="#5c6b7d" text-anchor="middle">the keeper automates detection &amp; preparation — every movement of money is signed by you, and only you</text>
+</svg>
