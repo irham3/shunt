@@ -121,6 +121,7 @@ export function Home() {
       <section style={{ display: "flex", gap: 8 }}>
         {[
           { to: "/topup", icon: "⬇", label: "Top Up" },
+          { to: "/request", icon: "🔗", label: "Request" },
           { to: "/send", icon: "⬆", label: "Send & Pay" },
         ].map((a) => (
           <Link

@@ -10,13 +10,15 @@ import { AutoSplitConfirm } from "./screens/AutoSplitConfirm";
 import { SavingsVault } from "./screens/SavingsVault";
 import { SendPay } from "./screens/SendPay";
 import { TopUp } from "./screens/TopUp";
+import { RequestPay } from "./screens/RequestPay";
+import { PayRequest } from "./screens/PayRequest";
 import { Activity } from "./screens/Activity";
 import { Settings } from "./screens/Settings";
 
 export default function App() {
   const address = useShunt((s) => s.address);
   const { pathname } = useLocation();
-  const fullScreen = ["/", "/connect", "/confirm"].includes(pathname);
+  const fullScreen = ["/", "/connect", "/confirm", "/pay"].includes(pathname);
 
   return (
     <div className="app-shell">
@@ -30,6 +32,9 @@ export default function App() {
         <Route path="/savings" element={address ? <SavingsVault /> : <Navigate to="/" replace />} />
         <Route path="/send" element={address ? <SendPay /> : <Navigate to="/" replace />} />
         <Route path="/topup" element={address ? <TopUp /> : <Navigate to="/" replace />} />
+        <Route path="/request" element={address ? <RequestPay /> : <Navigate to="/" replace />} />
+        {/* Public payer landing — the payer has no wallet connected here */}
+        <Route path="/pay" element={<PayRequest />} />
         <Route path="/activity" element={address ? <Activity /> : <Navigate to="/" replace />} />
         <Route path="/settings" element={address ? <Settings /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
