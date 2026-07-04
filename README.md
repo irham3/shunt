@@ -43,9 +43,10 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 
 | Direction | Feature | Status |
 |---|---|---|
-| **In** | **Payment request links (SEP-7)** — send a link, get paid in USDC from anywhere; no "do you have crypto?" conversation | 🔜 in build — Jul 15 |
-| **In** | **Top Up (SEP-24 deposit)** — IDR in through a licensed anchor's hosted flow, lands as USDC | 🔜 in build — Jul 15 |
-| **Structure** | **One-tap split** into Needs / Savings / Buffer / Invest, atomic on-chain | ✅ shipped (3 lanes) · Invest lane 🔜 |
+| **In** | **Payment request links (SEP-7)** — send a link or QR, get paid in USDC from anywhere; no "do you have crypto?" conversation. Card checkout for non-crypto payers lands with an on-ramp partner | ✅ shipped (card checkout 🔜) |
+| **In** | **Top Up (SEP-24 deposit)** — IDR in through a licensed anchor's hosted flow, lands as USDC | ✅ shipped (testnet anchor) |
+| **Structure** | **One-tap split** into Needs / Savings / Buffer / Invest, atomic on-chain | ✅ shipped |
+| **Structure** | **Invest lane** — spot DCA to XLM via path payment after each split | ✅ shipped |
 | **Structure** | **Code-custody savings** with timelock + penalty-to-your-buffer | ✅ shipped |
 | **Out** | **Cash-out (SEP-24 withdraw)** — Needs lane to IDR/PHP bank via allowlisted anchors, rate & fee shown first | ✅ shipped |
 
@@ -154,9 +155,9 @@ Both directions run on the standard Stellar anchor rails, implemented in [`web/s
 
 1. **SEP-1** — discover the anchor's endpoints from its `stellar.toml`.
 2. **SEP-10** — prove wallet ownership by signing a challenge (no password, no account).
-3. **SEP-24** — the anchor's hosted flow opens for KYC and bank details; Shunt polls the transaction status. `withdraw` = cash-out (✅ shipped), `deposit` = Top Up (🔜 same stack, mirrored).
+3. **SEP-24** — the anchor's hosted flow opens for KYC and bank details; Shunt polls the transaction status. `withdraw` = cash-out, `deposit` = Top Up — same stack, mirrored.
 
-Plus **SEP-7** payment request links (🔜): a `web+stellar:pay` URI any compatible wallet can open — the payee never explains crypto to a client again.
+Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatible wallet can open — the payee never explains crypto to a client again.
 
 Rate and fee are always shown **before** confirmation. The default anchor is SDF's test anchor; the target corridor is a regulated IDR stablecoin (IDRX) or a PHP anchor — and the on-chain allowlist ensures USDC can only ever flow to an anchor *you* approved when setting rules. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
 
@@ -211,7 +212,7 @@ design/                  Diagrams (animated SVG) + app screenshots
 
 ## Roadmap
 
-**Now (Jul 15)** — Top Up (SEP-24 deposit), Invest lane (XLM DCA via path payment), payment request links (SEP-7).
+**Shipped this sprint** — Top Up (SEP-24 deposit), Invest lane (XLM DCA via path payment, labeled simulated-rate fallback when DEX liquidity is absent), payment request links (SEP-7 + QR).
 **Next** — production IDR corridor (IDRX trustline verification), card-checkout partner for payment links, full anchor status webhooks, allocated-gold Invest option.
 **Later** — session-key auth for true hands-free splitting, AMM-router merge of split+invest into one signature, native mobile, goal-based savings, notifications, keeper decentralization, BTC DCA when an audited liquid wrapped-BTC issuer exists on Stellar.
 
