@@ -256,8 +256,7 @@ export async function fetchLatestSplitEvent(cursor: string = ""): Promise<{ curs
   if (!VAULT_CONTRACT_ID) return null;
   const server = new rpc.Server(RPC_URL);
   try {
-    const res = await server.getEvents({
-      startLedger: 0,
+    const request: any = {
       filters: [
         {
           type: "contract",
@@ -267,9 +266,15 @@ export async function fetchLatestSplitEvent(cursor: string = ""): Promise<{ curs
           ],
         },
       ],
-      cursor,
       limit: 10,
-    });
+    };
+    if (cursor) {
+      request.cursor = cursor;
+    } else {
+      request.startLedger = 0; // or any valid starting ledger
+    }
+
+    const res = await server.getEvents(request);
     
     if (res.events.length > 0) {
       const latest = res.events[res.events.length - 1] as any;
