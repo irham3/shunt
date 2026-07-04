@@ -60,6 +60,17 @@ Nine screens, mobile-first (~390px column, PWA-installable), scaling to a deskto
 | <img src="design/stitch/configure_shunt.png" width="260"><br>**Configure Shunt** | <img src="design/stitch/autosplit_confirm.png" width="260"><br>**Auto-split confirm** | <img src="design/stitch/savings_vault.png" width="260"><br>**Savings vault** |
 | <img src="design/stitch/send_pay.png" width="260"><br>**Send & Pay** | <img src="design/stitch/activity_history.png" width="260"><br>**Activity** | <img src="design/stitch/settings_profile.png" width="260"><br>**Settings** |
 
+### White Belt Compliance (Screenshots)
+
+As part of the Level 1 — White Belt requirements, here are screenshots of the working testnet application:
+
+| Requirement | Screenshot |
+|---|---|
+| **1. Wallet Connected**<br>Showing Freighter connection | `<img src="design/screenshots/1-wallet-connected.png" width="300" alt="Wallet connected">` |
+| **2. Balance Displayed**<br>Fetching XLM balance from Horizon | `<img src="design/screenshots/2-balance-displayed.png" width="300" alt="XLM balance">` |
+| **3. Successful Transaction**<br>Native XLM transfer | `<img src="design/screenshots/3-tx-success.png" width="300" alt="Transaction success">` |
+| **4. Transaction Result**<br>Hash & Explorer Link | `<img src="design/screenshots/4-tx-result.png" width="300" alt="Transaction result">` |
+
 ## Live on testnet
 
 | Item | Value |

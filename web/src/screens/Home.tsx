@@ -3,19 +3,33 @@ import { Link, useNavigate } from "react-router-dom";
 import { AllocationBar } from "../components/AllocationBar";
 import { getIdrRate } from "../lib/rates";
 import { fetchPending, type PendingSplit } from "../lib/keeper";
+import { fetchXlmBalance, fundWithFriendbot, NETWORK } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 
 export function Home() {
   const nav = useNavigate();
-  const { address, buckets, balances, activity } = useShunt();
+  const { address, buckets, balances, activity, xlmBalance, setXlmBalance, showToast } = useShunt();
   const [idr, setIdr] = useState<number | null>(null);
   const [pending, setPending] = useState<PendingSplit[]>([]);
+  const [fundingBot, setFundingBot] = useState(false);
 
   const total = balances.needs + balances.savings + balances.buffer;
 
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
   }, []);
+
+  // Fetch XLM balance on mount and periodically
+  useEffect(() => {
+    if (!address) return;
+    const tick = () =>
+      fetchXlmBalance(address)
+        .then(setXlmBalance)
+        .catch(() => {}); // silent fail — retry next tick
+    tick();
+    const t = setInterval(tick, 15000);
+    return () => clearInterval(t);
+  }, [address, setXlmBalance]);
 
   // poll keeper for detected inflows awaiting one-tap approval
   useEffect(() => {
@@ -29,6 +43,21 @@ export function Home() {
   const bucketBalance = (id: string) =>
     id === "needs" ? balances.needs : id === "savings" ? balances.savings : id === "buffer" ? balances.buffer : 0;
 
+  async function onFundbot() {
+    if (!address) return;
+    setFundingBot(true);
+    try {
+      await fundWithFriendbot(address);
+      const bal = await fetchXlmBalance(address);
+      setXlmBalance(bal);
+      showToast("Funded with 10,000 testnet XLM!");
+    } catch (e) {
+      showToast(`Friendbot error: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setFundingBot(false);
+    }
+  }
+
   return (
     <div className="screen">
       <header>
@@ -40,6 +69,26 @@ export function Home() {
           {idr ? `≈ ${fmtIdr(total * idr)}` : "…"}
         </div>
       </header>
+
+      {/* XLM Balance — Level 1 requirement */}
+      <section className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div className="muted" style={{ fontSize: 12 }}>XLM Balance ({NETWORK})</div>
+          <div className="numeric" style={{ fontSize: 22, fontWeight: 700 }}>
+            {xlmBalance !== null ? `${Number(xlmBalance).toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM` : "Loading…"}
+          </div>
+        </div>
+        {xlmBalance !== null && Number(xlmBalance) === 0 && NETWORK === "testnet" && (
+          <button
+            className="btn-secondary"
+            style={{ fontSize: 13, padding: "6px 14px" }}
+            disabled={fundingBot}
+            onClick={onFundbot}
+          >
+            {fundingBot ? "Funding…" : "Fund with Friendbot"}
+          </button>
+        )}
+      </section>
 
       {pending.length > 0 && (
         <button
@@ -119,3 +168,4 @@ export function Home() {
     </div>
   );
 }
+

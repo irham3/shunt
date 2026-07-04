@@ -33,6 +33,8 @@ interface ShuntState {
   lockSecs: number; // timelock duration chosen in Configure Shunt
   /** wallet + vault balances in USDC (display) */
   balances: { needs: number; savings: number; buffer: number };
+  /** On-chain native XLM balance (Level 1 requirement) */
+  xlmBalance: string | null;
   activity: ActivityItem[];
   toast: string | null;
 
@@ -43,6 +45,7 @@ interface ShuntState {
   removeBucket: (id: string) => void;
   markRulesSaved: () => void;
   setLockSecs: (s: number) => void;
+  setXlmBalance: (b: string) => void;
   applySplit: (amount: number, txHash?: string) => void;
   withdrawSavings: (amount: number, penalty: number) => void;
   offramp: (amount: number) => void;
@@ -69,6 +72,7 @@ export const useShunt = create<ShuntState>()(
       lockUntil: 0,
       lockSecs: 30 * 86400,
       balances: { needs: 0, savings: 0, buffer: 0 },
+      xlmBalance: null,
       activity: [],
       toast: null,
 
@@ -103,6 +107,7 @@ export const useShunt = create<ShuntState>()(
       },
       markRulesSaved: () => set({ rulesSavedOnChain: true }),
       setLockSecs: (lockSecs) => set({ lockSecs }),
+      setXlmBalance: (xlmBalance) => set({ xlmBalance }),
 
       applySplit: (amount, txHash) => {
         const { buckets, balances, activity, lockUntil, lockSecs } = get();

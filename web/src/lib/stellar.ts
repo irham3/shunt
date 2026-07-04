@@ -6,11 +6,17 @@ import {
 import {
   Address,
   Contract,
+  Horizon,
   nativeToScVal,
   rpc,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
+import {
+  Asset,
+  Operation,
+  StrKey,
+} from "@stellar/stellar-base";
 
 export const NETWORK = (import.meta.env.VITE_STELLAR_NETWORK ?? "testnet") as
   | "testnet"
@@ -29,8 +35,83 @@ export const NETWORK_PASSPHRASE =
 
 export const VAULT_CONTRACT_ID = import.meta.env.VITE_VAULT_CONTRACT_ID ?? "";
 
+export const HORIZON_URL =
+  NETWORK === "testnet"
+    ? "https://horizon-testnet.stellar.org"
+    : "https://horizon.stellar.org";
+
 export const EXPLORER_TX = (hash: string) =>
   `https://stellar.expert/explorer/${NETWORK === "testnet" ? "testnet" : "public"}/tx/${hash}`;
+
+export const EXPLORER_ACCOUNT = (addr: string) =>
+  `https://stellar.expert/explorer/${NETWORK === "testnet" ? "testnet" : "public"}/account/${addr}`;
+
+// ---------------------------------------------------------------------------
+// Level 1 — XLM balance & payment
+// ---------------------------------------------------------------------------
+
+/** Fetch the native XLM balance for a Stellar account via Horizon. */
+export async function fetchXlmBalance(address: string): Promise<string> {
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (!res.ok) {
+    if (res.status === 404) return "0"; // account not funded yet
+    throw new Error(`Horizon error ${res.status}`);
+  }
+  const data = await res.json();
+  const native = data.balances?.find(
+    (b: { asset_type: string }) => b.asset_type === "native",
+  );
+  return native?.balance ?? "0";
+}
+
+/** Build, sign (Freighter), and submit a native XLM payment on Horizon. */
+export async function sendXlmPayment(
+  sender: string,
+  destination: string,
+  amount: string,
+): Promise<string> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  const source = await horizon.loadAccount(sender);
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      Operation.payment({
+        destination,
+        asset: Asset.native(),
+        amount,
+      }),
+    )
+    .setTimeout(300)
+    .build();
+
+  const signed = await signTransaction(tx.toEnvelope().toXDR("base64"), {
+    networkPassphrase: NETWORK_PASSPHRASE,
+  });
+  if (signed.error) throw new Error(String(signed.error));
+
+  const sendTx = TransactionBuilder.fromXDR(
+    signed.signedTxXdr,
+    NETWORK_PASSPHRASE,
+  );
+  const result = await horizon.submitTransaction(
+    sendTx as unknown as Parameters<typeof horizon.submitTransaction>[0],
+  );
+  return (result as unknown as { hash: string }).hash;
+}
+
+/** Fund a testnet account with the Friendbot faucet (10,000 XLM). */
+export async function fundWithFriendbot(address: string): Promise<void> {
+  const res = await fetch(
+    `https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`,
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Friendbot failed: ${text.slice(0, 200)}`);
+  }
+}
 
 export async function connectFreighter(): Promise<string> {
   const conn = await isConnected();
