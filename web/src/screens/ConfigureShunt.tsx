@@ -13,6 +13,7 @@ const LOCK_OPTIONS = [
  * Core screen (F3). Validation decision (DESIGN.md §5.2): while total ≠ 100%,
  * the save button is disabled AND an inline message shows the difference.
  * No silent auto-adjust.
+ * Desktop layout: split diagram sticky on the left, sliders on the right.
  */
 export function ConfigureShunt() {
   const {
@@ -56,97 +57,110 @@ export function ConfigureShunt() {
 
   return (
     <div className="screen">
-      <h2 style={{ margin: 0 }}>Configure Shunt</h2>
-      <p className="muted" style={{ marginTop: -10, fontSize: 14 }}>
-        Every incoming income is automatically split by these rules.
-      </p>
+      <header>
+        <h2 style={{ margin: 0 }}>Configure Shunt</h2>
+        <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>
+          Every incoming income is automatically split by these rules.
+        </p>
+      </header>
 
-      <div className="card">
-        <SplitNode buckets={buckets} height={40 + buckets.length * 36} />
-      </div>
-
-      {buckets.map((b) => (
-        <div key={b.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: 600, color: b.color }}>{b.name}</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                className="chip"
-                aria-label={`Decrease ${b.name}`}
-                onClick={() => setBucketPct(b.id, b.pct - 5)}
-              >
-                −
-              </button>
-              <span className="numeric" style={{ width: 48, textAlign: "center", fontWeight: 700 }}>
-                {b.pct}%
+      <div className="split-cols">
+        {/* Diagram + total — sticky preview on desktop */}
+        <div className="col-side sticky-col">
+          <div className="card">
+            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Split preview</div>
+            <SplitNode buckets={buckets} height={40 + buckets.length * 36} />
+            <div
+              role="status"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: 600,
+                marginTop: 14,
+                paddingTop: 12,
+                borderTop: "1px solid #1f2732",
+                color: valid ? "var(--color-accent-primary)" : "#ffb4ab",
+              }}
+            >
+              <span>Total allocation</span>
+              <span className="numeric">
+                {total}% {valid ? "✓" : total > 100 ? `(${total - 100}% over)` : `(${100 - total}% short)`}
               </span>
-              <button
-                className="chip"
-                aria-label={`Increase ${b.name}`}
-                onClick={() => setBucketPct(b.id, b.pct + 5)}
-              >
-                +
-              </button>
-              {!["needs", "savings", "buffer"].includes(b.id) && (
-                <button className="chip" aria-label={`Remove ${b.name}`} onClick={() => removeBucket(b.id)}>
-                  ✕
+            </div>
+          </div>
+        </div>
+
+        {/* Sliders + timelock + save */}
+        <div className="col-main">
+          {buckets.map((b) => (
+            <div key={b.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600, color: b.color }}>{b.name}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    className="chip"
+                    aria-label={`Decrease ${b.name}`}
+                    onClick={() => setBucketPct(b.id, b.pct - 5)}
+                  >
+                    −
+                  </button>
+                  <span className="numeric" style={{ width: 48, textAlign: "center", fontWeight: 700 }}>
+                    {b.pct}%
+                  </span>
+                  <button
+                    className="chip"
+                    aria-label={`Increase ${b.name}`}
+                    onClick={() => setBucketPct(b.id, b.pct + 5)}
+                  >
+                    +
+                  </button>
+                  {!["needs", "savings", "buffer"].includes(b.id) && (
+                    <button className="chip" aria-label={`Remove ${b.name}`} onClick={() => removeBucket(b.id)}>
+                      ✕
+                    </button>
+                  )}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={b.pct}
+                aria-label={`${b.name} percent`}
+                onChange={(e) => setBucketPct(b.id, Number(e.target.value))}
+              />
+            </div>
+          ))}
+
+          <button className="btn-ghost" onClick={addBucket}>
+            + Add lane
+          </button>
+
+          <div className="card" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 14 }}>Savings timelock</span>
+            <span style={{ display: "flex", gap: 6 }}>
+              {LOCK_OPTIONS.map((o) => (
+                <button
+                  key={o.secs}
+                  className={`chip${lockSecs === o.secs ? " active" : ""}`}
+                  onClick={() => setLockSecs(o.secs)}
+                >
+                  {o.label}
                 </button>
-              )}
+              ))}
             </span>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={b.pct}
-            aria-label={`${b.name} percent`}
-            onChange={(e) => setBucketPct(b.id, Number(e.target.value))}
-          />
+
+          <button className="btn-primary" disabled={!valid || busy} onClick={onSave}>
+            {busy ? "Saving…" : "Save rules"}
+          </button>
+          {err && (
+            <p role="alert" className="muted" style={{ fontSize: 13, margin: 0 }}>
+              {err}
+            </p>
+          )}
         </div>
-      ))}
-
-      <button className="btn-ghost" onClick={addBucket}>
-        + Add lane
-      </button>
-
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 14 }}>Savings timelock</span>
-        <span style={{ display: "flex", gap: 6 }}>
-          {LOCK_OPTIONS.map((o) => (
-            <button
-              key={o.secs}
-              className={`chip${lockSecs === o.secs ? " active" : ""}`}
-              onClick={() => setLockSecs(o.secs)}
-            >
-              {o.label}
-            </button>
-          ))}
-        </span>
       </div>
-
-      <div
-        role="status"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontWeight: 600,
-          color: valid ? "var(--color-accent-primary)" : "#ffb4ab",
-        }}
-      >
-        <span>Total allocation</span>
-        <span>
-          {total}% {valid ? "✓" : total > 100 ? `(${total - 100}% over)` : `(${100 - total}% short)`}
-        </span>
-      </div>
-
-      <button className="btn-primary" disabled={!valid || busy} onClick={onSave}>
-        {busy ? "Saving…" : "Save rules"}
-      </button>
-      {err && (
-        <p role="alert" className="muted" style={{ fontSize: 13 }}>
-          {err}
-        </p>
-      )}
     </div>
   );
 }

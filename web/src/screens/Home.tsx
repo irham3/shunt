@@ -33,7 +33,7 @@ export function Home() {
     <div className="screen">
       <header>
         <div className="muted" style={{ fontSize: 13 }}>Total value</div>
-        <div className="numeric" style={{ fontSize: 40, fontWeight: 700 }}>
+        <div className="numeric" style={{ fontSize: "clamp(36px, 5vw, 48px)", fontWeight: 700, lineHeight: 1.1 }}>
           ${fmtUsdc(total)}
         </div>
         <div className="muted" style={{ fontSize: 14 }}>
@@ -54,61 +54,68 @@ export function Home() {
         </button>
       )}
 
-      <section className="card">
-        <AllocationBar buckets={buckets} />
-      </section>
+      {/* Desktop: allocation + buckets left, activity right. Mobile: stacked. */}
+      <div className="split-cols">
+        <div className="col-main">
+          <section className="card">
+            <AllocationBar buckets={buckets} />
+          </section>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {buckets.map((b) => (
-          <Link
-            key={b.id}
-            to={b.id === "savings" ? "/savings" : b.id === "needs" ? "/send" : "/shunt"}
-            className="card"
-            style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "inherit" }}
-          >
-            <span
-              aria-hidden
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 12,
-                background: b.color,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--color-text-on-accent)",
-                fontWeight: 700,
-              }}
-            >
-              {b.name[0]}
-            </span>
-            <span style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600 }}>{b.name}</div>
-              <div className="muted" style={{ fontSize: 12 }}>{b.pct}% of each income</div>
-            </span>
-            <span className="numeric" style={{ fontWeight: 600 }}>${fmtUsdc(bucketBalance(b.id))}</span>
-          </Link>
-        ))}
-      </section>
-
-      <section>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <h3 style={{ margin: "4px 0" }}>Recent activity</h3>
-          <Link to="/activity" className="muted" style={{ fontSize: 13 }}>All →</Link>
+          <section className="bucket-grid">
+            {buckets.map((b) => (
+              <Link
+                key={b.id}
+                to={b.id === "savings" ? "/savings" : b.id === "needs" ? "/send" : "/shunt"}
+                className="card"
+                style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, textDecoration: "none", color: "inherit" }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    background: b.color,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--color-text-on-accent)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {b.name[0]}
+                </span>
+                <span>
+                  <div style={{ fontWeight: 600 }}>{b.name}</div>
+                  <div className="muted" style={{ fontSize: 12 }}>{b.pct}% of each income</div>
+                </span>
+                <span className="numeric" style={{ fontWeight: 600, fontSize: 20 }}>${fmtUsdc(bucketBalance(b.id))}</span>
+              </Link>
+            ))}
+          </section>
         </div>
-        {activity.length === 0 ? (
-          <p className="muted" style={{ fontSize: 14 }}>
-            No activity yet. Your first USDC income will show up here.
-          </p>
-        ) : (
-          activity.slice(0, 3).map((a) => (
-            <div key={a.id} className="card" style={{ marginTop: 8, padding: 12, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 14 }}>{a.title}</span>
-              <span className="numeric muted">${fmtUsdc(a.amountUsdc)}</span>
+
+        <section className="col-side card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <h3 style={{ margin: 0, fontSize: 16 }}>Recent activity</h3>
+            <Link to="/activity" className="muted" style={{ fontSize: 13 }}>All →</Link>
+          </div>
+          {activity.length === 0 ? (
+            <p className="muted" style={{ fontSize: 14, margin: 0 }}>
+              No activity yet. Your first USDC income will show up here.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {activity.slice(0, 5).map((a) => (
+                <div key={a.id} style={{ padding: "11px 0", borderBottom: "1px solid #1f2732", display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ fontSize: 14, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</span>
+                  <span className="numeric muted">${fmtUsdc(a.amountUsdc)}</span>
+                </div>
+              ))}
             </div>
-          ))
-        )}
-      </section>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

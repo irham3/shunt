@@ -24,6 +24,8 @@
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
   --tap-target: 44px;
   --app-column: 390px;
+  --rail-width: 240px;
+  --content-max: 1080px;
 }
 
 * {
@@ -98,8 +100,10 @@ button {
   color: var(--color-text-secondary);
 }
 
-/* App shell: centered mobile column below 1024px, left rail at >=1024px
-   (DESIGN.md §3 decision: explicit 1024px breakpoint) */
+/* ============ App shell ============
+   Mobile (<1024px): centered single column + bottom tab bar.
+   Desktop (>=1024px): fixed left rail + wide content area with
+   multi-column screens (see .split-cols helpers below). */
 .app-shell {
   min-height: 100dvh;
   display: flex;
@@ -115,7 +119,9 @@ button {
 
 @media (min-width: 1024px) {
   .app-shell {
-    margin-left: calc(50% - var(--app-column) / 2 + 60px);
+    /* full-width shell offset past the rail — no more centered phone column */
+    max-width: none;
+    margin: 0 0 0 var(--rail-width);
     padding-bottom: 24px;
   }
   .tab-bar {
@@ -126,9 +132,20 @@ button {
     flex-direction: column;
     gap: 8px;
     position: fixed;
-    left: 24px;
-    top: 24px;
-    width: 200px;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--rail-width);
+    padding: 24px 14px;
+    border-right: 1px solid #1f2732;
+    background: #0d1218;
+  }
+  .screen {
+    width: 100%;
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 32px 40px;
+    gap: 20px;
   }
 }
 
@@ -138,6 +155,47 @@ button {
   flex-direction: column;
   gap: 16px;
   flex: 1;
+  width: 100%;
+}
+
+/* ============ Responsive multi-column helpers ============
+   Intrinsically responsive: side-by-side when there is room,
+   stacked single column on narrow viewports — no extra media queries. */
+.split-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+.col-main {
+  flex: 1.4 1 400px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.col-side {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bucket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 14px;
+}
+.dest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 10px;
+}
+@media (min-width: 1024px) {
+  .sticky-col {
+    position: sticky;
+    top: 24px;
+  }
 }
 
 .tab-bar {
@@ -168,6 +226,7 @@ button {
   border-radius: 12px;
 }
 .rail-item {
+  flex: none;
   flex-direction: row;
   justify-content: flex-start;
   gap: 12px;
@@ -177,6 +236,7 @@ button {
 .tab-item.active,
 .rail-item.active {
   color: var(--color-accent-primary);
+  background: var(--color-bg-elevated);
 }
 
 .toast {

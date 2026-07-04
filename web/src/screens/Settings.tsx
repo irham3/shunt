@@ -75,7 +75,7 @@ export function Settings() {
       </section>
 
       <div className="muted" style={{ textAlign: "center", fontSize: 12 }}>
-        Shunt v0.1.0 — APAC Stellar Hackathon 2026
+        Shunt v0.1.0 — non-custodial, built on Stellar
       </div>
     </div>
   );
