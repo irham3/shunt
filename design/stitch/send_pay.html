@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .circuit-trace {
+            background-image: radial-gradient(circle at 2px 2px, rgba(190, 242, 100, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+        .glass-card {
+            background: #141A21;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-input:focus-within {
+            box-shadow: 0 0 12px rgba(190, 242, 100, 0.2);
+            border-color: #BEF264;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#101419",
+                        "primary-container": "#bef264",
+                        "on-surface-variant": "#c3c9b2",
+                        "on-primary": "#233600",
+                        "on-primary-container": "#4b6e00",
+                        "secondary": "#7bd0ff",
+                        "on-surface": "#e0e2ea",
+                        "primary": "#fefff1",
+                        "background": "#0B0F14",
+                        "surface": "#141A21",
+                        "surface-container": "#1c2025"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "1", "fontWeight": "600"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen circuit-trace">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md px-4 h-16 flex justify-between items-center border-b border-white/5">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors active:scale-90">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-primary">Kirim &amp; Bayar</h1>
+</div>
+<button class="p-2">
+<span class="material-symbols-outlined text-on-surface-variant">info</span>
+</button>
+</header>
+<main class="pt-20 pb-32 px-4 max-w-md mx-auto space-y-6">
+<!-- Source Selection -->
+<section>
+<p class="text-on-surface-variant font-label-md uppercase mb-3 px-1 tracking-wider">Sumber Dana</p>
+<div class="glass-card rounded-xl p-4 flex items-center justify-between group cursor-pointer hover:border-primary-container/30 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container">account_balance_wallet</span>
+</div>
+<div>
+<p class="font-body-md font-semibold text-primary">Dari Kebutuhan</p>
+<p class="text-body-sm text-on-surface-variant">Saldo: 1.250,50 USDC</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary-container transition-colors">expand_more</span>
+</div>
+</section>
+<!-- Destination Type Selection -->
+<section>
+<p class="text-on-surface-variant font-label-md uppercase mb-3 px-1 tracking-wider">Tujuan Pengiriman</p>
+<div class="grid grid-cols-3 gap-3">
+<button class="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary-container/50 transition-all active:scale-95 group">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center group-hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined text-secondary">account_balance</span>
+</div>
+<span class="text-label-md text-center">Transfer Bank</span>
+</button>
+<button class="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary-container/50 transition-all active:scale-95 group">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center group-hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined text-secondary">account_balance_wallet</span>
+</div>
+<span class="text-label-md text-center">E-wallet</span>
+</button>
+<button class="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary-container/50 transition-all active:scale-95 group">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center group-hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined text-secondary">receipt_long</span>
+</div>
+<span class="text-label-md text-center">Tagihan</span>
+</button>
+</div>
+</section>
+<!-- Amount Input -->
+<section class="space-y-4">
+<div class="glass-card rounded-2xl p-6 glow-input transition-all">
+<div class="flex justify-between items-center mb-4">
+<span class="font-label-md text-on-surface-variant">Jumlah Kirim</span>
+<button class="text-primary-container text-label-md hover:underline">MAX</button>
+</div>
+<div class="flex items-end gap-2 mb-2">
+<input class="bg-transparent border-none p-0 text-4xl font-headline-lg w-full focus:ring-0 text-primary placeholder-on-surface-variant/30" id="usdcAmount" oninput="convertCurrency()" placeholder="0.00" type="number"/>
+<span class="text-headline-md font-headline-md mb-1 text-primary-container">USDC</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">swap_vert</span>
+<p class="font-body-md">≈ Rp <span id="idrConversion">0</span></p>
+</div>
+</div>
+</section>
+<!-- Transaction Details Breakdown -->
+<section class="glass-card rounded-xl overflow-hidden">
+<div class="p-4 space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-body-sm text-on-surface-variant">Kurs Tukar</span>
+<span class="font-body-sm font-medium text-on-surface">1 USDC = Rp 15.720</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-sm text-on-surface-variant">Biaya Transaksi</span>
+<div class="text-right">
+<span class="font-body-sm font-medium text-primary-container">Gratis</span>
+<p class="text-[10px] text-on-surface-variant">Kirim pertama bulan ini</p>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-high/30 p-3 flex gap-3 border-t border-white/5">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">info</span>
+<p class="text-body-sm text-on-surface-variant italic">
+                    Dikirim via <span class="text-primary">anchor</span> — kurs &amp; biaya ditampilkan sebelum konfirmasi.
+                </p>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Component (BottomNavBar Filtered out as this is task-focused) -->
+<!-- Floating Action Button Area / CTA -->
+<div class="fixed bottom-0 w-full p-4 bg-gradient-to-t from-background via-background/90 to-transparent">
+<button class="w-full bg-primary-container text-on-primary py-4 rounded-xl font-headline-md text-headline-md hover:opacity-90 active:scale-95 transition-all shadow-[0_0_20px_rgba(190,242,100,0.15)] flex items-center justify-center gap-2">
+            Lanjutkan
+            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<script>
+        const rate = 15720;
+        const usdcInput = document.getElementById('usdcAmount');
+        const idrOutput = document.getElementById('idrConversion');
+
+        function convertCurrency() {
+            const amount = parseFloat(usdcInput.value) || 0;
+            const converted = (amount * rate).toLocaleString('id-ID');
+            idrOutput.textContent = converted;
+        }
+
+        // Simple animation logic for input
+        usdcInput.addEventListener('focus', () => {
+            usdcInput.parentElement.parentElement.classList.add('border-primary-container/50');
+        });
+
+        usdcInput.addEventListener('blur', () => {
+            usdcInput.parentElement.parentElement.classList.remove('border-primary-container/50');
+        });
+    </script>
+</body></html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Inter:wght@300..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#101419",
+                        "secondary-container": "#00a6e0",
+                        "primary": "#fefff1",
+                        "on-background": "#e0e2ea",
+                        "outline-variant": "#434938",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#bff365",
+                        "on-primary": "#233600",
+                        "on-error": "#690005",
+                        "inverse-primary": "#476800",
+                        "on-surface-variant": "#c3c9b2",
+                        "outline": "#8d937e",
+                        "on-surface": "#e0e2ea",
+                        "surface-container-high": "#262a30",
+                        "surface-container": "#1c2025",
+                        "surface": "#101419",
+                        "secondary": "#7bd0ff",
+                        "on-tertiary-fixed": "#261a00",
+                        "primary-fixed-dim": "#a4d64c",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-container": "#4b6e00",
+                        "surface-container-highest": "#31353b",
+                        "secondary-fixed": "#c4e7ff",
+                        "primary-container": "#bef264",
+                        "surface-tint": "#a4d64c",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "on-tertiary": "#402d00",
+                        "secondary-fixed-dim": "#7bd0ff",
+                        "tertiary-fixed": "#ffdf9f",
+                        "surface-variant": "#31353b",
+                        "on-primary-fixed-variant": "#354e00",
+                        "on-primary-fixed": "#131f00",
+                        "on-secondary-fixed": "#001e2c",
+                        "error": "#ffb4ab",
+                        "surface-container-lowest": "#0a0e13",
+                        "on-tertiary-container": "#7f5e00",
+                        "tertiary-fixed-dim": "#f9bd22",
+                        "background": "#101419",
+                        "surface-container-low": "#181c21",
+                        "on-secondary-container": "#00374d",
+                        "on-secondary": "#00354a",
+                        "inverse-on-surface": "#2d3136",
+                        "tertiary-container": "#ffdd9a",
+                        "tertiary": "#fffdff",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "surface-bright": "#36393f",
+                        "inverse-surface": "#e0e2ea"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "lg": "24px",
+                        "gutter": "16px",
+                        "sm": "12px",
+                        "margin-mobile": "16px",
+                        "md": "16px",
+                        "margin-desktop": "32px",
+                        "base": "8px",
+                        "max-width": "1200px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "mono-data": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "headline-xl": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0b0f14;
+            color: #e0e2ea;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glow-active {
+            box-shadow: 0px 0px 12px rgba(191, 243, 101, 0.2);
+        }
+        .chart-container {
+            background-image: radial-gradient(circle at 100% 0%, rgba(191, 243, 101, 0.05) 0%, transparent 70%);
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md">
+<!-- Top App Bar -->
+<header class="w-full top-0 sticky z-50 bg-background/80 backdrop-blur-md border-b border-white/10 px-md py-sm flex justify-between items-center h-16">
+<div class="flex items-center gap-4">
+<button class="active:scale-95 duration-150 ease-in-out hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary-fixed">arrow_back_ios</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">Tabungan</h1>
+</div>
+<button class="active:scale-95 duration-150 ease-in-out hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+</header>
+<main class="px-margin-mobile pt-lg pb-32 max-w-md mx-auto">
+<!-- Header Section -->
+<section class="mb-lg text-center">
+<p class="font-label-md text-label-md tracking-widest text-on-surface-variant mb-xs">TOTAL SALDO TERKUNCI</p>
+<h2 class="font-headline-xl text-headline-xl font-bold text-primary-fixed tracking-tighter">$312.50</h2>
+</section>
+<!-- Currency Toggles -->
+<section class="flex gap-2 mb-lg overflow-x-auto scrollbar-hide">
+<button class="bg-primary-container text-on-primary-container px-6 py-2 rounded-full font-label-md text-label-md glow-active">USD</button>
+<button class="bg-surface-container border border-white/10 text-on-surface-variant px-6 py-2 rounded-full font-label-md text-label-md">IDR</button>
+<button class="bg-surface-container-low border border-white/5 text-on-surface-variant/30 px-6 py-2 rounded-full font-label-md text-label-md flex items-center gap-2 cursor-not-allowed">
+                Emas <span class="material-symbols-outlined text-xs">lock</span>
+</button>
+</section>
+<!-- Growth Card -->
+<div class="bg-surface-container rounded-xl p-md border border-white/10 mb-md relative overflow-hidden chart-container">
+<div class="flex justify-between items-start mb-md">
+<div>
+<h3 class="font-headline-md text-headline-md mb-1">Pertumbuhan Vault</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Data real-time 2020-2025</p>
+</div>
+<span class="flex items-center gap-1 text-primary-fixed font-mono-data bg-primary-container/10 px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                    +12.4%
+                </span>
+</div>
+<div class="w-full aspect-[16/9] mt-2 relative">
+<img class="w-full h-full object-contain" data-alt="A futuristic and minimal line graph showing an upward exponential growth curve in electric lime color against a deep obsidian background with subtle grid lines. The aesthetic is high-tech fintech with a soft cyan glow beneath the growth line. Professional, clean, and data-driven visualization for a premium mobile app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIjJTMYGuLeMnHna4jNKuYSRAYX8o6qE8KkM5OUNPIQemK-2IBrw3pBUqbUW18lEZnEw8_8h9CVf9fqT-2kVVU-KhSPOe6eYO1-fTRbMazV9TrpE8NBjCV567Qn58za6wXOhEKS9xLFugyB1eKY3te8XdBTaaMMkoChAl07dRxF2axjJZbjb8efTFAvLOT2u7NFVPrNI4ILRfni9c1Hl0cK7GJ_JD-r6V8K6tC1M5XLDwUhFwYKB1JQIddamlOJbs6ipp-3DCQ_vcC"/>
+</div>
+</div>
+<!-- Timelock Card -->
+<div class="bg-primary-container/10 border border-primary-fixed/20 rounded-xl p-md mb-md flex items-center gap-4">
+<div class="bg-primary-fixed/20 p-3 rounded-xl">
+<span class="material-symbols-outlined text-primary-fixed" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary-fixed">Timelock Aktif</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Terkunci hingga <span class="text-on-surface font-semibold">12 Des 2025</span></p>
+</div>
+</div>
+<!-- Info Section -->
+<div class="space-y-4 mb-lg">
+<div class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-primary-fixed text-lg mt-1">check_circle</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Disimpan dalam nilai keras — tahan depresiasi rupiah.</p>
+</div>
+<div class="flex gap-3 items-start bg-error-container/10 border border-error/10 p-sm rounded-lg">
+<span class="material-symbols-outlined text-error text-lg">warning</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Penalti penarikan awal <span class="text-error font-semibold">10%</span> akan dialokasikan ke Buffer.</p>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex gap-4">
+<button class="flex-1 border border-primary-fixed text-primary-fixed py-4 rounded-xl font-headline-md text-headline-md active:scale-95 duration-150 transition-all hover:bg-primary-fixed/5">
+                Tarik
+            </button>
+<button class="flex-1 border border-primary-fixed text-primary-fixed py-4 rounded-xl font-headline-md text-headline-md active:scale-95 duration-150 transition-all hover:bg-primary-fixed/5">
+                Ubah tujuan
+            </button>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-surface-container border-t border-white/10 px-sm pb-8 pt-2 flex justify-around items-center rounded-t-xl shadow-[0px_-4px_12px_rgba(190,242,100,0.05)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">splitscreen</span>
+<span class="font-label-md text-label-md mt-1">Shunt</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container/20 text-primary-fixed rounded-full px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+<span class="font-label-md text-label-md mt-1">Savings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-md text-label-md mt-1">Activity</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for chips
+        document.querySelectorAll('section button').forEach(button => {
+            if(!button.classList.contains('cursor-not-allowed')) {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('section button').forEach(b => {
+                        b.classList.remove('bg-primary-container', 'text-on-primary-container', 'glow-active');
+                        b.classList.add('bg-surface-container', 'text-on-surface-variant', 'border', 'border-white/10');
+                    });
+                    this.classList.add('bg-primary-container', 'text-on-primary-container', 'glow-active');
+                    this.classList.remove('bg-surface-container', 'text-on-surface-variant', 'border', 'border-white/10');
+                });
+            }
+        });
+    </script>
+</body></html>

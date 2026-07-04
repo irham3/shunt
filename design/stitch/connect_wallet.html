@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SHUNT - Hubungkan Dompet</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Load Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "secondary-fixed": "#c4e7ff",
+                "on-tertiary-fixed-variant": "#5c4300",
+                "on-secondary-fixed-variant": "#004c69",
+                "surface-container-lowest": "#0a0e13",
+                "primary": "#fefff1",
+                "outline": "#8d937e",
+                "on-primary-fixed-variant": "#354e00",
+                "surface-variant": "#31353b",
+                "on-error-container": "#ffdad6",
+                "surface-container-low": "#181c21",
+                "on-secondary-fixed": "#001e2c",
+                "on-tertiary": "#402d00",
+                "on-surface-variant": "#c3c9b2",
+                "inverse-surface": "#e0e2ea",
+                "inverse-on-surface": "#2d3136",
+                "primary-fixed-dim": "#a4d64c",
+                "on-surface": "#e0e2ea",
+                "surface-container": "#1c2025",
+                "surface-container-highest": "#31353b",
+                "primary-container": "#bef264",
+                "inverse-primary": "#476800",
+                "surface-container-high": "#262a30",
+                "surface": "#101419",
+                "tertiary-fixed-dim": "#f9bd22",
+                "tertiary-container": "#ffdd9a",
+                "surface-bright": "#36393f",
+                "error": "#ffb4ab",
+                "on-secondary": "#00354a",
+                "on-background": "#e0e2ea",
+                "primary-fixed": "#bff365",
+                "on-primary-fixed": "#131f00",
+                "background": "#101419",
+                "error-container": "#93000a",
+                "secondary": "#7bd0ff",
+                "surface-dim": "#101419",
+                "on-primary": "#233600",
+                "surface-tint": "#a4d64c",
+                "on-tertiary-fixed": "#261a00",
+                "on-primary-container": "#4b6e00",
+                "on-secondary-container": "#00374d",
+                "outline-variant": "#434938",
+                "secondary-container": "#00a6e0",
+                "tertiary-fixed": "#ffdf9f",
+                "on-error": "#690005",
+                "secondary-fixed-dim": "#7bd0ff",
+                "on-tertiary-container": "#7f5e00",
+                "tertiary": "#fffdff"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "sm": "12px",
+                "max-width": "1200px",
+                "lg": "24px",
+                "margin-mobile": "16px",
+                "gutter": "16px",
+                "base": "8px",
+                "margin-desktop": "32px",
+                "xs": "4px",
+                "md": "16px",
+                "xl": "40px"
+            },
+            "fontFamily": {
+                "body-sm": ["Inter"],
+                "headline-lg-mobile": ["Space Grotesk"],
+                "body-md": ["Inter"],
+                "headline-md": ["Space Grotesk"],
+                "headline-xl": ["Space Grotesk"],
+                "body-lg": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-lg": ["Space Grotesk"],
+                "mono-data": ["Space Grotesk"]
+            },
+            "fontSize": {
+                "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0B0F14;
+            color: #e0e2ea;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .circuit-bg {
+            background-image: radial-gradient(circle at 50% 50%, rgba(190, 242, 100, 0.05) 0%, transparent 70%);
+            position: relative;
+            overflow: hidden;
+        }
+        .glow-hover:hover {
+            box-shadow: 0px 0px 12px rgba(190, 242, 100, 0.2);
+        }
+        .card-border {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky flex justify-between items-center px-md py-sm w-full bg-background dark:bg-background z-50">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary dark:text-primary">grid_view</span>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tighter text-primary dark:text-primary">SHUNT</h1>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-white/10 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">person</span>
+</div>
+</header>
+<main class="flex-grow flex flex-col items-center px-margin-mobile md:px-margin-desktop py-xl">
+<!-- Hero Visual Section -->
+<div class="relative w-full max-w-[600px] aspect-square flex items-center justify-center mb-xl">
+<!-- Background Image Reference Replacement -->
+<div class="absolute inset-0 z-0 opacity-40 md:opacity-60" data-alt="A sophisticated dark tech visual featuring electric blue, lime green, and amber circuit traces that split from a single node and diverge into futuristic isometric icons. The background is a deep navy obsidian with micro-precision glowing lines, creating a high-end fintech atmosphere of security and advanced financial control." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBP3lq1txd3kOa4l2jZyIdpLRj5OeBwM143qqq-HFX9BhNEq5WoSagDX38ZnRu3V-xxCI1P-Igc0g88vjN_ec71ZSnxI3UnSa-vZujduH7IigSCCj7PWrML35c0uWDIMLuFMGi0nHtvTmNnfag3Bl9BfiQXiGoT9kx5uJZNNW1wCNiB9k1QnVScXb7meGHuZN7YD_z0h83pEfekCeGXl-mb7xcM4FkPUGl6aVsAi2twVZWYwaw1HsFZB7OBCctkds5LcKMYpmnnQ02s')">
+</div>
+<div class="relative z-10 text-center space-y-md">
+<div class="inline-flex items-center justify-center p-sm bg-primary-container/10 border border-primary-container/20 rounded-full mb-md animate-pulse">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<h2 class="font-headline-xl text-headline-xl text-primary leading-none tracking-tight">MULAI INVESTASI CERDAS</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xs mx-auto">Mudah, Aman, Terpercaya</p>
+</div>
+</div>
+<!-- Connection Card -->
+<section class="w-full max-w-md bg-surface-container rounded-xl p-lg card-border shadow-2xl relative z-20">
+<div class="space-y-lg">
+<!-- Primary Action -->
+<button class="w-full py-md bg-primary-container text-background font-bold rounded-xl flex items-center justify-center gap-sm transition-all hover:scale-[1.02] active:scale-95 glow-hover">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md">HUBUNGKAN FREIGHTER</span>
+</button>
+<!-- Secondary Action -->
+<button class="w-full py-md border border-primary-container/30 text-primary-container font-semibold rounded-xl flex items-center justify-center gap-sm hover:bg-primary-container/5 transition-colors">
+<span class="material-symbols-outlined text-sm">edit</span>
+<span class="text-sm">Masukkan alamat Stellar secara manual</span>
+</button>
+<!-- Security Note -->
+<div class="flex items-center justify-center gap-xs text-on-surface-variant/70 text-xs">
+<span class="material-symbols-outlined text-sm">lock</span>
+<span class="font-body-sm text-body-sm">Non-custodial — kunci tetap milikmu.</span>
+</div>
+</div>
+</section>
+<!-- Trust Badges -->
+<section class="mt-xl flex flex-wrap justify-center gap-lg">
+<div class="flex items-center gap-sm px-md py-sm bg-surface-container-low/50 rounded-lg border border-white/5">
+<div class="w-6 h-6 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">stars</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Powered by</span>
+<span class="font-mono-data text-mono-data text-on-surface">Stellar</span>
+</div>
+</div>
+<div class="flex items-center gap-sm px-md py-sm bg-surface-container-low/50 rounded-lg border border-white/5">
+<div class="w-6 h-6 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Stable Assets</span>
+<span class="font-mono-data text-mono-data text-on-surface">USDC Secure</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Space for Bottom Nav -->
+<div class="h-24"></div>
+<!-- BottomNavBar (Shell Visibility: Home inactive for setup) -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-surface-container-low dark:bg-surface-container-low border-t border-white/5 shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home_app_logo</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">alt_route</span>
+<span class="font-label-md text-label-md">Shunt</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Savings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for the primary button
+        const connectBtn = document.querySelector('button.bg-primary-container');
+        if (connectBtn) {
+            connectBtn.addEventListener('mousedown', () => {
+                connectBtn.classList.add('scale-95');
+            });
+            connectBtn.addEventListener('mouseup', () => {
+                connectBtn.classList.remove('scale-95');
+            });
+        }
+    </script>
+</body></html>

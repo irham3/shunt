@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shunt - Home Dashboard</title>
+<!-- Fonts and Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#31353b",
+                    "secondary-fixed": "#c4e7ff",
+                    "primary-container": "#bef264",
+                    "on-primary-container": "#4b6e00",
+                    "secondary": "#7bd0ff",
+                    "on-tertiary-fixed": "#261a00",
+                    "primary-fixed-dim": "#a4d64c",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-high": "#262a30",
+                    "surface-container": "#1c2025",
+                    "surface": "#101419",
+                    "outline": "#8d937e",
+                    "on-surface": "#e0e2ea",
+                    "on-surface-variant": "#c3c9b2",
+                    "surface-dim": "#101419",
+                    "secondary-container": "#00a6e0",
+                    "primary": "#fefff1",
+                    "on-background": "#e0e2ea",
+                    "outline-variant": "#434938",
+                    "error-container": "#93000a",
+                    "primary-fixed": "#bff365",
+                    "on-primary": "#233600",
+                    "on-error": "#690005",
+                    "inverse-primary": "#476800",
+                    "on-secondary-fixed-variant": "#004c69",
+                    "surface-bright": "#36393f",
+                    "inverse-surface": "#e0e2ea",
+                    "inverse-on-surface": "#2d3136",
+                    "tertiary-container": "#ffdd9a",
+                    "tertiary": "#fffdff",
+                    "on-secondary": "#00354a",
+                    "surface-container-low": "#181c21",
+                    "on-secondary-container": "#00374d",
+                    "surface-container-lowest": "#0a0e13",
+                    "on-tertiary-container": "#7f5e00",
+                    "tertiary-fixed-dim": "#f9bd22",
+                    "background": "#101419",
+                    "on-primary-fixed-variant": "#354e00",
+                    "on-primary-fixed": "#131f00",
+                    "on-secondary-fixed": "#001e2c",
+                    "error": "#ffb4ab",
+                    "secondary-fixed-dim": "#7bd0ff",
+                    "tertiary-fixed": "#ffdf9f",
+                    "surface-variant": "#31353b",
+                    "surface-tint": "#a4d64c",
+                    "on-tertiary-fixed-variant": "#5c4300",
+                    "on-tertiary": "#402d00",
+                    "amber-accent": "#f9bd22",
+                    "blue-accent": "#00a6e0",
+                    "lime-accent": "#bef264"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "max-width": "1200px",
+                    "xl": "40px",
+                    "gutter": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "sm": "12px",
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "base": "8px",
+                    "margin-desktop": "32px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Space Grotesk"],
+                    "headline-xl": ["Space Grotesk"],
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "mono-data": ["Space Grotesk"],
+                    "headline-md": ["Space Grotesk"],
+                    "headline-lg": ["Space Grotesk"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0B0F14;
+            color: #e0e2ea;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .circuit-bg {
+            background-image: radial-gradient(circle at 50% 50%, rgba(190, 242, 100, 0.05) 0%, transparent 70%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+        .card-outline {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glossy-toast {
+            background: rgba(190, 242, 100, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(190, 242, 100, 0.2);
+        }
+        .custom-shadow {
+            box-shadow: 0 8px 32px -4px rgba(0,0,0,0.5);
+        }
+        .active-glow {
+            box-shadow: 0px 0px 12px rgba(190, 242, 100, 0.2);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md overflow-x-hidden pb-24">
+<!-- Top AppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-4 h-16">
+<div class="flex items-center gap-2">
+<span class="font-headline-lg text-headline-lg font-bold text-primary-fixed tracking-tight">Shunt</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity">notifications</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest border border-white/10">
+<img class="w-full h-full object-cover" data-alt="A professional close-up studio portrait of a young tech-savvy Indonesian entrepreneur with a friendly smile, clean minimalist lighting, wearing a dark turtleneck. High-end photography style with soft bokeh background and cool color tones to match the obsidian fintech brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgSGFqX7Bd92Xmw7cbF94w847kkxr4Jpy6ez8N-BPkk83aJHktW5obKBNlC8sN9z_xkHrHCkRVbIxNs6I_4om7alICry3j24M3HU_Gs7QjdZyCvw6myhCN_s-DoX-6Fw4ZndQhA7Z1qkT2K2dyhxYv4JL8-agW4_0zmWeoP7PkvPegre9ofY7-pI4Z9V5Lu-7AuVlEbyJW27HGSM48eYOvGow0C9FO9M3bK6SARUS5zRDO4LVWf7p6urju7gOTy5PyGuB3Ew0-zaJ8"/>
+</div>
+</div>
+</header>
+<main class="pt-20 px-4 max-w-md mx-auto relative min-h-screen">
+<!-- Background Motif -->
+<div class="circuit-bg overflow-hidden flex items-center justify-center">
+<div class="w-full h-full opacity-20 bg-center bg-no-repeat bg-contain transform -translate-y-20" data-alt="A highly detailed, futuristic digital illustration of intricate circuit trace paths glowing in amber, lime green, and electric blue on a deep obsidian black background. The traces converge and split at a central node, echoing high-tech financial data flow. The style is ultra-modern, featuring sharp lines, soft light blooms, and a sense of depth and complex interconnection." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCH055iXSUEI-ZkbQ5gK60YyLjkGCN-9dLeuno6oqmQT2lWVZaHR-FjwNfDNgNoxSNZvh3g6wCw8RfMTXdhqvgsrG43244Hk9gG9t6iZ5ensDhYXjqsALIBc8U0_YtW5TQDR1QCK-uGA-gW9cnUjegmT-LtMFEt6sSpin4-RAc-SlQK-w-qx0BgD3aolb1pl3kF0haYJSnoVR1bgYOf3dp_ozAUbXTjgwoSygK4ITiEgoJUaQy6Y-HvyG9B8lfbq7Fnf9stzbRUbaOU')"></div>
+</div>
+<!-- Success Toast -->
+<div class="mb-6 flex items-center gap-3 p-4 rounded-xl glossy-toast animate-pulse" id="toast">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-primary-container">TRANSAKSI BERHASIL</span>
+<span class="font-body-sm text-body-sm text-primary">Income masuk - dibagi otomatis</span>
+</div>
+</div>
+<!-- Hero Section -->
+<section class="mb-8 flex flex-col items-center text-center">
+<h2 class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-widest">Total Portofolio</h2>
+<div class="font-headline-xl text-headline-xl text-primary flex items-baseline gap-1">
+<span class="text-headline-md opacity-70">$</span>1,250.00
+            </div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">
+                ≈ Rp 19.650.000
+            </p>
+</section>
+<!-- Allocation Visualization -->
+<section class="mb-8">
+<div class="flex justify-between items-end mb-3">
+<h3 class="font-headline-md text-headline-md text-primary">Alokasi Pendapatan</h3>
+<span class="font-label-md text-label-md text-on-surface-variant">Update: Baru saja</span>
+</div>
+<div class="w-full h-3 bg-surface-container-high rounded-full flex overflow-hidden">
+<div class="h-full bg-amber-accent" style="width: 60%"></div>
+<div class="h-full bg-lime-accent" style="width: 25%"></div>
+<div class="h-full bg-blue-accent" style="width: 15%"></div>
+</div>
+<div class="mt-4 grid grid-cols-3 gap-2">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-amber-accent"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">60% Kebutuhan</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-lime-accent"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">25% Tabungan</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-blue-accent"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">15% Buffer</span>
+</div>
+</div>
+</section>
+<!-- Bucket Cards Grid -->
+<section class="grid grid-cols-1 gap-4 mb-8">
+<!-- Card: Kebutuhan -->
+<div class="bg-surface-container rounded-xl p-4 card-outline flex items-center justify-between group active:scale-95 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-amber-accent/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-accent text-3xl">shopping_cart</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md text-primary">Kebutuhan</h4>
+<p class="font-label-md text-label-md text-on-surface-variant">60% Alokasi</p>
+</div>
+</div>
+<div class="text-right">
+<div class="font-headline-md text-headline-md text-primary">$750.00</div>
+<p class="font-label-md text-label-md text-amber-accent">+2.4% bln ini</p>
+</div>
+</div>
+<!-- Card: Tabungan -->
+<div class="bg-surface-container rounded-xl p-4 card-outline flex items-center justify-between active:scale-95 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-lime-accent/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-lime-accent text-3xl" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md text-primary">Tabungan</h4>
+<p class="font-label-md text-label-md text-on-surface-variant">25% Alokasi</p>
+</div>
+</div>
+<div class="text-right">
+<div class="font-headline-md text-headline-md text-primary">$312.50</div>
+<p class="font-label-md text-label-md text-lime-accent">Target 80%</p>
+</div>
+</div>
+<!-- Card: Buffer -->
+<div class="bg-surface-container rounded-xl p-4 card-outline flex items-center justify-between active:scale-95 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-blue-accent/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-accent text-3xl">shield</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md text-primary">Buffer</h4>
+<p class="font-label-md text-label-md text-on-surface-variant">15% Alokasi</p>
+</div>
+</div>
+<div class="text-right">
+<div class="font-headline-md text-headline-md text-primary">$187.50</div>
+<p class="font-label-md text-label-md text-blue-accent">Dana Darurat</p>
+</div>
+</div>
+</section>
+<!-- Recent Activity -->
+<section class="mb-12">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-headline-md text-headline-md text-primary">Aktivitas Terbaru</h3>
+<button class="text-primary-fixed font-label-md text-label-md hover:underline">Lihat Semua</button>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-4 p-3 bg-surface-container-low rounded-xl">
+<div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl">move_to_inbox</span>
+</div>
+<div class="flex-1">
+<h5 class="font-body-md text-primary leading-tight">Deposit USDC</h5>
+<p class="font-label-md text-on-surface-variant">Success • 14:20</p>
+</div>
+<div class="font-mono-data text-primary">+$500.00</div>
+</div>
+<div class="flex items-center gap-4 p-3 bg-surface-container-low rounded-xl">
+<div class="w-10 h-10 rounded-full bg-lime-accent/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-lime-accent text-xl">auto_awesome</span>
+</div>
+<div class="flex-1">
+<h5 class="font-body-md text-primary leading-tight">Auto-split ke Tabungan</h5>
+<p class="font-label-md text-on-surface-variant">Smart Shunt • 14:21</p>
+</div>
+<div class="font-mono-data text-on-surface-variant">-$125.00</div>
+</div>
+<div class="flex items-center gap-4 p-3 bg-surface-container-low rounded-xl">
+<div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl">shopping_bag</span>
+</div>
+<div class="flex-1">
+<h5 class="font-body-md text-primary leading-tight">Tokopedia Payment</h5>
+<p class="font-label-md text-on-surface-variant">Kebutuhan • Kemarin</p>
+</div>
+<div class="font-mono-data text-on-surface-variant">-$42.10</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container border-t border-white/10 rounded-t-xl custom-shadow flex justify-around items-center h-20 pb-4">
+<!-- Beranda (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 py-1 transition-all duration-300 active:scale-90 active-glow" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md">Beranda</span>
+</a>
+<!-- Shunt -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all duration-300 active:scale-90" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-label-md text-label-md">Shunt</span>
+</a>
+<!-- Tabungan -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all duration-300 active:scale-90" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Tabungan</span>
+</a>
+<!-- Aktivitas -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all duration-300 active:scale-90" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md">Aktivitas</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for toast disappearance
+        setTimeout(() => {
+            const toast = document.getElementById('toast');
+            if(toast) {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-1000');
+                setTimeout(() => toast.style.display = 'none', 1000);
+            }
+        }, 5000);
+
+        // Simple haptic feedback simulation on interactions
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('click', () => {
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(5);
+                }
+            });
+        });
+    </script>
+</body></html>

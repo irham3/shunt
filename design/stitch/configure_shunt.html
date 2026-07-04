@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Configure Shunt - Investasi Cerdas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#c3c9b2",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#c4e7ff",
+                        "on-primary-fixed": "#131f00",
+                        "on-primary-container": "#4b6e00",
+                        "secondary-fixed-dim": "#7bd0ff",
+                        "on-secondary-container": "#00374d",
+                        "surface-container-low": "#181c21",
+                        "inverse-primary": "#476800",
+                        "surface-variant": "#31353b",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#31353b",
+                        "on-tertiary-fixed": "#261a00",
+                        "surface-container": "#1c2025",
+                        "tertiary-container": "#ffdd9a",
+                        "outline": "#8d937e",
+                        "outline-variant": "#434938",
+                        "surface": "#101419",
+                        "primary": "#fefff1",
+                        "on-tertiary": "#402d00",
+                        "background": "#101419",
+                        "on-surface": "#e0e2ea",
+                        "primary-fixed-dim": "#a4d64c",
+                        "on-secondary-fixed": "#001e2c",
+                        "on-error-container": "#ffdad6",
+                        "primary-container": "#bef264",
+                        "surface-bright": "#36393f",
+                        "tertiary-fixed": "#ffdf9f",
+                        "secondary": "#7bd0ff",
+                        "surface-tint": "#a4d64c",
+                        "tertiary-fixed-dim": "#f9bd22",
+                        "surface-dim": "#101419",
+                        "secondary-container": "#00a6e0",
+                        "primary-fixed": "#bff365",
+                        "on-tertiary-container": "#7f5e00",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#354e00",
+                        "surface-container-high": "#262a30",
+                        "on-primary": "#233600",
+                        "inverse-surface": "#e0e2ea",
+                        "tertiary": "#fffdff",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "on-secondary": "#00354a",
+                        "inverse-on-surface": "#2d3136",
+                        "surface-container-lowest": "#0a0e13",
+                        "on-background": "#e0e2ea",
+                        "electric-blue": "#7bd0ff",
+                        "amber-accent": "#f9bd22",
+                        "primary-lime": "#bef264"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "margin-desktop": "32px",
+                        "xl": "40px",
+                        "max-width": "1200px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "sm": "12px",
+                        "base": "8px",
+                        "gutter": "16px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "headline-xl": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "mono-data": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .circuit-bg {
+            background-image: radial-gradient(circle at 50% 50%, rgba(190, 242, 100, 0.03) 0%, transparent 70%);
+        }
+        .glow-lime { box-shadow: 0 0 15px rgba(190, 242, 100, 0.2); }
+        .glow-amber { box-shadow: 0 0 15px rgba(249, 189, 34, 0.2); }
+        .glow-blue { box-shadow: 0 0 15px rgba(123, 208, 255, 0.2); }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+        input[type=range].slider-amber::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%; background: #f9bd22; cursor: pointer; -webkit-appearance: none; margin-top: -6px; box-shadow: 0 0 8px #f9bd22;
+        }
+        input[type=range].slider-lime::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%; background: #bef264; cursor: pointer; -webkit-appearance: none; margin-top: -6px; box-shadow: 0 0 8px #bef264;
+        }
+        input[type=range].slider-blue::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%; background: #7bd0ff; cursor: pointer; -webkit-appearance: none; margin-top: -6px; box-shadow: 0 0 8px #7bd0ff;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen pb-32">
+<!-- Top AppBar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface border-b border-white/5 flex justify-between items-center px-md py-sm h-16">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tighter text-primary">Shunt</h1>
+</div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity">account_balance_wallet</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional minimalist 3D avatar profile of a fintech user with soft lighting and a deep obsidian background, matching the premium tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_Xy3tQOTjjpr5xYUd2gtzN80f4D_9tD6vA6KHbpaHTNT8WQT6k95Dc9lG2HsjseZGUiV-z7bdtJOEtb-Zm3VbMkaYLIlZN3Ybngm4ZHOiyh7Lgh9Wlzzqrz8MKfImkBy09NKWJwj0ZCD4z43MfV1zUDNpplCe7JRP5jq2zDbnWKBzJxmow8yYVQJx_QXKlI9RypnL6ZsiXG8srIVreX4hN9mb8hnbvAFWHKXwLMCz3LqKNi4BkBcgUTW78q-oH5OxtGGb0lQa0oVj"/>
+</div>
+</div>
+</header>
+<main class="pt-20 px-margin-mobile max-w-md mx-auto">
+<!-- Split Node Diagram -->
+<section class="relative w-full h-56 mb-8 flex flex-col items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-surface-container-lowest">
+<div class="absolute inset-0 circuit-bg opacity-40"></div>
+<div class="z-10 w-full px-lg">
+<img class="w-full h-40 object-contain drop-shadow-2xl" data-alt="A highly detailed isometric 3D render of a futuristic glass node splitting into three neon-glowing fiber-optic lanes. The top lane glows electric blue, the middle lane glows lime green, and the bottom lane glows amber orange against a dark obsidian background with faint circuit trace textures. Cinematic lighting and micro-precision details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQT-eF_5lhRDgKIRPPrSdRv-SEP-uTUXyNbX1sKX0PdI_rbDiKe3rZmNV7nlM6vfhEvBZF0t2USMX3zHPUswn8QDUJNEe2F8RnnR37FQEFAl2pYrn2Kd_-rxNphiDaEJvbNXTc3LJntmkgKp8EwmwRUu51dF6EidKdsh9hvILHrAAYjOHrdgJXWTOprjfHXToWZwes8-2W19wKplMLPECxOrxoqbcSp8xEwg95yywB9WfFub8efTyZTzfeqWv6QyUNT7rwxIubYpJZ"/>
+</div>
+<div class="text-center mt-2 z-10">
+<p class="font-headline-md text-headline-md-mobile text-primary font-bold">MULAI INVESTASI CERDAS</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Mudah, Aman, Terpercaya</p>
+</div>
+</section>
+<!-- Configuration Section -->
+<section class="space-y-gutter">
+<div class="flex justify-between items-end mb-2">
+<h2 class="font-headline-md text-headline-md text-primary">Atur Alokasi</h2>
+<div class="flex items-center gap-xs px-sm py-1 bg-primary-container/10 border border-primary-lime/20 rounded-full text-primary-lime" id="validation-pill">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-md text-label-md">Total 100%</span>
+</div>
+</div>
+<!-- Bucket: Needs (Amber) -->
+<div class="p-md bg-surface-container border border-white/5 rounded-xl hover:border-amber-accent/30 transition-colors">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-amber-accent/10 flex items-center justify-center text-amber-accent glow-amber">
+<span class="material-symbols-outlined">shopping_cart</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-amber-accent">KEBUTUHAN</p>
+<p class="font-headline-md text-headline-md font-bold text-primary">Needs</p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<button class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary-lime hover:bg-surface-container-highest" onclick="adjust('needs', -1)">-</button>
+<div class="px-3 py-1 bg-surface-container-lowest rounded-lg border border-white/10 min-w-[50px] text-center font-mono-data text-mono-data">
+<span id="needs-val">60</span>%
+                        </div>
+<button class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary-lime hover:bg-surface-container-highest" onclick="adjust('needs', 1)">+</button>
+</div>
+</div>
+<input class="w-full slider-amber" id="needs-slider" max="100" min="0" oninput="sync('needs', this.value)" type="range" value="60"/>
+</div>
+<!-- Bucket: Savings (Lime) -->
+<div class="p-md bg-surface-container border border-white/5 rounded-xl hover:border-primary-lime/30 transition-colors">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-primary-lime/10 flex items-center justify-center text-primary-lime glow-lime">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-primary-lime">TABUNGAN</p>
+<p class="font-headline-md text-headline-md font-bold text-primary">Savings</p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<button class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary-lime hover:bg-surface-container-highest" onclick="adjust('savings', -1)">-</button>
+<div class="px-3 py-1 bg-surface-container-lowest rounded-lg border border-white/10 min-w-[50px] text-center font-mono-data text-mono-data">
+<span id="savings-val">25</span>%
+                        </div>
+<button class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary-lime hover:bg-surface-container-highest" onclick="adjust('savings', 1)">+</button>
+</div>
+</div>
+<input class="w-full slider-lime" id="savings-slider" max="100" min="0" oninput="sync('savings', this.value)" type="range" value="25"/>
+</div>
+<!-- Bucket: Buffer (Blue) -->
+<div class="p-md bg-surface-container border border-white/5 rounded-xl hover:border-electric-blue/30 transition-colors">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-electric-blue/10 flex items-center justify-center text-electric-blue glow-blue">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-electric-blue">DANA DARURAT</p>
+<p class="font-headline-md text-headline-md font-bold text-primary">Buffer</p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<button class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary-lime hover:bg-surface-container-highest" onclick="adjust('buffer', -1)">-</button>
+<div class="px-3 py-1 bg-surface-container-lowest rounded-lg border border-white/10 min-w-[50px] text-center font-mono-data text-mono-data">
+<span id="buffer-val">15</span>%
+                        </div>
+<button class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary-lime hover:bg-surface-container-highest" onclick="adjust('buffer', 1)">+</button>
+</div>
+</div>
+<input class="w-full slider-blue" id="buffer-slider" max="100" min="0" oninput="sync('buffer', this.value)" type="range" value="15"/>
+</div>
+<button class="w-full py-4 border border-dashed border-white/10 text-on-surface-variant font-label-md hover:border-primary-lime/50 transition-all rounded-xl flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Tambah jalur
+            </button>
+<div class="p-md rounded-xl bg-surface-container-low border border-white/5 flex gap-sm items-start mt-4">
+<span class="material-symbols-outlined text-primary-lime text-[20px]">info</span>
+<p class="text-body-sm text-on-surface-variant italic">Tiap income masuk otomatis dibagi sesuai aturan ini.</p>
+</div>
+</section>
+</main>
+<!-- Fixed Action Footer -->
+<div class="fixed bottom-16 left-0 w-full p-margin-mobile bg-gradient-to-t from-background to-transparent pointer-events-none">
+<button class="pointer-events-auto w-full py-4 bg-primary-lime text-background font-headline-md font-bold rounded-xl active:scale-95 transition-transform shadow-[0_8px_32px_rgba(190,242,100,0.3)]">
+            Simpan aturan
+        </button>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-sm py-xs bg-surface-container border-t border-white/5 rounded-t-xl shadow-xl">
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary font-bold bg-primary/10 rounded-xl p-xs">
+<span class="material-symbols-outlined">splitscreen</span>
+<span class="font-label-md text-label-md">Shunt</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-md text-label-md">Savings</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-md text-label-md">Activity</span>
+</div>
+</nav>
+<script>
+        const state = {
+            needs: 60,
+            savings: 25,
+            buffer: 15
+        };
+
+        function updateUI() {
+            const total = state.needs + state.savings + state.buffer;
+            const validationPill = document.getElementById('validation-pill');
+            
+            document.getElementById('needs-val').innerText = state.needs;
+            document.getElementById('savings-val').innerText = state.savings;
+            document.getElementById('buffer-val').innerText = state.buffer;
+            
+            document.getElementById('needs-slider').value = state.needs;
+            document.getElementById('savings-slider').value = state.savings;
+            document.getElementById('buffer-slider').value = state.buffer;
+
+            if (total === 100) {
+                validationPill.className = "flex items-center gap-xs px-sm py-1 bg-primary-container/10 border border-primary-lime/20 rounded-full text-primary-lime";
+                validationPill.innerHTML = `<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span><span class="font-label-md text-label-md">Total 100%</span>`;
+            } else {
+                validationPill.className = "flex items-center gap-xs px-sm py-1 bg-error-container/20 border border-error/20 rounded-full text-error";
+                validationPill.innerHTML = `<span class="material-symbols-outlined text-[16px]">warning</span><span class="font-label-md text-label-md">Total ${total}%</span>`;
+            }
+        }
+
+        function sync(key, value) {
+            state[key] = parseInt(value);
+            updateUI();
+        }
+
+        function adjust(key, amount) {
+            const newVal = state[key] + amount;
+            if (newVal >= 0 && newVal <= 100) {
+                state[key] = newVal;
+                updateUI();
+            }
+        }
+
+        // Initialize UI
+        updateUI();
+    </script>
+</body></html>

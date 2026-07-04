@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shunt - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#7bd0ff",
+                        "primary": "#fefff1",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#131f00",
+                        "surface-container": "#1c2025",
+                        "background": "#101419",
+                        "primary-fixed-dim": "#a4d64c",
+                        "on-primary-container": "#4b6e00",
+                        "surface-container-highest": "#31353b",
+                        "tertiary-container": "#ffdd9a",
+                        "on-background": "#e0e2ea",
+                        "on-error-container": "#ffdad6",
+                        "tertiary": "#fffdff",
+                        "surface-tint": "#a4d64c",
+                        "primary-container": "#bef264",
+                        "inverse-on-surface": "#2d3136",
+                        "on-secondary-container": "#00374d",
+                        "error": "#ffb4ab",
+                        "on-surface": "#e0e2ea",
+                        "on-tertiary-container": "#7f5e00",
+                        "surface": "#101419",
+                        "on-secondary-fixed": "#001e2c",
+                        "secondary": "#7bd0ff",
+                        "tertiary-fixed-dim": "#f9bd22",
+                        "on-primary": "#233600",
+                        "on-tertiary-fixed": "#261a00",
+                        "outline": "#8d937e",
+                        "primary-fixed": "#bff365",
+                        "surface-container-lowest": "#0a0e13",
+                        "tertiary-fixed": "#ffdf9f",
+                        "secondary-container": "#00a6e0",
+                        "surface-container-low": "#181c21",
+                        "outline-variant": "#434938",
+                        "surface-bright": "#36393f",
+                        "inverse-surface": "#e0e2ea",
+                        "inverse-primary": "#476800",
+                        "surface-container-high": "#262a30",
+                        "on-primary-fixed-variant": "#354e00",
+                        "secondary-fixed": "#c4e7ff",
+                        "on-secondary": "#00354a",
+                        "surface-dim": "#101419",
+                        "on-surface-variant": "#c3c9b2",
+                        "on-tertiary": "#402d00",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "surface-variant": "#31353b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "md": "16px",
+                        "max-width": "1200px",
+                        "margin-mobile": "16px",
+                        "sm": "12px",
+                        "gutter": "16px",
+                        "lg": "24px",
+                        "xl": "40px",
+                        "base": "8px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "mono-data": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-xl": ["Space Grotesk"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0B0F14;
+            color: #e0e2ea;
+            overflow: hidden;
+        }
+        .glow-lime {
+            box-shadow: 0 0 15px rgba(190, 242, 100, 0.2);
+        }
+        .indicator-active {
+            width: 24px;
+            background-color: #BEF264;
+        }
+        .indicator-inactive {
+            width: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen max-w-md mx-auto relative px-md font-body-md">
+<!-- Top Navigation Placeholder (Hidden for focused journey) -->
+<header class="flex justify-between items-center py-lg shrink-0">
+<span class="font-headline-md text-headline-md font-bold tracking-tighter text-primary">SHUNT</span>
+<button class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">SKIP</button>
+</header>
+<!-- Hero Section -->
+<main class="flex-1 flex flex-col justify-center items-center gap-xl relative">
+<!-- Main Illustration Container -->
+<div class="relative w-full aspect-square flex items-center justify-center fade-in-up" style="animation-delay: 0.1s;">
+<!-- Glow background effect -->
+<div class="absolute inset-0 bg-primary-container/5 rounded-full blur-[80px]"></div>
+<!-- Hero Image from JSON requirement -->
+<img alt="Automated distribution flow" class="relative z-10 w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtdRueza6_4QcJYrpzp_TsNQ0LF3I_SKmj3un6oV8E0G9-Wt1ihfKHSqxsHnkGHmboOj9PGfvvqu2C1lowc6Ux-vvQ0zeNlhtd-AzBI29IG53ca5wGTLm3zCxsljZgBzhlXYB_Km2NcOBckUBmVOds-6LacxMUik5FcrVVzC9jp6fdE_tmv5oZzeRD8xN3Xv1txp9KoLUT-_YrVOX34D4WRWJLdal63iX3lecrKInICp_fXsdxrMeywSRsr"/>
+</div>
+<!-- Text Content -->
+<div class="w-full text-center space-y-md fade-in-up" style="animation-delay: 0.3s;">
+<!-- Indicators -->
+<div class="flex justify-center gap-xs mb-md">
+<div class="h-1 indicator-active rounded-full transition-all duration-300"></div>
+<div class="h-1 indicator-inactive rounded-full transition-all duration-300"></div>
+<div class="h-1 indicator-inactive rounded-full transition-all duration-300"></div>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background px-xs">
+                Income masuk, langsung kebagi.
+            </h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[85%] mx-auto">
+                Atur sekali, sisanya otomatis. Keuangan lebih rapi tanpa ribet manual.
+            </p>
+<!-- Badges -->
+<div class="flex justify-center gap-sm pt-sm">
+<div class="flex items-center gap-xs px-sm py-xs bg-surface-container rounded-full border border-white/5">
+<span class="material-symbols-outlined text-[16px] text-primary-container" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Aman</span>
+</div>
+<div class="flex items-center gap-xs px-sm py-xs bg-surface-container rounded-full border border-white/5">
+<span class="material-symbols-outlined text-[16px] text-primary-container" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Cepat</span>
+</div>
+<div class="flex items-center gap-xs px-sm py-xs bg-surface-container rounded-full border border-white/5">
+<span class="material-symbols-outlined text-[16px] text-primary-container" style="font-variation-settings: 'FILL' 1;">autorenew</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Otomatis</span>
+</div>
+</div>
+</div>
+</main>
+<!-- CTA & Footer -->
+<footer class="pb-xl pt-lg flex flex-col items-center gap-lg fade-in-up" style="animation-delay: 0.5s;">
+<button class="group w-full h-[60px] bg-primary-container rounded-xl flex items-center justify-center gap-md active:scale-95 transition-all duration-150 glow-lime">
+<span class="font-headline-md text-headline-md font-bold text-on-primary">Mulai</span>
+<span class="material-symbols-outlined text-on-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<div class="flex flex-col items-center">
+<p class="font-label-md text-label-md text-on-surface-variant/40 tracking-[0.2em]">POWERED BY SHUNT CORE</p>
+<div class="mt-xs w-6 h-1 bg-primary-container/20 rounded-full"></div>
+</div>
+</footer>
+<!-- Interactive Layer: Ambient Glow Script -->
+<script>
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            const glow = document.querySelector('.bg-primary-container\\/5');
+            if (glow) {
+                glow.style.transform = `translate(${(x - 0.5) * 20}px, ${(y - 0.5) * 20}px)`;
+            }
+        });
+
+        // Simple carousel tap logic for demo purposes
+        const indicators = document.querySelectorAll('.h-1');
+        let currentSlide = 0;
+        
+        // Auto-animate indicators to show vitality
+        setInterval(() => {
+            indicators[currentSlide].classList.replace('indicator-active', 'indicator-inactive');
+            currentSlide = (currentSlide + 1) % 3;
+            indicators[currentSlide].classList.replace('indicator-inactive', 'indicator-active');
+        }, 4000);
+    </script>
+</body></html>

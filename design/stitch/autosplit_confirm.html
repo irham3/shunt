@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shunt - Konfirmasi Split</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#101419",
+                        "primary-container": "#bef264",
+                        "surface-container-low": "#181c21",
+                        "outline": "#8d937e",
+                        "on-tertiary-fixed": "#261a00",
+                        "background": "#101419",
+                        "secondary-container": "#00a6e0",
+                        "inverse-on-surface": "#2d3136",
+                        "surface-container-highest": "#31353b",
+                        "tertiary-fixed": "#ffdf9f",
+                        "primary": "#fefff1",
+                        "surface-container-lowest": "#0a0e13",
+                        "primary-fixed": "#bff365",
+                        "on-primary-container": "#4b6e00",
+                        "on-tertiary": "#402d00",
+                        "tertiary-container": "#ffdd9a",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "tertiary": "#fffdff",
+                        "tertiary-fixed-dim": "#f9bd22",
+                        "surface-container-high": "#262a30",
+                        "inverse-surface": "#e0e2ea",
+                        "surface-bright": "#36393f",
+                        "on-error": "#690005",
+                        "on-surface-variant": "#c3c9b2",
+                        "on-surface": "#e0e2ea",
+                        "secondary": "#7bd0ff",
+                        "on-secondary-container": "#00374d",
+                        "surface-tint": "#a4d64c",
+                        "on-secondary-fixed": "#001e2c",
+                        "on-primary-fixed": "#131f00",
+                        "surface-variant": "#31353b",
+                        "error": "#ffb4ab",
+                        "outline-variant": "#434938",
+                        "error-container": "#93000a",
+                        "on-secondary": "#00354a",
+                        "on-error-container": "#ffdad6",
+                        "on-background": "#e0e2ea",
+                        "surface-container": "#1c2025",
+                        "secondary-fixed-dim": "#7bd0ff",
+                        "on-primary": "#233600",
+                        "on-tertiary-container": "#7f5e00",
+                        "inverse-primary": "#476800",
+                        "surface": "#101419",
+                        "primary-fixed-dim": "#a4d64c",
+                        "on-primary-fixed-variant": "#354e00",
+                        "secondary-fixed": "#c4e7ff",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "electric-blue": "#38BDF8",
+                        "amber-accent": "#FBBF24"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "xl": "40px",
+                        "base": "8px",
+                        "sm": "12px",
+                        "gutter": "16px",
+                        "md": "16px",
+                        "max-width": "1200px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-data": ["Space Grotesk"],
+                        "headline-xl": ["Space Grotesk"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Space Grotesk"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0B0F14;
+            color: #e0e2ea;
+            -webkit-font-smoothing: antialiased;
+        }
+        .circuit-line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 3s ease-in-out forwards;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: 0; }
+        }
+        .glow-lime { filter: drop-shadow(0 0 8px rgba(190, 242, 100, 0.4)); }
+        .glow-amber { filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4)); }
+        .glow-blue { filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4)); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md overflow-x-hidden">
+<!-- Top App Bar (Modified as per JSON) -->
+<header class="bg-surface dark:bg-surface w-full top-0 flex justify-between items-center px-margin-mobile py-4 w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A sleek profile avatar of a professional user, rendered in a high-tech minimalist style with soft studio lighting and a deep navy and lime color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8dbJpqwUVJR_TJgMdNPUBCOkgGKviEPasLmG_XmNcesDeLF-jgNGZQNmcy9myZThfJKcH8M4_gfme3S99IwPrZChEQWUbm2a-gVksthzg8bbut8d-Uod6wJiIudSOF9gAyq1tH4nC5un7dElJ3XWKvqvWJO5Ed9iyE83pjD3w6_9Tte7eUY8EAy_bzgI1n2jj5P_9e9EdLh-szpMJ_GXwQu9psft4X9fOEoR7Eiy2J_QmAWWd8AI6A5RyrN_y3Z66KUxSpIbiqCGi"/>
+</div>
+<span class="text-headline-md font-headline-md font-bold text-primary-container dark:text-primary-fixed-dim tracking-tight">Shunt</span>
+</div>
+<div class="active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed dark:text-primary-fixed-dim">notifications</span>
+</div>
+</header>
+<main class="max-w-md mx-auto px-margin-mobile pt-8 pb-32">
+<!-- Status Header -->
+<div class="text-center mb-8">
+<span class="inline-flex items-center gap-2 bg-on-primary-container/10 text-primary-container font-label-md text-label-md px-3 py-1 rounded-full mb-4">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                Berhasil!
+            </span>
+<h1 class="font-headline-xl text-headline-xl text-white mb-2">500 USDC</h1>
+<p class="text-on-surface-variant font-body-sm text-body-sm">Otomatis dibagi dalam <span id="countdown">8</span> detik</p>
+</div>
+<!-- Split Node Illustration -->
+<div class="relative w-full aspect-square mb-10 overflow-hidden rounded-xl border border-white/5 bg-[#141A21] flex items-center justify-center">
+<!-- Grid Background -->
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 24px 24px;"></div>
+<div class="relative w-full h-full p-8 flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="A sophisticated 3D isometric digital illustration of a financial split node mechanism. A main glowing white circuit line enters from the left and branches into three distinct glowing paths: one amber, one lime green, and one electric blue. Each path terminates at a floating crystal-like icon representing spending, savings, and security. The aesthetic is high-tech, dark-mode, and minimalist with cinematic lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBER0zkOM0l1DTtJ1dPSBtypR8OL06Tkycv-7wglOGfDctEbnCt0yhCiSgP_7x4pVhE18yhn6wfdmfCROOLZ6ozwLkhbVLvQXqxwudF4XW6waCxYF_OdcEwwWXp12uMvQhYj_kM2bZ9mcPEJnNOtjE5PznI-Vh8KsYbRx0X0vogJEwsi6a7YCHUxf7-Tags7lOPNb8WtLKjBfrnksAL0SWM85VgWlp_UZG2Xddo9muW_sN5rC0ENLb72TRmu_q8FqxIs_w1DFpKlJV0"/>
+</div>
+</div>
+<!-- Breakdown Section -->
+<section class="space-y-4">
+<h2 class="font-headline-md text-headline-md text-white px-1">Rincian Alokasi</h2>
+<!-- Card: Needs -->
+<div class="bg-[#141A21] border border-white/[0.08] p-md rounded-xl flex items-center justify-between group hover:border-amber-accent/30 transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-amber-accent/10 flex items-center justify-center text-amber-accent glow-amber">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div>
+<p class="text-white font-body-md text-body-md">Kebutuhan</p>
+<p class="text-on-surface-variant font-label-md text-label-md">Needs (60%)</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-amber-accent font-mono-data text-body-lg">300 USDC</p>
+<p class="text-on-surface-variant font-label-md text-label-md">~ Rp 4.700.000</p>
+</div>
+</div>
+<!-- Card: Savings -->
+<div class="bg-[#141A21] border border-white/[0.08] p-md rounded-xl flex items-center justify-between group hover:border-primary-container/30 transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-primary-container/10 flex items-center justify-center text-primary-container glow-lime">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<div>
+<p class="text-white font-body-md text-body-md">Tabungan</p>
+<p class="text-on-surface-variant font-label-md text-label-md">Savings (25%)</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-primary-container font-mono-data text-body-lg">125 USDC</p>
+<p class="text-on-surface-variant font-label-md text-label-md">~ Rp 1.950.000</p>
+</div>
+</div>
+<!-- Card: Buffer -->
+<div class="bg-[#141A21] border border-white/[0.08] p-md rounded-xl flex items-center justify-between group hover:border-electric-blue/30 transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-electric-blue/10 flex items-center justify-center text-electric-blue glow-blue">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div>
+<p class="text-white font-body-md text-body-md">Dana Darurat</p>
+<p class="text-on-surface-variant font-label-md text-label-md">Buffer (15%)</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-electric-blue font-mono-data text-body-lg">75 USDC</p>
+<p class="text-on-surface-variant font-label-md text-label-md">~ Rp 1.170.000</p>
+</div>
+</div>
+</section>
+<!-- Fees & Action Area -->
+<div class="mt-8 flex flex-col items-center gap-6">
+<div class="flex items-center gap-2 text-on-surface-variant opacity-60 font-label-md text-label-md">
+<span class="material-symbols-outlined text-xs">info</span>
+                Biaya jaringan < Rp2
+            </div>
+<div class="w-full space-y-4">
+<button class="w-full bg-primary-container text-on-primary-fixed font-headline-md py-4 rounded-xl active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(190,242,100,0.2)]">
+                    Selesai
+                </button>
+<a class="block text-center text-primary-container font-label-md text-label-md hover:underline active:opacity-60 transition-opacity" href="#">
+                    Lihat di explorer
+                </a>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Execution from JSON) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-surface-container dark:bg-surface-container-high shadow-[0_-4px_20px_rgba(0,0,0,0.4)] rounded-t-xl">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed transition-colors active:scale-90 duration-200">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md mt-1">Beranda</span>
+</button>
+<!-- Shunt Tab - Active State determined by screen context -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span class="font-label-md text-label-md mt-1">Shunt</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed transition-colors active:scale-90 duration-200">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md mt-1">Tabungan</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed transition-colors active:scale-90 duration-200">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md mt-1">Aktivitas</span>
+</button>
+</nav>
+<script>
+        // Simple countdown logic
+        let count = 8;
+        const countdownEl = document.getElementById('countdown');
+        const timer = setInterval(() => {
+            count--;
+            if (count >= 0) {
+                countdownEl.innerText = count;
+            } else {
+                clearInterval(timer);
+                // In a real app, this would trigger an auto-navigation
+            }
+        }, 1000);
+
+        // Haptic-like feedback on button click
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(10);
+                }
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shunt - Aktivitas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0B0F14; /* Brand base background */
+            color: #e0e2ea;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(20, 26, 33, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .active-glow {
+            box-shadow: 0px 0px 12px rgba(190, 242, 100, 0.2);
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#262a30",
+                        "surface-variant": "#31353b",
+                        "outline-variant": "#434938",
+                        "on-tertiary-container": "#7f5e00",
+                        "surface-tint": "#a4d64c",
+                        "tertiary-container": "#ffdd9a",
+                        "primary-fixed-dim": "#a4d64c",
+                        "inverse-on-surface": "#2d3136",
+                        "inverse-surface": "#e0e2ea",
+                        "on-error": "#690005",
+                        "surface": "#101419",
+                        "on-secondary": "#00354a",
+                        "surface-container-lowest": "#0a0e13",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "primary": "#fefff1",
+                        "error-container": "#93000a",
+                        "surface-container": "#1c2025",
+                        "secondary-fixed-dim": "#7bd0ff",
+                        "secondary": "#7bd0ff",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#101419",
+                        "surface-container-low": "#181c21",
+                        "surface-container-highest": "#31353b",
+                        "background": "#101419",
+                        "secondary-container": "#00a6e0",
+                        "on-surface": "#e0e2ea",
+                        "on-background": "#e0e2ea",
+                        "on-primary-fixed-variant": "#354e00",
+                        "on-primary": "#233600",
+                        "on-secondary-fixed": "#001e2c",
+                        "on-primary-fixed": "#131f00",
+                        "error": "#ffb4ab",
+                        "primary-container": "#bef264",
+                        "outline": "#8d937e",
+                        "surface-bright": "#36393f",
+                        "tertiary-fixed": "#ffdf9f",
+                        "on-surface-variant": "#c3c9b2",
+                        "on-secondary-container": "#00374d",
+                        "on-primary-container": "#4b6e00",
+                        "tertiary-fixed-dim": "#f9bd22",
+                        "tertiary": "#fffdff",
+                        "primary-fixed": "#bff365",
+                        "on-tertiary": "#402d00",
+                        "inverse-primary": "#476800",
+                        "on-tertiary-fixed": "#261a00",
+                        "secondary-fixed": "#c4e7ff",
+                        "on-secondary-fixed-variant": "#004c69"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "xl": "40px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "sm": "12px",
+                        "max-width": "1200px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Space Grotesk"],
+                        "mono-data": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-xl": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "mono-data": ["14px", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-md text-on-surface bg-surface-container-lowest min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-md py-sm">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+<img class="w-full h-full object-cover" data-alt="A high-definition, minimalist close-up portrait of a young professional with subtle tech-inspired lighting. The background is a deep obsidian navy, reflecting a premium fintech aesthetic. The lighting highlights sharp features with a hint of neon lime reflection on the skin, suggesting a screen nearby." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwqPkNJw6H2BuyKUfFIS-RzuE4A6QiH5duxK0rMK1PobL5tt8S-KQclzp2i0BaujvHdRlyZujTZNDqmIWPgOXIYUsEEEltPDKN5f4A-PW9LQRk1qgqAIvg9eD_8_5njpxl7E3T019zoObrUclTw23KfRBmJiBTkJJ8A133SUDwWpxbZbMJjiHLepBtLKcN4E4v8_e2NjldwYjLHT1sIs5euIHJFYJNp03jvGDw0Wa5ugSwzweFwL3Y4lLBLBi8V6v-2jzp6cNMEzGS"/>
+</div>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tighter text-primary">Aktivitas</h1>
+<div class="p-2 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+</div>
+</header>
+<main class="pt-20 px-gutter max-w-xl mx-auto">
+<!-- Filter Section -->
+<section class="mb-8">
+<div class="flex overflow-x-auto gap-3 pb-2 -mx-gutter px-gutter no-scrollbar">
+<button class="flex-shrink-0 px-6 py-2 rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md active-glow transition-all">
+                    Semua
+                </button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full bg-surface-container text-on-surface-variant border border-white/5 font-label-md text-label-md hover:border-primary/30 transition-all">
+                    Split
+                </button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full bg-surface-container text-on-surface-variant border border-white/5 font-label-md text-label-md hover:border-primary/30 transition-all">
+                    Tarik
+                </button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full bg-surface-container text-on-surface-variant border border-white/5 font-label-md text-label-md hover:border-primary/30 transition-all">
+                    Off-ramp
+                </button>
+</div>
+</section>
+<!-- Transaction Groups -->
+<div class="space-y-8">
+<!-- Group: Hari Ini -->
+<section>
+<h2 class="font-headline-md text-headline-md text-on-surface-variant mb-4 px-1">Hari Ini</h2>
+<div class="space-y-3">
+<!-- Transaction Row 1 -->
+<div class="glass-card p-md rounded-xl flex items-center justify-between group cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Gaji Masuk</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-container/20 text-primary-container uppercase tracking-wider">Savings</span>
+<span class="text-[10px] text-on-surface-variant/60 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">link</span>
+                                        On-chain
+                                    </span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-primary text-lg">+$1,250.00</p>
+<p class="text-[10px] text-on-surface-variant/50 mt-1">10:45 AM</p>
+</div>
+</div>
+<!-- Transaction Row 2 -->
+<div class="glass-card p-md rounded-xl flex items-center justify-between group cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">splitscreen</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Auto-split</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#ffb300]/20 text-[#ffb300] uppercase tracking-wider">Needs</span>
+<span class="text-[10px] text-on-surface-variant/60 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">link</span>
+                                        On-chain
+                                    </span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-on-surface text-lg">-$450.00</p>
+<p class="text-[10px] text-on-surface-variant/50 mt-1">09:12 AM</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Group: Kemarin -->
+<section>
+<h2 class="font-headline-md text-headline-md text-on-surface-variant mb-4 px-1">Kemarin</h2>
+<div class="space-y-3">
+<!-- Transaction Row 3 -->
+<div class="glass-card p-md rounded-xl flex items-center justify-between group cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined">electric_bolt</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Pembayaran Listrik</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary-container/20 text-secondary-container uppercase tracking-wider">Buffer</span>
+<span class="text-[10px] text-on-surface-variant/60 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">link</span>
+                                        On-chain
+                                    </span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-on-surface text-lg">-$85.20</p>
+<p class="text-[10px] text-on-surface-variant/50 mt-1">08:20 PM</p>
+</div>
+</div>
+<!-- Transaction Row 4 -->
+<div class="glass-card p-md rounded-xl flex items-center justify-between group cursor-pointer hover:bg-surface-container-high transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">swap_horiz</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Top-up Wallet</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-container/20 text-primary-container uppercase tracking-wider">Savings</span>
+<span class="text-[10px] text-on-surface-variant/60 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">link</span>
+                                        On-chain
+                                    </span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-primary text-lg">+$200.00</p>
+<p class="text-[10px] text-on-surface-variant/50 mt-1">02:15 PM</p>
+</div>
+</div>
+<!-- Transaction Row 5 -->
+<div class="glass-card p-md rounded-xl flex items-center justify-between group cursor-pointer hover:bg-surface-container-high transition-all opacity-80">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-on-surface-variant/10 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">shopping_cart</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Belanja Mingguan</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#ffb300]/20 text-[#ffb300] uppercase tracking-wider">Needs</span>
+<span class="text-[10px] text-on-surface-variant/60 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">link</span>
+                                        On-chain
+                                    </span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-on-surface text-lg">-$120.50</p>
+<p class="text-[10px] text-on-surface-variant/50 mt-1">11:05 AM</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Decorative Shader Background (Atmospheric) -->
+<div class="fixed bottom-0 left-0 w-full h-1/2 -z-10 pointer-events-none opacity-20">
+
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-sm py-xs bg-surface-container rounded-t-xl shadow-xl border-t border-white/5">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">splitscreen</span>
+<span class="font-label-md text-label-md mt-1">Shunt</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-md text-label-md mt-1">Savings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary font-bold bg-primary/10 rounded-xl px-4 py-2 scale-105 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-md text-label-md mt-1">Activity</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for transaction rows
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('touchstart', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('touchend', () => {
+                card.style.transform = 'scale(1)';
+            });
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+
+        // Filter chip toggle logic
+        const filterChips = document.querySelectorAll('button.flex-shrink-0');
+        filterChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                filterChips.forEach(c => {
+                    c.classList.remove('bg-primary-container', 'text-on-primary-container', 'active-glow');
+                    c.classList.add('bg-surface-container', 'text-on-surface-variant', 'border', 'border-white/5');
+                });
+                chip.classList.add('bg-primary-container', 'text-on-primary-container', 'active-glow');
+                chip.classList.remove('bg-surface-container', 'text-on-surface-variant', 'border', 'border-white/5');
+            });
+        });
+    </script>
+</body></html>
