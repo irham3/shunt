@@ -51,6 +51,8 @@ interface ShuntState {
   applySplit: (amount: number, txHash?: string) => void;
   withdrawSavings: (amount: number, penalty: number) => void;
   offramp: (amount: number) => void;
+  /** F11: record a Top Up request sent to the anchor (funds land later as a normal inflow). */
+  recordTopUp: (amount: number) => void;
   setLockUntil: (t: number) => void;
   showToast: (msg: string) => void;
   clearToast: () => void;
@@ -180,6 +182,22 @@ export const useShunt = create<ShuntState>()(
               amountUsdc: amount,
               at: new Date().toISOString(),
               bucket: "needs",
+            },
+            ...activity,
+          ],
+        });
+      },
+
+      recordTopUp: (amount) => {
+        const { activity } = get();
+        set({
+          activity: [
+            {
+              id: `${Date.now()}`,
+              kind: "deposit",
+              title: "Top Up via anchor (pending)",
+              amountUsdc: amount,
+              at: new Date().toISOString(),
             },
             ...activity,
           ],

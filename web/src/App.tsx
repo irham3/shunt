@@ -9,6 +9,7 @@ import { ConfigureShunt } from "./screens/ConfigureShunt";
 import { AutoSplitConfirm } from "./screens/AutoSplitConfirm";
 import { SavingsVault } from "./screens/SavingsVault";
 import { SendPay } from "./screens/SendPay";
+import { TopUp } from "./screens/TopUp";
 import { Activity } from "./screens/Activity";
 import { Settings } from "./screens/Settings";
 
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/confirm" element={<AutoSplitConfirm />} />
         <Route path="/savings" element={address ? <SavingsVault /> : <Navigate to="/" replace />} />
         <Route path="/send" element={address ? <SendPay /> : <Navigate to="/" replace />} />
+        <Route path="/topup" element={address ? <TopUp /> : <Navigate to="/" replace />} />
         <Route path="/activity" element={address ? <Activity /> : <Navigate to="/" replace />} />
         <Route path="/settings" element={address ? <Settings /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

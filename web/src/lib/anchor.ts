@@ -1,10 +1,11 @@
 /**
- * SEP-24 interactive off-ramp against a Stellar anchor (F10 / P1).
+ * SEP-24 interactive on/off-ramp against a Stellar anchor (F10 / F11).
  *
  * Flow: SEP-1 TOML discovery -> SEP-10 web auth (challenge signed with
- * Freighter) -> SEP-24 interactive withdraw. KYC and bank details live in
- * the anchor's hosted UI; the contract's anchor allowlist governs where the
- * USDC itself may be sent (PRD §12).
+ * Freighter) -> SEP-24 interactive withdraw (cash-out) or deposit (Top Up).
+ * KYC and bank details live in the anchor's hosted UI; the contract's anchor
+ * allowlist governs where withdrawn USDC may be sent (PRD §12). Deposited
+ * USDC lands in the wallet like any inflow, so the keeper picks it up.
  *
  * Demo target: SDF test anchor. Production target: IDRX or a PHP-corridor
  * anchor once verified on Stellar.
@@ -89,6 +90,27 @@ export async function startWithdraw(
     body: JSON.stringify({ asset_code: assetCode, account, amount }),
   });
   if (!res.ok) throw new Error(`SEP-24 withdraw start failed (${res.status})`);
+  const data = await res.json();
+  return { url: data.url, id: data.id };
+}
+
+/** SEP-24: start an interactive deposit (Top Up) — mirror of `startWithdraw`. */
+export async function startDeposit(
+  account: string,
+  jwt: string,
+  assetCode: string,
+  amount: string,
+): Promise<WithdrawSession> {
+  const { sep24Endpoint } = await discoverAnchor();
+  const res = await fetch(`${sep24Endpoint}/transactions/deposit/interactive`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${jwt}`,
+    },
+    body: JSON.stringify({ asset_code: assetCode, account, amount }),
+  });
+  if (!res.ok) throw new Error(`SEP-24 deposit start failed (${res.status})`);
   const data = await res.json();
   return { url: data.url, id: data.id };
 }
