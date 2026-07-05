@@ -102,9 +102,9 @@ Mobile-first (~390px column, PWA-installable), scaling to a desktop nav rail at 
 
 | | | |
 |:---:|:---:|:---:|
-| <img src="design/stitch/onboarding.png" width="260"><br>**Onboarding** | <img src="design/stitch/connect_wallet.png" width="260"><br>**Connect wallet** | <img src="design/stitch/home_dashboard.png" width="260"><br>**Home** |
-| <img src="design/stitch/configure_shunt.png" width="260"><br>**Configure Shunt** | <img src="design/stitch/autosplit_confirm.png" width="260"><br>**Auto-split confirm** | <img src="design/stitch/savings_vault.png" width="260"><br>**Savings vault** |
-| <img src="design/stitch/send_pay.png" width="260"><br>**Send & Pay** | <img src="design/stitch/activity_history.png" width="260"><br>**Activity** | <img src="design/stitch/settings_profile.png" width="260"><br>**Settings** |
+| <img src="design/screens/onboarding.png" width="260"><br>**Onboarding** | <img src="design/screens/connect_wallet.png" width="260"><br>**Connect wallet** | <img src="design/screens/home_dashboard.png" width="260"><br>**Home** |
+| <img src="design/screens/configure_shunt.png" width="260"><br>**Configure Shunt** | <img src="design/screens/autosplit_confirm.png" width="260"><br>**Auto-split confirm** | <img src="design/screens/savings_vault.png" width="260"><br>**Savings vault** |
+| <img src="design/screens/send_pay.png" width="260"><br>**Send & Pay** | <img src="design/screens/activity_history.png" width="260"><br>**Activity** | <img src="design/screens/settings_profile.png" width="260"><br>**Settings** |
 
 ### Level 1 — White Belt (testnet proof)
 
@@ -158,7 +158,7 @@ Rate and fee are always shown **before** confirmation. The default anchor is SDF
 
 ## Business model — service fees, never interest
 
-Every revenue line is a transparent fee on a service the user *wants*: 0.4% on Needs-lane cash-out, a similar fee on Top Up and on Invest conversions. **No lending, no yield products, no cut of your savings** — by design, not by omission: interest-based yield would both stack smart-contract risk and exclude the sharia-conscious majority of our target market. The 10% early-withdrawal penalty goes to *your own* buffer, not to us. Savings deposits and post-lock withdrawals are free, forever.
+Every revenue line is a transparent fee on a service the user *wants*: 0.4% on Needs-lane cash-out, a similar fee on Top Up and on Invest conversions. **No lending, no yield products, no cut of your savings** — by design, not by omission: interest-based yield would add unnecessary smart-contract risk. The 10% early-withdrawal penalty goes to *your own* buffer, not to us. Savings deposits and post-lock withdrawals are free, forever.
 
 ## Quickstart
 
