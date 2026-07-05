@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getIdrRate } from "../lib/rates";
-import { txWithdrawSavings } from "../lib/stellar";
+import { vaultWithdrawSavings } from "../lib/vault";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 
 const PENALTY_PCT = 10; // must match PENALTY_BPS in the contract
@@ -55,7 +55,7 @@ export function SavingsVault() {
     setErr(null);
     const penalty = locked ? (usdc * PENALTY_PCT) / 100 : 0;
     try {
-      if (address) await txWithdrawSavings(address, usdc);
+      if (address) await vaultWithdrawSavings(address, usdc);
       withdrawSavings(usdc, penalty);
       showToast(penalty > 0 ? `Withdrawn — ${fmtUsdc(penalty)} USDC penalty → Buffer` : "Savings withdrawn");
       setAmount("");

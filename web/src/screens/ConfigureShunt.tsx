@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SplitNode } from "../components/SplitNode";
-import { txSetRules } from "../lib/stellar";
+import { vaultSetRules } from "../lib/vault";
 import { CORE_BUCKET_IDS, totalPct, useShunt } from "../store";
 
 const LOCK_OPTIONS = [
@@ -44,7 +44,7 @@ export function ConfigureShunt() {
         // wallet-side, so the contract receives their sum as the wallet-tier
         // share. The invest slice is then DCA-converted by a follow-up path
         // payment (F12) — the vault contract stays frozen (11 tests intact).
-        await txSetRules(address, pct("needs") + pct("invest"), pct("savings"), pct("buffer"), lockSecs);
+        await vaultSetRules(address, pct("needs") + pct("invest"), pct("savings"), pct("buffer"), lockSecs);
       }
       markRulesSaved();
       persistLockSecs(lockSecs);

@@ -1,4 +1,7 @@
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
+import { FreighterModule } from "@creit.tech/stellar-wallets-kit/modules/freighter";
+import { AlbedoModule } from "@creit.tech/stellar-wallets-kit/modules/albedo";
+import { xBullModule } from "@creit.tech/stellar-wallets-kit/modules/xbull";
 import {
   Address,
   Contract,
@@ -7,12 +10,10 @@ import {
   rpc,
   TransactionBuilder,
   xdr,
-} from "@stellar/stellar-sdk";
-import {
   Asset,
   Operation,
   StrKey,
-} from "@stellar/stellar-base";
+} from "@stellar/stellar-sdk";
 
 export const NETWORK = (import.meta.env.VITE_STELLAR_NETWORK ?? "testnet") as
   | "testnet"
@@ -53,7 +54,15 @@ export const EXPLORER_ACCOUNT = (addr: string) =>
 // Wallet Kit Initialization
 // ---------------------------------------------------------------------------
 
-export const kit = null; // Removed
+// Register wallet modules at import time so all static methods work.
+StellarWalletsKit.init({
+  modules: [
+    new FreighterModule(),
+    new AlbedoModule(),
+    new xBullModule(),
+  ],
+  network: NETWORK_PASSPHRASE as any,
+});
 
 /** Formats wallet kit errors for better UX (Level 2). */
 function parseWalletError(e: unknown): never {
@@ -70,14 +79,26 @@ function parseWalletError(e: unknown): never {
   throw new Error(e instanceof Error ? e.message : String(e));
 }
 
-export async function connectWalletKit(walletId: string): Promise<string> {
+/**
+ * Opens the built-in auth modal — the user picks their wallet,
+ * approves access, and we get back the public key. Works for
+ * Freighter, Albedo, xBull out of the box.
+ */
+export async function connectWithAuthModal(): Promise<string> {
   try {
-    (StellarWalletsKit as any).setWallet(walletId);
-    const { address } = await (StellarWalletsKit as any).getAddress();
+    const { address } = await StellarWalletsKit.authModal();
     return address;
   } catch (e) {
     parseWalletError(e);
   }
+}
+
+export async function disconnectWalletKit(): Promise<void> {
+  await StellarWalletsKit.disconnect();
+}
+
+export async function openProfileModal(): Promise<void> {
+  await StellarWalletsKit.profileModal();
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +117,21 @@ export async function fetchXlmBalance(address: string): Promise<string> {
     (b: { asset_type: string }) => b.asset_type === "native",
   );
   return native?.balance ?? "0";
+}
+
+/** Fetch the USDC balance for a Stellar account via Horizon. */
+export async function fetchUsdcBalance(address: string): Promise<string> {
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (!res.ok) {
+    if (res.status === 404) return "0"; // account not funded yet
+    throw new Error(`Horizon error ${res.status}`);
+  }
+  const data = await res.json();
+  const usdc = data.balances?.find(
+    (b: { asset_code?: string; asset_issuer?: string }) => 
+      b.asset_code === USDC_CODE && b.asset_issuer === USDC_ISSUER,
+  );
+  return usdc?.balance ?? "0";
 }
 
 /** Build, sign (WalletKit), and submit a native XLM payment on Horizon. */
@@ -127,10 +163,10 @@ export async function sendXlmPayment(
     .build();
 
   try {
-    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
-      xdr: tx.toEnvelope().toXDR("base64"),
-      network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
-    });
+    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+      tx.toEnvelope().toXDR("base64"),
+      { networkPassphrase: NETWORK_PASSPHRASE }
+    );
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const result = await horizon.submitTransaction(sendTx as any) as any;
     return result.hash;
@@ -175,10 +211,10 @@ export async function convertUsdcToXlm(
     .build();
 
   try {
-    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
-      xdr: tx.toEnvelope().toXDR("base64"),
-      network: NETWORK_PASSPHRASE,
-    });
+    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+      tx.toEnvelope().toXDR("base64"),
+      { networkPassphrase: NETWORK_PASSPHRASE }
+    );
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const result = await horizon.submitTransaction(sendTx as any) as any;
     return result.hash;
@@ -225,10 +261,10 @@ async function invoke(
 
   try {
     const prepared = await server.prepareTransaction(tx);
-    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
-      xdr: prepared.toEnvelope().toXDR("base64"),
-      network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
-    });
+    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+      prepared.toEnvelope().toXDR("base64"),
+      { networkPassphrase: NETWORK_PASSPHRASE }
+    );
     
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const res = await server.sendTransaction(sendTx) as any;
@@ -273,10 +309,10 @@ export async function txSetRules(
 export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
   try {
     const server = new rpc.Server(RPC_URL);
-    const { signedTxXdr } = await (StellarWalletsKit as any).signTx({
-      xdr: preparedXdr,
-      network: NETWORK === "testnet" ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015",
-    });
+    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+      preparedXdr,
+      { networkPassphrase: NETWORK_PASSPHRASE }
+    );
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const res = await server.sendTransaction(sendTx) as any;
     if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);

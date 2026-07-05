@@ -3,7 +3,7 @@ import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { sendXlmPayment, fetchXlmBalance, EXPLORER_TX, NETWORK } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
-import { StrKey } from "@stellar/stellar-base";
+import { StrKey } from "@stellar/stellar-sdk";
 
 const FEE_PCT = 0.4; // off-ramp fee (PRD §7b: 0.3–0.5%)
 

@@ -5,6 +5,7 @@ import { getIdrRate } from "../lib/rates";
 import { fetchPending, type PendingSplit } from "../lib/keeper";
 import { fetchXlmBalance, fundWithFriendbot, fetchLatestSplitEvent, NETWORK } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
+import { BentoGrid, BentoCard } from "../components/BentoGrid";
 
 export function Home() {
   const nav = useNavigate();
@@ -156,45 +157,45 @@ export function Home() {
             <AllocationBar buckets={buckets} />
           </section>
 
-          <section className="bucket-grid">
-            {buckets.map((b) => (
-              <Link
-                key={b.id}
-                to={b.id === "savings" ? "/savings" : b.id === "needs" ? "/send" : "/shunt"}
-                className="card"
-                style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, textDecoration: "none", color: "inherit" }}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 12,
-                    background: b.color,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--color-text-on-accent)",
-                    fontWeight: 700,
-                  }}
+          <BentoGrid className="bucket-grid">
+            {buckets.map((b, i) => (
+              <BentoCard key={b.id} delay={i * 0.1}>
+                <Link
+                  to={b.id === "savings" ? "/savings" : b.id === "needs" ? "/send" : "/shunt"}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, textDecoration: "none", color: "inherit", height: "100%" }}
                 >
-                  {b.name[0]}
-                </span>
-                <span>
-                  <div style={{ fontWeight: 600 }}>{b.name}</div>
-                  <div className="muted" style={{ fontSize: 12 }}>{b.pct}% of each income</div>
-                </span>
-                <span className="numeric" style={{ fontWeight: 600, fontSize: 20 }}>
-                  ${fmtUsdc(bucketBalance(b.id))}
-                  {b.id === "invest" && investXlm > 0 && (
-                    <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
-                      {investXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM held
-                    </span>
-                  )}
-                </span>
-              </Link>
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      background: b.color,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--color-text-on-accent)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {b.name[0]}
+                  </span>
+                  <span>
+                    <div style={{ fontWeight: 600 }}>{b.name}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>{b.pct}% of each income</div>
+                  </span>
+                  <span className="numeric" style={{ fontWeight: 600, fontSize: 20, marginTop: "auto" }}>
+                    ${fmtUsdc(bucketBalance(b.id))}
+                    {b.id === "invest" && investXlm > 0 && (
+                      <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
+                        {investXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM held
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </BentoCard>
             ))}
-          </section>
+          </BentoGrid>
         </div>
 
         <section className="col-side card">

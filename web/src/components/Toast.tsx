@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useShunt } from "../store";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function Toast() {
   const toast = useShunt((s) => s.toast);
@@ -11,10 +12,20 @@ export function Toast() {
     return () => clearTimeout(t);
   }, [toast, clearToast]);
 
-  if (!toast) return null;
   return (
-    <div className="toast" role="status">
-      {toast} <i className="ph-fill ph-check-circle" style={{ color: "var(--color-accent-primary)", fontSize: 16 }} />
-    </div>
+    <AnimatePresence>
+      {toast && (
+        <motion.div
+          className="toast"
+          role="status"
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+        >
+          {toast} <i className="ph-fill ph-check-circle" style={{ color: "var(--color-accent-primary)", fontSize: 16 }} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

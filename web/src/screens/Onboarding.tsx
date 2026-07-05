@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SplitNode } from "../components/SplitNode";
 import { DEFAULT_BUCKETS } from "../store";
+import { AnimatedBackground } from "../components/AnimatedBackground";
+import { ShinyText } from "../components/ShinyText";
 
 const SLIDES = [
   {
@@ -24,9 +26,12 @@ export function Onboarding() {
   const last = i === SLIDES.length - 1;
 
   return (
-    <div className="screen" style={{ justifyContent: "center", textAlign: "center", minHeight: "100dvh" }}>
-      <SplitNode buckets={DEFAULT_BUCKETS} height={160} />
-      <h1 style={{ fontSize: 28, margin: "8px 0 0" }}>{SLIDES[i].headline}</h1>
+    <AnimatedBackground>
+      <div className="screen" style={{ justifyContent: "center", textAlign: "center", minHeight: "100dvh" }}>
+        <SplitNode buckets={DEFAULT_BUCKETS} height={160} />
+        <h1 style={{ fontSize: 28, margin: "8px 0 0" }}>
+          <ShinyText text={SLIDES[i].headline} speed={4} />
+        </h1>
       <p className="muted" style={{ margin: 0 }}>{SLIDES[i].sub}</p>
 
       <div style={{ display: "flex", gap: 8, justifyContent: "center", margin: "12px 0" }} aria-label={`Slide ${i + 1} of 3`}>
@@ -56,6 +61,7 @@ export function Onboarding() {
           Skip
         </button>
       )}
-    </div>
+      </div>
+    </AnimatedBackground>
   );
 }

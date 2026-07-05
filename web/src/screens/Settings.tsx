@@ -1,13 +1,23 @@
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { manualTrigger } from "../lib/keeper";
-import { NETWORK } from "../lib/stellar";
+import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance } from "../lib/stellar";
 import { useShunt } from "../store";
 
 export function Settings() {
   const nav = useNavigate();
   const { address, setAddress, showToast } = useShunt();
+  const [xlmBal, setXlmBal] = useState("0");
+  const [usdcBal, setUsdcBal] = useState("0");
 
   const short = address ? `${address.slice(0, 6)}…${address.slice(-6)}` : "—";
+
+  useEffect(() => {
+    if (address) {
+      fetchXlmBalance(address).then(setXlmBal).catch(console.error);
+      fetchUsdcBalance(address).then(setUsdcBal).catch(console.error);
+    }
+  }, [address]);
 
   /** Manual trigger (F4 demo fallback): simulate a detected 500 USDC inflow. */
   async function onSimulate() {
@@ -18,25 +28,93 @@ export function Settings() {
     nav("/confirm", { state: p ?? { account: address, amount: "500.0000000", txHash: fakeHash, xdr: null } });
   }
 
+  async function onDisconnect() {
+    await disconnectWalletKit();
+    setAddress(null);
+    nav("/connect");
+  }
+
+  async function onSwitchAccount() {
+    try {
+      const addr = await connectWithAuthModal();
+      setAddress(addr);
+      showToast("Switched account");
+    } catch {
+      // user cancelled — that's fine
+    }
+  }
+
+  function onCopyAddress() {
+    if (address) {
+      navigator.clipboard.writeText(address);
+      showToast("Address copied");
+    }
+  }
+
   return (
     <div className="screen">
       <h2 style={{ margin: 0 }}>Settings</h2>
 
-      <section className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div className="muted" style={{ fontSize: 12 }}>Wallet</div>
+      <section className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span className="numeric" style={{ fontSize: 14 }}>{short}</span>
+          <div>
+            <div className="muted" style={{ fontSize: 12 }}>Connected Wallet</div>
+            <div className="numeric" style={{ fontSize: 14 }}>{short}</div>
+          </div>
           <span className="chip">{NETWORK}</span>
         </div>
-        <button
-          className="btn-ghost"
-          onClick={() => {
-            setAddress(null);
-            nav("/connect");
-          }}
-        >
-          Disconnect wallet
-        </button>
+
+        {address && (
+          <div
+            onClick={onCopyAddress}
+            style={{
+              background: "var(--color-bg-base)",
+              borderRadius: 8,
+              padding: "8px 12px",
+              fontSize: 11,
+              fontFamily: "monospace",
+              color: "var(--color-text-secondary)",
+              wordBreak: "break-all",
+              cursor: "pointer",
+              border: "1px solid #2a3340",
+            }}
+            title="Click to copy"
+          >
+            {address}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+          <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>XLM Balance</div>
+            <div className="numeric" style={{ fontSize: 16, fontWeight: 500, marginTop: 4 }}>
+              {parseFloat(xlmBal).toFixed(2)}
+            </div>
+          </div>
+          <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>USDC Balance</div>
+            <div className="numeric" style={{ fontSize: 16, fontWeight: 500, marginTop: 4, color: "var(--color-accent-secondary)" }}>
+              {parseFloat(usdcBal).toFixed(2)}
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+          <button
+            className="btn-secondary"
+            style={{ flex: "1 1 auto", minWidth: 120 }}
+            onClick={onSwitchAccount}
+          >
+            Switch Account
+          </button>
+          <button
+            className="btn-ghost"
+            style={{ flex: "1 1 100%", color: "var(--color-danger)" }}
+            onClick={onDisconnect}
+          >
+            Sign Out
+          </button>
+        </div>
       </section>
 
       <Link to="/shunt" className="card" style={{ textDecoration: "none", color: "inherit", display: "flex", justifyContent: "space-between" }}>

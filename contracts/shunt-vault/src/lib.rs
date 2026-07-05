@@ -12,9 +12,44 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, token,
+    contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error, token,
     Address, BytesN, Env, Vec,
 };
+
+#[contractevent(topics = ["split"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SplitEvent {
+    pub user: Address,
+    pub amount: i128,
+    pub needs: i128,
+    pub savings: i128,
+    pub buffer: i128,
+    pub inflow_key: BytesN<32>,
+}
+
+#[contractevent(topics = ["deposit"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DepositEvent {
+    pub user: Address,
+    pub amount: i128,
+}
+
+#[contractevent(topics = ["withdraw"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WithdrawEvent {
+    pub user: Address,
+    pub amount: i128,
+    pub payout: i128,
+    pub penalty: i128,
+}
+
+#[contractevent(topics = ["offramp"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OfframpEvent {
+    pub user: Address,
+    pub anchor: Address,
+    pub amount: i128,
+}
 
 /// 100% in basis points.
 pub const BPS_DENOM: i128 = 10_000;
@@ -153,10 +188,14 @@ impl ShuntVault {
         env.storage().persistent().set(&processed_key, &true);
         env.storage().persistent().extend_ttl(&processed_key, BUMP_THRESHOLD, BUMP_AMOUNT);
 
-        env.events().publish(
-            (symbol_short!("split"), user),
-            (amount, needs, savings, buffer, inflow_key),
-        );
+        SplitEvent {
+            user,
+            amount,
+            needs,
+            savings,
+            buffer,
+            inflow_key,
+        }.publish(&env);
         (needs, savings, buffer)
     }
 
@@ -178,7 +217,7 @@ impl ShuntVault {
             &amount,
         );
         Self::credit_savings(&env, &user, amount, rules.lock_secs);
-        env.events().publish((symbol_short!("deposit"), user), amount);
+        DepositEvent { user, amount }.publish(&env);
     }
 
     /// Withdraw from Savings. Before `lock_until`, a 10% penalty is deducted
@@ -219,10 +258,12 @@ impl ShuntVault {
             &user,
             &payout,
         );
-        env.events().publish(
-            (symbol_short!("withdraw"), user),
-            (amount, payout, penalty),
-        );
+        WithdrawEvent {
+            user,
+            amount,
+            payout,
+            penalty,
+        }.publish(&env);
         payout
     }
 
@@ -264,7 +305,7 @@ impl ShuntVault {
         }
         let token = Self::token(&env);
         token::Client::new(&env, &token).transfer(&user, &anchor, &amount);
-        env.events().publish((symbol_short!("offramp"), user), (anchor, amount));
+        OfframpEvent { user, anchor, amount }.publish(&env);
     }
 
     // ---- Views ----

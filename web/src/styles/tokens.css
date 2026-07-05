@@ -15,6 +15,7 @@
   --color-text-secondary: #8a93a3;
   /* WCAG: text on lime/amber surfaces must be near-black (DESIGN.md §2.1) */
   --color-text-on-accent: #0b0f14;
+  --color-danger: #ffb4ab;
 
   --font-heading: "Space Grotesk", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
@@ -23,7 +24,7 @@
   --radius-pill: 999px;
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
   --tap-target: 44px;
-  --app-column: 390px;
+  --app-column: min(100%, 480px);
   --rail-width: 240px;
   --content-max: 1080px;
 }
@@ -154,9 +155,16 @@ button {
   display: none;
 }
 
+/* Tablet breakpoint — wider column, still centered */
+@media (min-width: 640px) and (max-width: 1023px) {
+  :root {
+    --app-column: min(100%, 640px);
+  }
+}
+
 @media (min-width: 1024px) {
   .app-shell {
-    /* full-width shell offset past the rail — no more centered phone column */
+    /* full-width shell offset past the rail */
     max-width: none;
     margin: 0 0 0 var(--rail-width);
     padding-bottom: 24px;
@@ -176,6 +184,7 @@ button {
     padding: 24px 14px;
     border-right: 1px solid #1f2732;
     background: #0d1218;
+    z-index: 30;
   }
   .screen {
     width: 100%;
@@ -246,6 +255,7 @@ button {
   background: var(--color-bg-elevated);
   border-top: 1px solid #1f2732;
   padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+  z-index: 40;
 }
 
 .tab-item,
@@ -325,4 +335,112 @@ input[type="number"] {
   padding: 12px 14px;
   font-size: 15px;
   width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+input[type="text"]:focus,
+input[type="number"]:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+/* ============ React Bits Components ============ */
+
+/* ShinyText */
+.shiny-text {
+  color: #b5b5b5a4;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  display: inline-block;
+  animation: shine var(--shiny-duration) linear infinite;
+}
+@keyframes shine {
+  0% { background-position: 100%; }
+  100% { background-position: -100%; }
+}
+.shiny-text.disabled { animation: none; }
+
+/* AnimatedBackground */
+.animated-background {
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.blob {
+  position: absolute;
+  filter: blur(80px);
+  z-index: 0;
+  opacity: 0.4;
+  animation: float 10s ease-in-out infinite;
+}
+.blob-1 {
+  background: var(--color-accent-primary);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  top: -100px;
+  left: -100px;
+}
+.blob-2 {
+  background: var(--color-accent-secondary);
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  bottom: -50px;
+  right: -50px;
+  animation-delay: -2s;
+}
+.blob-3 {
+  background: var(--color-accent-tertiary);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -4s;
+}
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -20px) scale(1.05); }
+}
+.animated-background-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* BentoGrid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+.bento-card {
+  background: rgba(20, 26, 33, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.bento-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
 }
