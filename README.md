@@ -100,11 +100,11 @@ withdraw_buffer 0.25                                    ✓ instant, no lock
 
 Mobile-first (~390px column, PWA-installable), scaling to a desktop nav rail at ≥1024px.
 
-|                          |                              |                        |
-| :-----------------------: | :--------------------------: | :---------------------: |
-|   **Onboarding**   |   **Connect wallet**   |     **Home**     |
-| **Configure Shunt** | **Auto-split confirm** | **Savings vault** |
-|   **Send & Pay**   |      **Activity**      |   **Settings**   |
+| | | |
+|:---:|:---:|:---:|
+| <img src="design/screens/onboarding.png" width="260"><br>**Onboarding** | <img src="design/screens/connect_wallet.png" width="260"><br>**Connect wallet** | <img src="design/screens/home_dashboard.png" width="260"><br>**Home** |
+| <img src="design/screens/configure_shunt.png" width="260"><br>**Configure Shunt** | <img src="design/screens/autosplit_confirm.png" width="260"><br>**Auto-split confirm** | <img src="design/screens/savings_vault.png" width="260"><br>**Savings vault** |
+| <img src="design/screens/send_pay.png" width="260"><br>**Send & Pay** | <img src="design/screens/activity_history.png" width="260"><br>**Activity** | <img src="design/screens/settings_profile.png" width="260"><br>**Settings** |
 
 ### Level 1 — White Belt (testnet proof)
 
@@ -112,10 +112,10 @@ All four requirements are live in the app: wallet connect, XLM balance fetched f
 
 ### Level 2 — Blue Belt (multi-wallet + events)
 
-| Requirement                                                    | Screenshot |
-| -------------------------------------------------------------- | ---------- |
-| **Multi-Wallet Options**Showing Freighter, Albedo, xBull |            |
-| **Real-time Event Toast**Soroban split event detected    |            |
+| Requirement | Screenshot |
+|---|---|
+| **Multi-Wallet Options**<br>Showing Freighter, Albedo, xBull | <img src="design/screenshots/blue-1-wallets.png" width="300" alt="Wallet options"> |
+| **Real-time Event Toast**<br>Soroban split event detected | <img src="design/screenshots/blue-2-events.png" width="300" alt="Event listening"> |
 
 ## Architecture
 
