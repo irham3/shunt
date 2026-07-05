@@ -1,5 +1,3 @@
-pdpdadsdmasdasasn
-
 <p align="center">
   <img src="design/hero.svg" alt="Shunt — income lands, instantly split" width="900">
 </p>
