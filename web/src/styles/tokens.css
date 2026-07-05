@@ -17,7 +17,7 @@
   --color-text-on-accent: #0b0f14;
 
   --font-heading: "Space Grotesk", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
 
   --radius-card: 16px;
   --radius-pill: 999px;
@@ -64,6 +64,8 @@ button {
   border-radius: var(--radius-pill);
   padding: 0 24px;
   width: 100%;
+  position: relative;
+  overflow: hidden;
 }
 .btn-primary:disabled {
   opacity: 0.4;
@@ -100,9 +102,44 @@ button {
   color: var(--color-text-secondary);
 }
 
+/* ============ Motion utilities ============
+   Additive only — not applied anywhere automatically. Add the class in a
+   screen's JSX where you want the effect (see handoff/README.md). */
+@keyframes shunt-shimmer-sweep {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+.shimmer-once::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: shunt-shimmer-sweep 2.2s ease 0.4s 2 both;
+  pointer-events: none;
+}
+
+@keyframes shunt-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: shunt-fade-up 0.5s ease both;
+}
+
 /* ============ App shell ============
-   Mobile (<1024px): centered single column + bottom tab bar.
-   Desktop (>=1024px): fixed left rail + wide content area with
+   Mobile (&lt;1024px): centered single column + bottom tab bar.
+   Desktop (&gt;=1024px): fixed left rail + wide content area with
    multi-column screens (see .split-cols helpers below). */
 .app-shell {
   min-height: 100dvh;
@@ -252,6 +289,9 @@ button {
   font-size: 14px;
   z-index: 50;
   box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .chip {

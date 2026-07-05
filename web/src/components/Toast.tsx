@@ -14,7 +14,7 @@ export function Toast() {
   if (!toast) return null;
   return (
     <div className="toast" role="status">
-      {toast} <span style={{ color: "var(--color-accent-primary)" }}>✓</span>
+      {toast} <i className="ph-fill ph-check-circle" style={{ color: "var(--color-accent-primary)", fontSize: 16 }} />
     </div>
   );
 }
