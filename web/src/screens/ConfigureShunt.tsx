@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Lock, Wallet, ArrowUpRight, Plus } from "lucide-react";
 import { SplitNode } from "../components/SplitNode";
 import { vaultSetRules } from "../lib/vault";
 import { CORE_BUCKET_IDS, totalPct, useShunt } from "../store";
@@ -30,6 +31,18 @@ export function ConfigureShunt() {
   const [lockSecs, setLockSecs] = useState(storedLockSecs);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newKind, setNewKind] = useState<"needs" | "savings" | "buffer" | "invest">("savings");
+
+  const getKindIcon = (kind: string, size = 16) => {
+    switch (kind) {
+      case "savings": return <Lock size={size} />;
+      case "invest": return <ArrowUpRight size={size} />;
+      default: return <Wallet size={size} />; // needs and buffer
+    }
+  };
 
   const total = totalPct(buckets);
   const valid = total === 100;
@@ -99,7 +112,9 @@ export function ConfigureShunt() {
           {buckets.map((b) => (
             <div key={b.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600, color: b.color }}>{b.name}</span>
+                <span style={{ fontWeight: 600, color: b.color, display: "flex", alignItems: "center", gap: 6 }}>
+                  {getKindIcon(b.kind)} {b.name}
+                </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
                     className="chip"
@@ -141,9 +156,28 @@ export function ConfigureShunt() {
             </div>
           ))}
 
-          <button className="btn-ghost" onClick={addBucket}>
-            + Add lane
-          </button>
+          {!showAdd ? (
+            <button className="btn-ghost" onClick={() => setShowAdd(true)} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+              <Plus size={16} /> Add custom lane
+            </button>
+          ) : (
+            <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12, border: "1px solid var(--color-accent-primary)" }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>New custom lane</div>
+              <input type="text" placeholder="Lane name (e.g. Holiday)" value={newName} onChange={e => setNewName(e.target.value)} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className={`chip ${newKind === "savings" ? "active" : ""}`} onClick={() => setNewKind("savings")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+                  <Lock size={14} /> Vault (Locked)
+                </button>
+                <button className={`chip ${newKind === "needs" ? "active" : ""}`} onClick={() => setNewKind("needs")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+                  <Wallet size={14} /> Wallet (Liquid)
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+                <button className="btn-primary" disabled={!newName.trim()} onClick={() => { addBucket(newName.trim(), newKind); setShowAdd(false); setNewName(""); }}>Add Lane</button>
+              </div>
+            </div>
+          )}
 
           <div className="card" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 14 }}>Savings timelock</span>

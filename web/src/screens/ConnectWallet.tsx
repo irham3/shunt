@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { connectWithAuthModal } from "../lib/stellar";
 import { useShunt } from "../store";
 import { StrKey } from "@stellar/stellar-sdk";
+import { Loader2 } from "lucide-react";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { ShinyText } from "../components/ShinyText";
 
@@ -52,9 +53,9 @@ export function ConnectWallet() {
           className="btn-primary"
           onClick={onConnect}
           disabled={busy}
-          style={{ width: "100%", padding: "14px 0", fontSize: 16 }}
+          style={{ width: "100%", padding: "14px 0", fontSize: 16, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
         >
-          {busy ? "Connecting…" : "Connect Wallet"}
+          {busy ? <><Loader2 className="animate-spin" size={18} /> Confirm in extension…</> : "Connect Wallet"}
         </button>
         <p className="muted" style={{ textAlign: "center", fontSize: 13, marginTop: 4 }}>
           Freighter · Albedo · xBull supported

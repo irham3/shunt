@@ -12,6 +12,7 @@ export interface Bucket {
   /** percentage 0..100 (UI); converted to bps for the contract */
   pct: number;
   color: string;
+  kind: "needs" | "savings" | "buffer" | "invest";
 }
 
 export interface ActivityItem {
@@ -45,7 +46,7 @@ interface ShuntState {
   setWalletId: (w: string | null) => void;
   setBuckets: (b: Bucket[]) => void;
   setBucketPct: (id: string, pct: number) => void;
-  addBucket: () => void;
+  addBucket: (name: string, kind: "needs" | "savings" | "buffer" | "invest") => void;
   removeBucket: (id: string) => void;
   markRulesSaved: () => void;
   setLockSecs: (s: number) => void;
@@ -62,13 +63,13 @@ interface ShuntState {
   clearToast: () => void;
 }
 
-const EXTRA_COLORS = ["var(--color-bucket-extra-1)", "var(--color-bucket-extra-2)"];
+const EXTRA_COLORS = ["var(--color-bucket-extra-1)", "var(--color-bucket-extra-2)", "#818cf8", "#34d399", "#f87171"];
 
 export const DEFAULT_BUCKETS: Bucket[] = [
-  { id: "needs", name: "Needs", pct: 50, color: "var(--color-bucket-needs)" },
-  { id: "savings", name: "Savings", pct: 25, color: "var(--color-bucket-savings)" },
-  { id: "buffer", name: "Buffer", pct: 15, color: "var(--color-bucket-buffer)" },
-  { id: "invest", name: "Invest", pct: 10, color: "var(--color-bucket-extra-1)" },
+  { id: "needs", name: "Needs", pct: 50, color: "var(--color-bucket-needs)", kind: "needs" },
+  { id: "savings", name: "Savings", pct: 25, color: "var(--color-bucket-savings)", kind: "savings" },
+  { id: "buffer", name: "Buffer", pct: 15, color: "var(--color-bucket-buffer)", kind: "buffer" },
+  { id: "invest", name: "Invest", pct: 10, color: "var(--color-bucket-extra-1)", kind: "invest" },
 ];
 
 /** Core lanes that cannot be removed in Configure Shunt. */
@@ -99,18 +100,21 @@ export const useShunt = create<ShuntState>()(
             b.id === id ? { ...b, pct: Math.max(0, Math.min(100, Math.round(pct))) } : b,
           ),
         }),
-      addBucket: () => {
+      addBucket: (name, kind) => {
         const buckets = get().buckets;
-        const extraCount = buckets.length - 3;
-        if (extraCount >= EXTRA_COLORS.length) return; // max 5 lanes
+        const extraCount = buckets.length - 4;
+        if (extraCount >= EXTRA_COLORS.length) return; // max lanes limit
+        // assign a slightly varied color based on kind, or use extra colors
+        const color = EXTRA_COLORS[extraCount % EXTRA_COLORS.length];
         set({
           buckets: [
             ...buckets,
             {
               id: `lane-${Date.now()}`,
-              name: `Lane ${buckets.length + 1}`,
+              name,
               pct: 0,
-              color: EXTRA_COLORS[extraCount],
+              color,
+              kind,
             },
           ],
         });
@@ -125,10 +129,12 @@ export const useShunt = create<ShuntState>()(
 
       applySplit: (amount, txHash) => {
         const { buckets, balances, activity, lockUntil, lockSecs } = get();
-        const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
-        const savings = (amount * pct("savings")) / 100;
-        const buffer = (amount * pct("buffer")) / 100;
-        const invest = (amount * pct("invest")) / 100;
+        const pctKind = (kind: string) =>
+          buckets.filter((b) => b.kind === kind).reduce((sum, b) => sum + b.pct, 0);
+          
+        const savings = (amount * pctKind("savings")) / 100;
+        const buffer = (amount * pctKind("buffer")) / 100;
+        const invest = (amount * pctKind("invest")) / 100;
         const needs = amount - savings - buffer - invest;
         // mirror the contract: each savings deposit extends the timelock
         const newLock = Math.floor(Date.now() / 1000) + lockSecs;
@@ -239,10 +245,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 1,
-      // v0 -> v1: introduce the Invest lane (F12). Existing users get it at
-      // 0% so their saved 100% allocation stays valid; fresh installs get
-      // the 50/25/15/10 default.
+      version: 2,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -253,6 +256,14 @@ export const useShunt = create<ShuntState>()(
           }
           persisted.balances = { invest: 0, ...(persisted.balances ?? {}) };
           persisted.investXlm = persisted.investXlm ?? 0;
+        }
+        if (version < 2 && persisted) {
+          if (Array.isArray(persisted.buckets)) {
+            persisted.buckets = persisted.buckets.map((b: any) => ({
+              ...b,
+              kind: b.kind || (b.id.startsWith("lane-") ? "needs" : b.id),
+            }));
+          }
         }
         return persisted;
       },

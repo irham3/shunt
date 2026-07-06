@@ -6,6 +6,7 @@ import { fetchPending, type PendingSplit } from "../lib/keeper";
 import { fetchXlmBalance, fundWithFriendbot, fetchLatestSplitEvent, NETWORK } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { BentoGrid, BentoCard } from "../components/BentoGrid";
+import { Lock, Wallet, ArrowUpRight } from "lucide-react";
 
 export function Home() {
   const nav = useNavigate();
@@ -178,7 +179,7 @@ export function Home() {
                       fontWeight: 700,
                     }}
                   >
-                    {b.name[0]}
+                    {b.kind === "savings" ? <Lock size={20} /> : b.kind === "invest" ? <ArrowUpRight size={20} /> : <Wallet size={20} />}
                   </span>
                   <span>
                     <div style={{ fontWeight: 600 }}>{b.name}</div>

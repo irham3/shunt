@@ -138,6 +138,13 @@ button {
   animation: shunt-fade-up 0.5s ease both;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 /* ============ App shell ============
    Mobile (&lt;1024px): centered single column + bottom tab bar.
    Desktop (&gt;=1024px): fixed left rail + wide content area with
