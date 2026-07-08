@@ -11,13 +11,13 @@ export function Onboarding() {
 
   return (
     <AnimatedBackground>
-      {/* Navbar/Header */}
+        {/* Navbar/Header */}
       <div style={{ display: "flex", justifyContent: "space-between", padding: "20px 40px", maxWidth: 1200, margin: "0 auto", width: "100%", alignItems: "center" }}>
         <div style={{ fontSize: 24, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 16, height: 16, background: "var(--color-accent-primary)", borderRadius: 4 }} />
           Shunt
         </div>
-        <button className="btn-primary" onClick={() => nav("/connect")}>Connect Wallet</button>
+        <button className="btn-primary" style={{ width: "fit-content", padding: "8px 16px" }} onClick={() => nav("/connect")}>Connect Wallet</button>
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 20px", display: "flex", flexDirection: "column", gap: 100 }}>
@@ -30,7 +30,7 @@ export function Onboarding() {
           <p className="muted" style={{ fontSize: "clamp(18px, 2vw, 22px)", maxWidth: 600, margin: 0 }}>
             Set it once, the rest is automatic. Every incoming USDC is split into its own lanes. The moment discipline is easy: payday.
           </p>
-          <button className="btn-primary" style={{ fontSize: 18, padding: "16px 32px", height: "auto", borderRadius: 30 }} onClick={() => nav("/connect")}>
+          <button className="btn-primary" style={{ fontSize: 18, padding: "16px 32px", height: "auto", borderRadius: 30, width: "fit-content" }} onClick={() => nav("/connect")}>
             Get Started
           </button>
           
@@ -40,7 +40,7 @@ export function Onboarding() {
         </section>
 
         {/* 2. The Problem / Why People Use It */}
-        <section style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        <section style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center" }}>
             <h2 style={{ fontSize: "clamp(32px, 4vw, 48px)", margin: 0 }}>Why people use it</h2>
             <p className="muted" style={{ fontSize: 18, marginTop: 8 }}>Three quiet leaks that freelancers face.</p>
@@ -72,7 +72,7 @@ export function Onboarding() {
         </section>
 
         {/* 3. The Solutions / Outcomes */}
-        <section style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        <section style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center" }}>
             <h2 style={{ fontSize: "clamp(32px, 4vw, 48px)", margin: 0 }}>What you get</h2>
             <p className="muted" style={{ fontSize: 18, marginTop: 8 }}>Four concrete outcomes of the Shunt autopilot.</p>
@@ -105,7 +105,7 @@ export function Onboarding() {
         {/* 4. Bottom CTA */}
         <section style={{ textAlign: "center", padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
           <h2 style={{ fontSize: "clamp(32px, 4vw, 48px)", margin: 0 }}>Ready to put your income on autopilot?</h2>
-          <button className="btn-primary" style={{ fontSize: 18, padding: "16px 32px", height: "auto", borderRadius: 30 }} onClick={() => nav("/connect")}>
+          <button className="btn-primary" style={{ fontSize: 18, padding: "16px 32px", height: "auto", borderRadius: 30, width: "fit-content" }} onClick={() => nav("/connect")}>
             Launch App
           </button>
         </section>
