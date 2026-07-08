@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
-import { sendXlmPayment, fetchXlmBalance, EXPLORER_TX, NETWORK } from "../lib/stellar";
+import { sendXlmPayment, fetchXlmBalance, EXPLORER_TX, NETWORK, formatError } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { StrKey } from "@stellar/stellar-sdk";
 
@@ -62,7 +62,8 @@ export function SendPay() {
     } catch (e) {
       offramp(usdc);
       setSubmitted("local");
-      setErr(`Anchor flow unavailable (${e instanceof Error ? e.message : e}) — recorded as a sketched request.`);
+      const formatted = formatError(e);
+      if (formatted) setErr(`Anchor flow unavailable (${formatted}) — recorded as a sketched request.`);
       showToast("Cash-out request submitted");
     } finally {
       setBusy(false);
@@ -89,7 +90,8 @@ export function SendPay() {
       setXlmBalance(bal);
       showToast("XLM transaction confirmed!");
     } catch (e) {
-      setXlmErr(e instanceof Error ? e.message : String(e));
+      const formatted = formatError(e);
+      if (formatted) setXlmErr(formatted);
     } finally {
       setXlmBusy(false);
     }

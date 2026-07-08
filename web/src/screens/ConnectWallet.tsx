@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { connectWithAuthModal } from "../lib/stellar";
+import { connectWithAuthModal, formatError } from "../lib/stellar";
 import { useShunt } from "../store";
 import { StrKey } from "@stellar/stellar-sdk";
 import { Loader2 } from "lucide-react";
@@ -24,7 +24,8 @@ export function ConnectWallet() {
       setAddress(addr);
       nav("/shunt");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      const formatted = formatError(e);
+      if (formatted) setErr(formatted);
     } finally {
       setBusy(false);
     }

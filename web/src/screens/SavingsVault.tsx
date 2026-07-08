@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getIdrRate } from "../lib/rates";
 import { vaultWithdrawSavings } from "../lib/vault";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
+import { formatError } from "../lib/stellar";
 
 const PENALTY_PCT = 10; // must match PENALTY_BPS in the contract
 
@@ -60,7 +61,8 @@ export function SavingsVault() {
       showToast(penalty > 0 ? `Withdrawn — ${fmtUsdc(penalty)} USDC penalty → Buffer` : "Savings withdrawn");
       setAmount("");
     } catch (e) {
-      setErr(`On-chain call failed (${e instanceof Error ? e.message : String(e)})`);
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain call failed (${formatted})`);
     } finally {
       setBusy(false);
     }

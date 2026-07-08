@@ -54,6 +54,13 @@ export const EXPLORER_ACCOUNT = (addr: string) =>
 // Wallet Kit Initialization
 // ---------------------------------------------------------------------------
 
+export function formatError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg === "USER_REJECTED") return "";
+  // Fix snake_case errors from Soroban / Stellar
+  return msg.replace(/_/g, " ");
+}
+
 // Register wallet modules at import time so all static methods work.
 StellarWalletsKit.init({
   modules: [
@@ -64,19 +71,32 @@ StellarWalletsKit.init({
   network: NETWORK_PASSPHRASE as any,
 });
 
+function extractErrorString(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  if (e && typeof e === "object") {
+    if ("message" in e && typeof (e as any).message === "string") return (e as any).message;
+    if ("error" in e && typeof (e as any).error === "string") return (e as any).error;
+    try { return JSON.stringify(e); } catch { return "Unknown error"; }
+  }
+  return String(e);
+}
+
 /** Formats wallet kit errors for better UX (Level 2). */
 function parseWalletError(e: unknown): never {
-  const msg = String(e).toLowerCase();
+  const errStr = extractErrorString(e);
+  const msg = errStr.toLowerCase();
+  
   if (msg.includes("not installed") || msg.includes("not found")) {
     throw new Error("Wallet not found. Please install the extension.");
   }
   if (msg.includes("reject") || msg.includes("decline") || msg.includes("cancel")) {
-    throw new Error("Transaction rejected by user.");
+    throw new Error("USER_REJECTED");
   }
   if (msg.includes("tx_insufficient_balance") || msg.includes("underfunded")) {
     throw new Error("Insufficient XLM balance for this transaction.");
   }
-  throw new Error(e instanceof Error ? e.message : String(e));
+  throw new Error(errStr);
 }
 
 /**

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Lock, Wallet, ArrowUpRight, Plus } from "lucide-react";
 import { SplitNode } from "../components/SplitNode";
 import { vaultSetRules } from "../lib/vault";
+import { formatError } from "../lib/stellar";
 import { CORE_BUCKET_IDS, totalPct, useShunt } from "../store";
 
 const LOCK_OPTIONS = [
@@ -63,7 +64,8 @@ export function ConfigureShunt() {
       persistLockSecs(lockSecs);
       showToast("Shunt rules saved on-chain");
     } catch (e) {
-      setErr(`On-chain save failed (${e instanceof Error ? e.message : String(e)})`);
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain save failed (${formatted})`);
     } finally {
       setBusy(false);
     }

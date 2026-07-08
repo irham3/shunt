@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AllocationBar } from "../components/AllocationBar";
 import { getIdrRate } from "../lib/rates";
 import { fetchPending, type PendingSplit } from "../lib/keeper";
-import { fetchXlmBalance, fundWithFriendbot, fetchLatestSplitEvent, NETWORK } from "../lib/stellar";
+import { fetchXlmBalance, fundWithFriendbot, fetchLatestSplitEvent, NETWORK, formatError } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { BentoGrid, BentoCard } from "../components/BentoGrid";
 import { Lock, Wallet, ArrowUpRight } from "lucide-react";
@@ -84,7 +84,8 @@ export function Home() {
       setXlmBalance(bal);
       showToast("Funded with 10,000 testnet XLM!");
     } catch (e) {
-      showToast(`Friendbot error: ${e instanceof Error ? e.message : e}`);
+      const formatted = formatError(e);
+      if (formatted) showToast(`Friendbot error: ${formatted}`);
     } finally {
       setFundingBot(false);
     }

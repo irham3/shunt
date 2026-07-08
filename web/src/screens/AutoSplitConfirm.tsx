@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SplitNode } from "../components/SplitNode";
 import { markComplete, type PendingSplit } from "../lib/keeper";
-import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX } from "../lib/stellar";
+import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
 import { getXlmUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
@@ -77,7 +77,8 @@ export function AutoSplitConfirm() {
       setDoneHash(hash);
       showToast("Income landed — auto-split complete");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      const formatted = formatError(e);
+      if (formatted) setErr(formatted);
     } finally {
       setBusy(false);
     }

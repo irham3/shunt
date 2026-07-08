@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { authenticate, startDeposit, ANCHOR_HOME_DOMAIN } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
+import { formatError } from "../lib/stellar";
 
 const FEE_PCT = 0.35; // on-ramp fee (PRD §7b: 0.3–0.4%)
 
@@ -42,7 +43,8 @@ export function TopUp() {
     } catch (e) {
       recordTopUp(usdc);
       setSubmitted("local");
-      setErr(`Anchor flow unavailable (${e instanceof Error ? e.message : e}) — recorded as a sketched request.`);
+      const formatted = formatError(e);
+      if (formatted) setErr(`Anchor flow unavailable (${formatted}) — recorded as a sketched request.`);
       showToast("Top Up request submitted");
     } finally {
       setBusy(false);
