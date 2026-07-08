@@ -53,10 +53,13 @@ export function Home() {
         if (lastEventCursor !== "") {
           // If it's not the first load, show a real-time toast
           showToast(`Real-time: New contract event detected (Split/Withdraw)`);
-          // Note: In a full implementation, we'd fetch the updated balances from the contract here.
         }
+        // Sync the latest balances from the contract
+        useShunt.getState().syncFromChain(address);
       }
     };
+    // Also sync on initial mount
+    useShunt.getState().syncFromChain(address);
     const t = setInterval(tick, 5000);
     return () => clearInterval(t);
   }, [address, lastEventCursor, showToast]);

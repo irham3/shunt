@@ -66,14 +66,15 @@ export function AutoSplitConfirm() {
     setBusy(true);
     setErr(null);
     try {
-      let hash: string | undefined;
-      if (pending?.xdr) {
-        hash = await signAndSubmitXdr(pending.xdr);
-        await markComplete(pending.txHash);
+      if (!pending?.xdr) {
+        throw new Error("Missing prepared XDR from Keeper. Ensure Vault contract is deployed and Keeper is running.");
       }
-      applySplit(amount, hash ?? pending?.txHash);
-      await runInvestConversion(Boolean(pending?.xdr));
-      setDoneHash(hash ?? null);
+      const hash = await signAndSubmitXdr(pending.xdr);
+      await markComplete(pending.txHash);
+      
+      applySplit(amount, hash);
+      await runInvestConversion(true);
+      setDoneHash(hash);
       showToast("Income landed — auto-split complete");
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -109,12 +110,6 @@ export function AutoSplitConfirm() {
         Atomic split in a single transaction · sub-cent network fee
         {investAmt > 0 && " · invest slice converts via a follow-up path payment"}
       </p>
-
-      {doneHash === null && !pending?.xdr && (
-        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          (Demo mode: contract not configured — split recorded locally.)
-        </p>
-      )}
 
       {doneHash ? (
         <>

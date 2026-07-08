@@ -60,9 +60,7 @@ export function SavingsVault() {
       showToast(penalty > 0 ? `Withdrawn — ${fmtUsdc(penalty)} USDC penalty → Buffer` : "Savings withdrawn");
       setAmount("");
     } catch (e) {
-      // no contract deployed -> local demo accounting
-      withdrawSavings(usdc, penalty);
-      setErr(`On-chain call failed (${e instanceof Error ? e.message : e}) — recorded locally.`);
+      setErr(`On-chain call failed (${e instanceof Error ? e.message : String(e)})`);
     } finally {
       setBusy(false);
     }

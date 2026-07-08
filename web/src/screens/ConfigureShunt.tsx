@@ -63,10 +63,7 @@ export function ConfigureShunt() {
       persistLockSecs(lockSecs);
       showToast("Shunt rules saved on-chain");
     } catch (e) {
-      // contract not deployed yet -> still persist locally for the demo flow
-      markRulesSaved();
-      persistLockSecs(lockSecs);
-      setErr(`On-chain save failed (${e instanceof Error ? e.message : e}) — rules saved locally.`);
+      setErr(`On-chain save failed (${e instanceof Error ? e.message : String(e)})`);
     } finally {
       setBusy(false);
     }
