@@ -125,9 +125,9 @@ export function Home() {
       {/* Quick actions: the in/out loop lives one tap from Home (F11/F13/F8) */}
       <section style={{ display: "flex", gap: 8 }}>
         {[
-          { to: "/topup", icon: "⬇", label: "Top Up" },
-          { to: "/request", icon: "🔗", label: "Request" },
-          { to: "/send", icon: "⬆", label: "Send & Pay" },
+          { to: "/topup", icon: "ph-download-simple", label: "Top Up" },
+          { to: "/request", icon: "ph-link", label: "Request" },
+          { to: "/send", icon: "ph-paper-plane-right", label: "Send & Pay" },
         ].map((a) => (
           <Link
             key={a.to}
@@ -135,7 +135,7 @@ export function Home() {
             className="card"
             style={{ flex: 1, textAlign: "center", textDecoration: "none", color: "inherit", padding: "12px 4px" }}
           >
-            <div style={{ fontSize: 20 }}>{a.icon}</div>
+            <i className={`ph ${a.icon}`} style={{ fontSize: 24 }} />
             <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600 }}>{a.label}</div>
           </Link>
         ))}

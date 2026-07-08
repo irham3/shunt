@@ -78,7 +78,7 @@ export function ConfigureShunt() {
         </p>
       </header>
 
-      <div className="split-cols">
+      <div className="split-cols reverse-mobile">
         {/* Diagram + total — sticky preview on desktop */}
         <div className="col-side sticky-col">
           <div className="card">
@@ -163,10 +163,10 @@ export function ConfigureShunt() {
               <input type="text" placeholder="Lane name (e.g. Holiday)" value={newName} onChange={e => setNewName(e.target.value)} />
               <div style={{ display: "flex", gap: 8 }}>
                 <button className={`chip ${newKind === "savings" ? "active" : ""}`} onClick={() => setNewKind("savings")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
-                  <Lock size={14} /> Vault (Locked)
+                  <Lock size={14} /> Locked
                 </button>
                 <button className={`chip ${newKind === "needs" ? "active" : ""}`} onClick={() => setNewKind("needs")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
-                  <Wallet size={14} /> Wallet (Liquid)
+                  <Wallet size={14} /> Liquid
                 </button>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
@@ -178,7 +178,7 @@ export function ConfigureShunt() {
 
           <div className="card" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 14 }}>Savings timelock</span>
-            <span style={{ display: "flex", gap: 6 }}>
+            <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {LOCK_OPTIONS.map((o) => (
                 <button
                   key={o.secs}
