@@ -174,10 +174,13 @@ button {
 
 @media (min-width: 1024px) {
   .app-shell {
-    /* full-width shell offset past the rail */
+    /* full-width shell */
     max-width: none;
-    margin: 0 0 0 var(--rail-width);
+    margin: 0 auto;
     padding-bottom: 24px;
+  }
+  .app-shell.with-rail {
+    margin: 0 0 0 var(--rail-width);
   }
   .tab-bar {
     display: none !important;

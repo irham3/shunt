@@ -21,7 +21,7 @@ export default function App() {
   const fullScreen = ["/", "/connect", "/confirm", "/pay"].includes(pathname);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${!fullScreen && address ? "with-rail" : ""}`}>
       <Toast />
       <Routes>
         <Route path="/" element={address ? <Navigate to="/home" replace /> : <Onboarding />} />
