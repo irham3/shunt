@@ -15,10 +15,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "bindings": ["../contracts/shunt-vault/bindings/src/index.ts"]
-    }
+    "baseUrl": "."
   },
   "include": ["src"]
 }

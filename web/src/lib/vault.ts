@@ -6,7 +6,7 @@
  * The bindings Client handles simulation, assembly, and XDR encoding.
  * We only need to plug in the wallet signer from StellarWalletsKit.
  */
-import { Client, networks, type Rules } from "bindings";
+import { Client, networks, type Rules } from "./vault-contract";
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
 import { RPC_URL, VAULT_CONTRACT_ID, NETWORK_PASSPHRASE } from "./stellar";
 
@@ -145,4 +145,4 @@ export async function vaultGetBufferCredit(user: string): Promise<bigint> {
   return tx.result;
 }
 
-export { type Rules } from "bindings";
+export { type Rules } from "./vault-contract";
