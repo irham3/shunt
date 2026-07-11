@@ -14,7 +14,7 @@ import { RPC_URL, VAULT_CONTRACT_ID, NETWORK_PASSPHRASE } from "./stellar";
 // Client singleton
 // ---------------------------------------------------------------------------
 
-function getVaultClient(): Client {
+function getVaultClient(publicKey: string): Client {
   const contractId = VAULT_CONTRACT_ID || networks.testnet.contractId;
   if (!contractId) {
     throw new Error("VAULT_CONTRACT_ID is not configured (local demo mode).");
@@ -23,6 +23,10 @@ function getVaultClient(): Client {
     contractId,
     networkPassphrase: NETWORK_PASSPHRASE,
     rpcUrl: RPC_URL,
+    // Required so the bindings Client knows which account is the tx source
+    // (needed even for read-only simulation) — without it every call fails
+    // with "constructed using a default account".
+    publicKey,
     // The bindings Client calls this to sign assembled transactions.
     async signTransaction(xdr: string) {
       const result = await StellarWalletsKit.signTransaction(xdr, {
@@ -46,7 +50,7 @@ export async function vaultSetRules(
   lockSecs: number,
   anchors: string[] = [],
 ): Promise<string> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.set_rules({
     user,
     needs_bps: needsPct * 100,
@@ -64,7 +68,7 @@ export async function vaultWithdrawSavings(
   user: string,
   usdc: number,
 ): Promise<string> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.withdraw_savings({
     user,
     amount: BigInt(Math.round(usdc * 10_000_000)),
@@ -78,7 +82,7 @@ export async function vaultWithdrawBuffer(
   user: string,
   usdc: number,
 ): Promise<string> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.withdraw_buffer({
     user,
     amount: BigInt(Math.round(usdc * 10_000_000)),
@@ -93,7 +97,7 @@ export async function vaultOfframp(
   anchor: string,
   usdc: number,
 ): Promise<string> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.offramp({
     user,
     anchor,
@@ -108,7 +112,7 @@ export async function vaultDeposit(
   user: string,
   usdc: number,
 ): Promise<string> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.deposit({
     user,
     amount: BigInt(Math.round(usdc * 10_000_000)),
@@ -122,25 +126,25 @@ export async function vaultDeposit(
 // ---------------------------------------------------------------------------
 
 export async function vaultGetRules(user: string): Promise<Rules | null> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.get_rules({ user });
   return tx.result ?? null;
 }
 
 export async function vaultGetSavings(user: string): Promise<bigint> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.get_savings({ user });
   return tx.result;
 }
 
 export async function vaultGetLockUntil(user: string): Promise<bigint> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.get_lock_until({ user });
   return tx.result;
 }
 
 export async function vaultGetBufferCredit(user: string): Promise<bigint> {
-  const client = getVaultClient();
+  const client = getVaultClient(user);
   const tx = await client.get_buffer_credit({ user });
   return tx.result;
 }

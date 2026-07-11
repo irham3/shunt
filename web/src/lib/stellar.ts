@@ -55,7 +55,7 @@ export const EXPLORER_ACCOUNT = (addr: string) =>
 // ---------------------------------------------------------------------------
 
 export function formatError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = extractErrorString(e);
   if (msg === "USER_REJECTED") return "";
   // Fix snake_case errors from Soroban / Stellar
   return msg.replace(/_/g, " ");
