@@ -17,7 +17,7 @@ type Tab = "usdc" | "xlm";
 
 /** F8/F10: off-ramp from the Needs lane via a SEP-24 anchor + XLM transfer (Level 1). */
 export function SendPay() {
-  const { address, balances, xlmBalance, setXlmBalance, offramp, showToast, activity } = useShunt();
+  const { address, balances, xlmBalance, setXlmBalance, offramp, showToast, activity, recordXlmPayment } = useShunt();
   const [tab, setTab] = useState<Tab>("xlm");
   const [dest, setDest] = useState("bank");
   const [amount, setAmount] = useState("");
@@ -89,6 +89,7 @@ export function SendPay() {
     try {
       const hash = await sendXlmPayment(address, xlmDest.trim(), xlmAmount.trim());
       setXlmResult({ hash });
+      recordXlmPayment(xlmDest.trim(), xlmAmount.trim(), hash);
       // Refresh XLM balance
       const bal = await fetchXlmBalance(address);
       setXlmBalance(bal);

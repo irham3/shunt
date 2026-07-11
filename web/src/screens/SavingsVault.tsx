@@ -33,7 +33,8 @@ export function SavingsVault() {
       .slice()
       .reverse()
       .reduce<number[]>((acc, a) => {
-        const savingsPart = a.kind === "split" ? a.amountUsdc * 0.25 : a.amountUsdc;
+        const amt = a.amountUsdc ?? 0;
+        const savingsPart = a.kind === "split" ? amt * 0.25 : amt;
         acc.push((acc[acc.length - 1] ?? 0) + savingsPart);
         return acc;
       }, []);

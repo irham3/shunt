@@ -8,6 +8,7 @@ const FILTERS = [
   { id: "invest", label: "Invest" },
   { id: "withdraw", label: "Withdraw" },
   { id: "offramp", label: "Off-ramp" },
+  { id: "payment", label: "Payment" },
 ] as const;
 
 const KIND_ICON: Record<ActivityItem["kind"], string> = {
@@ -16,6 +17,7 @@ const KIND_ICON: Record<ActivityItem["kind"], string> = {
   offramp: "↗",
   deposit: "＋",
   invest: "📈",
+  payment: "→",
 };
 
 export function Activity() {
@@ -65,7 +67,11 @@ export function Activity() {
                   )}
                 </div>
               </span>
-              <span className="numeric" style={{ fontWeight: 600 }}>${fmtUsdc(a.amountUsdc)}</span>
+              <span className="numeric" style={{ fontWeight: 600 }}>
+                {a.amountXlm !== undefined
+                  ? `${a.amountXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`
+                  : `$${fmtUsdc(a.amountUsdc ?? 0)}`}
+              </span>
             </div>
           ))}
         </section>

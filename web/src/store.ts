@@ -18,9 +18,11 @@ export interface Bucket {
 
 export interface ActivityItem {
   id: string;
-  kind: "split" | "withdraw" | "offramp" | "deposit" | "invest";
+  kind: "split" | "withdraw" | "offramp" | "deposit" | "invest" | "payment";
   title: string;
-  amountUsdc: number;
+  /** USDC-lane items use this; XLM peer-to-peer sends use amountXlm instead. */
+  amountUsdc?: number;
+  amountXlm?: number;
   txHash?: string;
   at: string; // ISO
   bucket?: string;
@@ -59,6 +61,8 @@ interface ShuntState {
   recordTopUp: (amount: number) => void;
   /** F12: record a DCA conversion of the invest slice (real tx or labeled simulation). */
   applyInvestConversion: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
+  /** Record a direct wallet-to-wallet XLM payment (Send & Pay, XLM tab). */
+  recordXlmPayment: (destination: string, amountXlm: string, txHash: string) => void;
   setLockUntil: (t: number) => void;
   showToast: (msg: string) => void;
   clearToast: () => void;
@@ -235,6 +239,24 @@ export const useShunt = create<ShuntState>()(
               kind: "deposit",
               title: "Top Up via anchor (pending)",
               amountUsdc: amount,
+              at: new Date().toISOString(),
+            },
+            ...activity,
+          ],
+        });
+      },
+
+      recordXlmPayment: (destination, amountXlm, txHash) => {
+        const { activity } = get();
+        const short = `${destination.slice(0, 4)}…${destination.slice(-4)}`;
+        set({
+          activity: [
+            {
+              id: `${Date.now()}`,
+              kind: "payment",
+              title: `Sent XLM to ${short}`,
+              amountXlm: Number(amountXlm),
+              txHash,
               at: new Date().toISOString(),
             },
             ...activity,

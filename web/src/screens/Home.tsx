@@ -217,7 +217,11 @@ export function Home() {
               {activity.slice(0, 5).map((a) => (
                 <div key={a.id} style={{ padding: "11px 0", borderBottom: "1px solid #1f2732", display: "flex", justifyContent: "space-between", gap: 12 }}>
                   <span style={{ fontSize: 14, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</span>
-                  <span className="numeric muted">${fmtUsdc(a.amountUsdc)}</span>
+                  <span className="numeric muted">
+                    {a.amountXlm !== undefined
+                      ? `${a.amountXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`
+                      : `$${fmtUsdc(a.amountUsdc ?? 0)}`}
+                  </span>
                 </div>
               ))}
             </div>
