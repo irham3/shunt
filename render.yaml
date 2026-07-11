@@ -1,0 +1,22 @@
+# Render blueprint — deploys the keeper as an always-on web service.
+# In the Render dashboard: New + → Blueprint → point at this repo.
+services:
+  - type: web
+    name: shunt-keeper
+    runtime: node
+    rootDir: keeper
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: STELLAR_NETWORK
+        value: testnet
+      - key: VAULT_CONTRACT_ID
+        value: CA65BKKNEZEXOXK54G6BAVE3O4QMTCXGSA7YULHADELX5HOIOZPO7JUM
+      - key: WATCH_ACCOUNTS
+        value: GC4IUJPBQZKXYONI6UABEXE7EA6QXT4OYV2JYJA5GTPMXSMEKDL6AGDZ
+      - key: PORT
+        value: "8787"
+      - key: STATE_FILE
+        value: /tmp/keeper-state.json

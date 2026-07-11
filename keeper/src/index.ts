@@ -80,6 +80,17 @@ function watch(account: string) {
 
 const app = Fastify({ logger: false });
 
+// The web app calls this API cross-origin (Vite dev server / Vercel domain).
+app.addHook("onRequest", async (req, reply) => {
+  reply.header("access-control-allow-origin", "*");
+  reply.header("access-control-allow-headers", "content-type");
+  reply.header("access-control-allow-methods", "GET,POST,OPTIONS");
+  if (req.method === "OPTIONS") {
+    reply.code(204);
+    return reply.send();
+  }
+});
+
 app.get("/health", async () => ({
   ok: true,
   network: cfg.networkPassphrase.includes("Test") ? "testnet" : "mainnet",
