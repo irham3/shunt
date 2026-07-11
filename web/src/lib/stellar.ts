@@ -243,6 +243,58 @@ export async function convertUsdcToXlm(
   }
 }
 
+/** True if the account has a USDC trustline (can receive USDC). */
+export async function hasUsdcTrustline(address: string): Promise<boolean> {
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (!res.ok) return false; // unfunded account has no trustlines
+  const data = await res.json();
+  return (data.balances ?? []).some(
+    (b: { asset_code?: string; asset_issuer?: string }) =>
+      b.asset_code === USDC_CODE && b.asset_issuer === USDC_ISSUER,
+  );
+}
+
+/**
+ * Add a USDC trustline (changeTrust) so the account can receive USDC —
+ * required once before Top Up / payment links can deliver USDC.
+ */
+export async function addUsdcTrustline(sender: string): Promise<string> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Account not funded yet — get XLM first (Friendbot).");
+  }
+
+  const already = source.balances.some(
+    (b: any) => b.asset_code === USDC_CODE && b.asset_issuer === USDC_ISSUER,
+  );
+  if (already) throw new Error("USDC trustline already exists.");
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      Operation.changeTrust({ asset: new Asset(USDC_CODE, USDC_ISSUER) }),
+    )
+    .setTimeout(300)
+    .build();
+
+  try {
+    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+      tx.toEnvelope().toXDR("base64"),
+      { networkPassphrase: NETWORK_PASSPHRASE }
+    );
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    return result.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
 /** Fund a testnet account with the Friendbot faucet (10,000 XLM). */
 export async function fundWithFriendbot(address: string): Promise<void> {
   const res = await fetch(

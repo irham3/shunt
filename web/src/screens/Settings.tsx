@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { manualTrigger } from "../lib/keeper";
-import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance } from "../lib/stellar";
+import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance, addUsdcTrustline, hasUsdcTrustline, formatError } from "../lib/stellar";
 import { useShunt } from "../store";
 
 export function Settings() {
@@ -9,6 +9,8 @@ export function Settings() {
   const { address, setAddress, showToast } = useShunt();
   const [xlmBal, setXlmBal] = useState("0");
   const [usdcBal, setUsdcBal] = useState("0");
+  const [hasUsdcLine, setHasUsdcLine] = useState(true);
+  const [enablingUsdc, setEnablingUsdc] = useState(false);
 
   const short = address ? `${address.slice(0, 6)}…${address.slice(-6)}` : "—";
 
@@ -16,8 +18,25 @@ export function Settings() {
     if (address) {
       fetchXlmBalance(address).then(setXlmBal).catch(console.error);
       fetchUsdcBalance(address).then(setUsdcBal).catch(console.error);
+      hasUsdcTrustline(address).then(setHasUsdcLine).catch(console.error);
     }
   }, [address]);
+
+  /** One-time changeTrust so the wallet can receive USDC (Top Up, pay links). */
+  async function onEnableUsdc() {
+    if (!address) return;
+    setEnablingUsdc(true);
+    try {
+      await addUsdcTrustline(address);
+      setHasUsdcLine(true);
+      showToast("USDC enabled — this wallet can now receive USDC");
+    } catch (e) {
+      const msg = formatError(e);
+      if (msg) showToast(msg);
+    } finally {
+      setEnablingUsdc(false);
+    }
+  }
 
   /** Manual trigger (F4 demo fallback): simulate a detected 500 USDC inflow. */
   async function onSimulate() {
@@ -99,6 +118,17 @@ export function Settings() {
           </div>
         </div>
         
+        {!hasUsdcLine && (
+          <button
+            className="btn-secondary"
+            style={{ marginTop: 4 }}
+            onClick={onEnableUsdc}
+            disabled={enablingUsdc}
+          >
+            {enablingUsdc ? "Confirm in wallet…" : "Enable USDC (add trustline)"}
+          </button>
+        )}
+
         <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
           <button
             className="btn-secondary"

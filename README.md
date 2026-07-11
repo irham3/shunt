@@ -10,6 +10,10 @@
   <img alt="Tests" src="https://img.shields.io/badge/contract_tests-11_passing-BEF264?style=flat-square&labelColor=0B0F14">
 </p>
 
+<p align="center">
+  <b>🌐 Live app: <a href="https://shunt-ruddy.vercel.app">shunt-ruddy.vercel.app</a></b> · testnet · connect Freighter and try the loop
+</p>
+
 **Get paid in dollars. Keep them worth something. Never watch a month's income evaporate again.**
 
 Shunt is a financial autopilot for people who earn from abroad. The moment USDC lands in your Stellar wallet, one tap splits it by rules you set once: spending money stays liquid, an emergency buffer builds itself, savings get **locked by code** in hard value the rupiah can't erode, and a slice is **dollar-cost-averaged into assets** — automatically, at the one moment discipline is easy: payday.
@@ -85,16 +89,21 @@ Early savings withdrawals are possible but cost a **10% penalty — which isn't 
 | Proof vault (XLM)     | [`CADI23I2J2DMRB4YS63MGXJQCIN7QYYBCOIH6YSXJZFY63SPRNJDCMNL`](https://stellar.expert/explorer/testnet/contract/CADI23I2J2DMRB4YS63MGXJQCIN7QYYBCOIH6YSXJZFY63SPRNJDCMNL) |
 | USDC SAC (testnet)    | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`                                                                                                             |
 
-The proof vault ran the **complete lifecycle on-chain** (XLM SAC, so funds were available without a USDC faucet — same 7-decimal code path):
+The main vault ran the **complete lifecycle on-chain with real testnet USDC** (acquired on the DEX via path payment — every hash below is clickable proof):
 
 ```text
+change_trust USDC                                       ✓ trustline added
+path_payment XLM → USDC (25 USDC via DEX)               ✓ real USDC, no faucet
 set_rules  60/25/15, 1-day timelock                     ✓ stored on-chain
-distribute 10 XLM                                       ✓ split exactly 6 / 2.5 / 1.5, `split` event emitted
+distribute 10 USDC                                      ✓ split exactly 6 / 2.5 / 1.5, `split` event emitted
 distribute (replayed same inflow_key)                   ✗ rejected — Error #6, double-splits impossible
-withdraw_savings 2.5 (still locked)                     ✓ paid 2.25 — 10% penalty applied
-get_buffer_credit                                       ✓ 0.25 — penalty credited to Buffer, not lost
-withdraw_buffer 0.25                                    ✓ instant, no lock
+withdraw_savings 1.0 (still locked)                     ✓ paid 0.9 — 10% penalty → Buffer credit, not lost
+get_savings / get_buffer_credit                         ✓ 1.5 / 0.1 — state readable by anyone
 ```
+
+Proof transactions: [trustline](https://stellar.expert/explorer/testnet/tx/429694ebefb36b9f41b0033b174f3a503b6f975ddb22a9867b70a3720ead093f) · [USDC purchase](https://stellar.expert/explorer/testnet/tx/3bf334a7d55f83bf9e13ef665a912e5eccab02e71286dcebaedde15aaa3e7b33) · [set_rules](https://stellar.expert/explorer/testnet/tx/ccf020a0e95f8ba1aab12721863c14b9d5d41d233b77d67185d6703462d5cd9c) · [distribute](https://stellar.expert/explorer/testnet/tx/85cde3c33ac058dbe5b5c1e7b246147d75e239aae20adf00a70a8a2a6badfe06) · [withdraw + penalty](https://stellar.expert/explorer/testnet/tx/d60b135cc7e6fccf600ad6cd86aa97a692c9bfe41a111ee667469519ee72ef1e)
+
+An earlier identical lifecycle ran on the XLM proof vault (`CADI…`) — same code path, 7-decimal arithmetic.
 
 ## The app
 
