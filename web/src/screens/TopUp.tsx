@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { authenticate, startDeposit, ANCHOR_HOME_DOMAIN } from "../lib/anchor";
+import { authenticate, startDeposit, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { formatError } from "../lib/stellar";
@@ -27,6 +27,10 @@ export function TopUp() {
   async function onSubmit() {
     if (usdc <= 0) {
       setErr("Enter a valid amount.");
+      return;
+    }
+    if (usdc < ANCHOR_MIN_AMOUNT || usdc > ANCHOR_MAX_AMOUNT) {
+      setErr(`The test anchor accepts ${ANCHOR_MIN_AMOUNT}–${ANCHOR_MAX_AMOUNT} USDC per transaction.`);
       return;
     }
     setErr(null);
@@ -92,6 +96,9 @@ export function TopUp() {
             style={{ marginTop: 6 }}
           />
         </label>
+        <span className="muted" style={{ fontSize: 12 }}>
+          Test anchor accepts {ANCHOR_MIN_AMOUNT}–{ANCHOR_MAX_AMOUNT} USDC per transaction.
+        </span>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
           <span className="muted">Rate</span>
           <span className="numeric">1 USDC ≈ {fmtIdr(idr)}</span>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN } from "../lib/anchor";
+import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { sendXlmPayment, fetchXlmBalance, EXPLORER_TX, NETWORK, formatError } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
@@ -46,6 +46,10 @@ export function SendPay() {
   async function onSubmitUsdc() {
     if (usdc <= 0 || usdc > balances.needs) {
       setErr("Invalid amount or exceeds Needs balance.");
+      return;
+    }
+    if (usdc < ANCHOR_MIN_AMOUNT || usdc > ANCHOR_MAX_AMOUNT) {
+      setErr(`The test anchor accepts ${ANCHOR_MIN_AMOUNT}–${ANCHOR_MAX_AMOUNT} USDC per transaction.`);
       return;
     }
     setErr(null);
@@ -263,6 +267,9 @@ export function SendPay() {
                 style={{ marginTop: 6 }}
               />
             </label>
+            <span className="muted" style={{ fontSize: 12 }}>
+              Test anchor accepts {ANCHOR_MIN_AMOUNT}–{ANCHOR_MAX_AMOUNT} USDC per transaction.
+            </span>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span className="muted">Rate</span>
               <span className="numeric">1 USDC ≈ {fmtIdr(idr)}</span>

@@ -16,6 +16,26 @@ import { NETWORK_PASSPHRASE } from "./stellar";
 export const ANCHOR_HOME_DOMAIN =
   import.meta.env.VITE_ANCHOR_HOME_DOMAIN ?? "testanchor.stellar.org";
 
+/**
+ * SDF's public test anchor caps every sandbox deposit/withdraw at 1–10 of
+ * the asset (its /sep24/info, not something Shunt imposes) — a production
+ * anchor (IDRX etc.) would have real limits instead. Surfaced client-side
+ * so the amount field fails fast instead of round-tripping to a 400.
+ */
+export const ANCHOR_MIN_AMOUNT = 1;
+export const ANCHOR_MAX_AMOUNT = 10;
+
+/** Extract the anchor's own `{"error": "..."}` body, if present, for a readable message. */
+async function anchorErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.error === "string") return `${fallback}: ${body.error}`;
+  } catch {
+    // body wasn't JSON — fall through to the generic message
+  }
+  return `${fallback} (${res.status})`;
+}
+
 interface AnchorInfo {
   webAuthEndpoint: string;
   sep24Endpoint: string;
@@ -51,7 +71,7 @@ export async function authenticate(account: string): Promise<string> {
   const chRes = await fetch(
     `${webAuthEndpoint}?account=${encodeURIComponent(account)}`,
   );
-  if (!chRes.ok) throw new Error(`SEP-10 challenge failed (${chRes.status})`);
+  if (!chRes.ok) throw new Error(await anchorErrorMessage(chRes, "SEP-10 challenge failed"));
   const { transaction } = await chRes.json();
 
   const signed = await signTransaction(transaction, {
@@ -64,7 +84,7 @@ export async function authenticate(account: string): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transaction: signed.signedTxXdr }),
   });
-  if (!tokRes.ok) throw new Error(`SEP-10 token exchange failed (${tokRes.status})`);
+  if (!tokRes.ok) throw new Error(await anchorErrorMessage(tokRes, "SEP-10 token exchange failed"));
   const { token } = await tokRes.json();
   return token;
 }
@@ -92,7 +112,7 @@ export async function startWithdraw(
     },
     body: JSON.stringify({ asset_code: assetCode, account, amount }),
   });
-  if (!res.ok) throw new Error(`SEP-24 withdraw start failed (${res.status})`);
+  if (!res.ok) throw new Error(await anchorErrorMessage(res, "SEP-24 withdraw start failed"));
   const data = await res.json();
   return { url: data.url, id: data.id };
 }
@@ -113,7 +133,7 @@ export async function startDeposit(
     },
     body: JSON.stringify({ asset_code: assetCode, account, amount }),
   });
-  if (!res.ok) throw new Error(`SEP-24 deposit start failed (${res.status})`);
+  if (!res.ok) throw new Error(await anchorErrorMessage(res, "SEP-24 deposit start failed"));
   const data = await res.json();
   return { url: data.url, id: data.id };
 }
@@ -136,7 +156,7 @@ export async function getWithdrawStatus(
   const res = await fetch(`${sep24Endpoint}/transaction?id=${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${jwt}` },
   });
-  if (!res.ok) throw new Error(`SEP-24 status failed (${res.status})`);
+  if (!res.ok) throw new Error(await anchorErrorMessage(res, "SEP-24 status failed"));
   const { transaction: t } = await res.json();
   return {
     status: t.status,
