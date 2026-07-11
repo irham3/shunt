@@ -183,10 +183,11 @@ stellar contract deploy --wasm target/wasm32v1-none/release/shunt_vault.wasm \
 stellar contract invoke --id <CONTRACT_ID> --source <IDENTITY> --network testnet \
   -- init --token CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 
-# 2. Keeper — inflow detection + tx preparation
+# 2. Keeper — inflow detection + tx preparation (Cloudflare Worker)
 cd keeper
-cp .env.example .env            # VAULT_CONTRACT_ID + WATCH_ACCOUNTS
-npm install && npm run dev      # http://localhost:8787
+npm install
+npx wrangler dev --local        # http://localhost:8787
+#   Config lives in wrangler.toml (no .env file). Deploy with `npx wrangler deploy`.
 
 # 3. Web app
 cd web
@@ -201,7 +202,7 @@ No contract configured? The app runs in **local demo mode** — the full flow (c
 ```
 contracts/shunt-vault/   Soroban contract — split engine + savings vault (Rust)
 web/                     React + TypeScript app, mobile-first, PWA-ready (Vite)
-keeper/                  Node/TS watcher — Horizon stream, idempotent, manual fallback
+keeper/                  Cloudflare Worker — 1-min cron poll of Horizon, prepares distribute XDR
 design/                  Diagrams (animated SVG) + app screenshots
 ```
 
