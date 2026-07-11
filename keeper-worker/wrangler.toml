@@ -1,0 +1,25 @@
+name = "shunt-keeper"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Poll Horizon for new USDC inflows once a minute — Workers Cron Triggers
+# are free and don't sleep, unlike a container-based host.
+[triggers]
+crons = ["* * * * *"]
+
+# Create with: npx wrangler kv namespace create KEEPER_KV
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "KEEPER_KV"
+id = "829f8ec8dacc45ab863c23cc71779bb1"
+
+[vars]
+STELLAR_NETWORK = "testnet"
+HORIZON_URL = "https://horizon-testnet.stellar.org"
+SOROBAN_RPC_URL = "https://soroban-testnet.stellar.org"
+NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"
+USDC_CODE = "USDC"
+USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+VAULT_CONTRACT_ID = "CA65BKKNEZEXOXK54G6BAVE3O4QMTCXGSA7YULHADELX5HOIOZPO7JUM"
+WATCH_ACCOUNTS = "GC4IUJPBQZKXYONI6UABEXE7EA6QXT4OYV2JYJA5GTPMXSMEKDL6AGDZ"
