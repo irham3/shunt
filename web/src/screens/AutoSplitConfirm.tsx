@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SplitNode } from "../components/SplitNode";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 import { markComplete, type PendingSplit } from "../lib/keeper";
 import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
 import { getXlmUsdRate } from "../lib/rates";
@@ -87,22 +89,35 @@ export function AutoSplitConfirm() {
   return (
     <div className="screen" style={{ justifyContent: "center", minHeight: "100dvh", textAlign: "center" }}>
       <h2 style={{ margin: 0 }}>Income landed</h2>
-      <div className="numeric" style={{ fontSize: 36, fontWeight: 700 }}>
-        {fmtUsdc(amount)} <span style={{ fontSize: 18 }}>USDC</span>
-      </div>
+      <motion.div
+        className="numeric"
+        style={{ fontSize: 36, fontWeight: 700 }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 18 }}
+      >
+        <AnimatedNumber value={amount} decimals={2} /> <span style={{ fontSize: 18 }}>USDC</span>
+      </motion.div>
 
       <div className="card">
         <SplitNode buckets={buckets} height={130} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {rows.map((r) => {
+        {rows.map((r, i) => {
           const bucket = buckets.find((b) => b.id === r.id)!;
           return (
-            <div key={r.id} className="card" style={{ display: "flex", justifyContent: "space-between", padding: 12 }}>
+            <motion.div
+              key={r.id}
+              className="card"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.15 + i * 0.07 }}
+              style={{ display: "flex", justifyContent: "space-between", padding: 12 }}
+            >
               <span style={{ color: bucket.color, fontWeight: 600, fontSize: 14 }}>{r.label}</span>
-              <span className="numeric">{fmtUsdc(r.amt)} USDC</span>
-            </div>
+              <span className="numeric"><AnimatedNumber value={r.amt} decimals={2} /> USDC</span>
+            </motion.div>
           );
         })}
       </div>

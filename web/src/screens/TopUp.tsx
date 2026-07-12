@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { authenticate, startDeposit, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { formatError } from "../lib/stellar";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 
 const FEE_PCT = 0.35; // on-ramp fee (PRD §7b: 0.3–0.4%)
 
@@ -84,7 +86,13 @@ export function TopUp() {
         Fund your wallet with IDR through the anchor — it lands as USDC, without leaving Shunt.
       </p>
 
-      <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <motion.div
+        className="card"
+        style={{ display: "flex", flexDirection: "column", gap: 10 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
         <label className="muted" style={{ fontSize: 13 }}>
           Amount to receive (USDC)
           <input
@@ -105,13 +113,13 @@ export function TopUp() {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
           <span className="muted">On-ramp fee ({FEE_PCT}%)</span>
-          <span className="numeric">{fmtUsdc(fee)} USDC</span>
+          <span className="numeric"><AnimatedNumber value={fee} decimals={4} /> USDC</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
           <span>You pay</span>
           <span className="numeric" style={{ color: "var(--color-accent-primary)" }}>{fmtIdr(payIdr)}</span>
         </div>
-      </div>
+      </motion.div>
 
       <p className="muted" style={{ fontSize: 13, margin: 0 }}>
         Payment method and KYC are handled in the anchor's hosted flow. Settlement time is the

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "qrcode";
 import { buildSep7Uri, buildShareLink } from "../lib/sep7";
 import { useShunt } from "../store";
@@ -70,14 +71,23 @@ export function RequestPay() {
         </label>
       </div>
 
-      {qr && (
-        <div className="card" style={{ textAlign: "center" }}>
-          <img src={qr} alt="SEP-7 payment QR" width={180} height={180} style={{ borderRadius: 12 }} />
-          <p className="muted" style={{ fontSize: 12, margin: "8px 0 0" }}>
-            Scannable by any SEP-7 Stellar wallet
-          </p>
-        </div>
-      )}
+      <AnimatePresence>
+        {qr && (
+          <motion.div
+            className="card"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ textAlign: "center" }}
+          >
+            <img src={qr} alt="SEP-7 payment QR" width={180} height={180} style={{ borderRadius: 12 }} />
+            <p className="muted" style={{ fontSize: 12, margin: "8px 0 0" }}>
+              Scannable by any SEP-7 Stellar wallet
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div className="muted" style={{ fontSize: 12 }}>Share link</div>

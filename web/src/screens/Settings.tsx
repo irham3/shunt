@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { manualTrigger } from "../lib/keeper";
 import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance, addUsdcTrustline, hasUsdcTrustline, formatError } from "../lib/stellar";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 import { useShunt } from "../store";
 
 export function Settings() {
@@ -74,7 +76,13 @@ export function Settings() {
     <div className="screen">
       <h2 style={{ margin: 0 }}>Settings</h2>
 
-      <section className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <motion.section
+        className="card"
+        style={{ display: "flex", flexDirection: "column", gap: 12 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="muted" style={{ fontSize: 12 }}>Connected Wallet</div>
@@ -107,13 +115,13 @@ export function Settings() {
           <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 12 }}>
             <div className="muted" style={{ fontSize: 12 }}>XLM Balance</div>
             <div className="numeric" style={{ fontSize: 16, fontWeight: 500, marginTop: 4 }}>
-              {parseFloat(xlmBal).toFixed(2)}
+              <AnimatedNumber value={parseFloat(xlmBal) || 0} decimals={2} />
             </div>
           </div>
           <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 12 }}>
             <div className="muted" style={{ fontSize: 12 }}>USDC Balance</div>
             <div className="numeric" style={{ fontSize: 16, fontWeight: 500, marginTop: 4, color: "var(--color-accent-secondary)" }}>
-              {parseFloat(usdcBal).toFixed(2)}
+              <AnimatedNumber value={parseFloat(usdcBal) || 0} decimals={2} />
             </div>
           </div>
         </div>
@@ -145,7 +153,7 @@ export function Settings() {
             Sign Out
           </button>
         </div>
-      </section>
+      </motion.section>
 
       <Link to="/shunt" className="card" style={{ textDecoration: "none", color: "inherit", display: "flex", justifyContent: "space-between" }}>
         <span>Shunt rules</span>

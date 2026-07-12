@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { connectWithAuthModal, formatError } from "../lib/stellar";
 import { useShunt } from "../store";
@@ -50,14 +51,15 @@ export function ConnectWallet() {
           Non-custodial — your keys stay yours.
         </p>
 
-        <button
+        <motion.button
           className="btn-primary"
           onClick={onConnect}
           disabled={busy}
+          whileTap={{ scale: 0.97 }}
           style={{ width: "100%", padding: "14px 0", fontSize: 16, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
         >
           {busy ? <><Loader2 className="animate-spin" size={18} /> Confirm in extension…</> : "Connect Wallet"}
-        </button>
+        </motion.button>
         <p className="muted" style={{ textAlign: "center", fontSize: 13, marginTop: 4 }}>
           Freighter · Albedo · xBull supported
         </p>

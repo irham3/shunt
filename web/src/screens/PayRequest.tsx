@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
 import { buildSep7Uri, parsePayQuery } from "../lib/sep7";
 import { USDC_CODE } from "../lib/stellar";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 
 /**
  * F13 (payer side): public landing for a Shunt payment request — no wallet
@@ -50,10 +52,15 @@ export function PayRequest() {
       <div style={{ fontFamily: "var(--font-heading)", fontSize: 22, fontWeight: 700 }}>⑃ Shunt</div>
       <h2 style={{ margin: 0 }}>Payment request</h2>
 
-      <div className="card">
+      <motion.div
+        className="card"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+      >
         {req.amount ? (
           <div className="numeric" style={{ fontSize: 36, fontWeight: 700 }}>
-            {req.amount} <span style={{ fontSize: 18 }}>{USDC_CODE}</span>
+            <AnimatedNumber value={Number(req.amount) || 0} decimals={2} /> <span style={{ fontSize: 18 }}>{USDC_CODE}</span>
           </div>
         ) : (
           <div className="muted">Amount: up to you</div>
@@ -62,7 +69,7 @@ export function PayRequest() {
         <p className="muted" style={{ fontSize: 12, margin: "10px 0 0", wordBreak: "break-all" }}>
           To: <span className="numeric">{req.to}</span>
         </p>
-      </div>
+      </motion.div>
 
       {qr && (
         <div className="card" style={{ textAlign: "center" }}>

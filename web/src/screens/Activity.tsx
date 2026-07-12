@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { EXPLORER_TX } from "../lib/stellar";
 import { fmtUsdc, useShunt, type ActivityItem } from "../store";
 
@@ -50,8 +51,15 @@ export function Activity() {
       {Object.entries(byDate).map(([date, list]) => (
         <section key={date}>
           <div className="muted" style={{ fontSize: 12, margin: "4px 0" }}>{date}</div>
-          {list.map((a) => (
-            <div key={a.id} className="card" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
+          {list.map((a, i) => (
+            <motion.div
+              key={a.id}
+              className="card"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.03 }}
+              style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 12, padding: 12 }}
+            >
               <span style={{ fontSize: 20, width: 28, textAlign: "center" }}>{KIND_ICON[a.kind]}</span>
               <span style={{ flex: 1 }}>
                 <div style={{ fontSize: 14 }}>{a.title}</div>
@@ -72,7 +80,7 @@ export function Activity() {
                   ? `${a.amountXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`
                   : `$${fmtUsdc(a.amountUsdc ?? 0)}`}
               </span>
-            </div>
+            </motion.div>
           ))}
         </section>
       ))}

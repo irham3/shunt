@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { sendXlmPayment, fetchXlmBalance, EXPLORER_TX, NETWORK, formatError } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 import { StrKey } from "@stellar/stellar-sdk";
 
 const FEE_PCT = 0.4; // off-ramp fee (PRD §7b: 0.3–0.5%)
@@ -184,9 +186,10 @@ export function SendPay() {
         </button>
       </div>
 
+      <AnimatePresence mode="wait">
       {/* ─── XLM Transfer Tab ─── */}
       {tab === "xlm" && (
-        <>
+        <motion.div key="xlm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
             Send native XLM on {NETWORK} — balance: {xlmBalance !== null ? `${Number(xlmBalance).toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM` : "…"}
           </p>
@@ -228,14 +231,14 @@ export function SendPay() {
               {xlmErr}
             </p>
           )}
-        </>
+        </motion.div>
       )}
 
       {/* ─── USDC Off-Ramp Tab ─── */}
       {tab === "usdc" && (
-        <>
+        <motion.div key="usdc" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
-            Cash out from the Needs bucket — balance ${fmtUsdc(balances.needs)}.
+            Cash out from the Needs bucket — balance $<AnimatedNumber value={balances.needs} decimals={2} />.
           </p>
 
           <div style={{ display: "flex", gap: 8 }}>
@@ -277,7 +280,7 @@ export function SendPay() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span className="muted">Off-ramp fee ({FEE_PCT}%)</span>
-              <span className="numeric">{fmtUsdc(fee)} USDC</span>
+              <span className="numeric"><AnimatedNumber value={fee} decimals={4} /> USDC</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
               <span>You receive</span>
@@ -298,8 +301,9 @@ export function SendPay() {
               {err}
             </p>
           )}
-        </>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

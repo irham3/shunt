@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { AllocationBar } from "../components/AllocationBar";
 import { getIdrRate } from "../lib/rates";
@@ -6,6 +7,7 @@ import { fetchPending, type PendingSplit } from "../lib/keeper";
 import { fetchXlmBalance, fundWithFriendbot, fetchLatestSplitEvent, NETWORK, formatError } from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { BentoGrid, BentoCard } from "../components/BentoGrid";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 import { Lock, Wallet, ArrowUpRight } from "lucide-react";
 
 export function Home() {
@@ -93,22 +95,31 @@ export function Home() {
 
   return (
     <div className="screen">
-      <header>
+      <motion.header
+        className="card"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         <div className="muted" style={{ fontSize: 13 }}>Total value</div>
         <div className="numeric" style={{ fontSize: "clamp(36px, 5vw, 48px)", fontWeight: 700, lineHeight: 1.1 }}>
-          ${fmtUsdc(total)}
+          $<AnimatedNumber value={total} decimals={2} />
         </div>
         <div className="muted" style={{ fontSize: 14 }}>
           {idr ? `≈ ${fmtIdr(total * idr)}` : "…"}
         </div>
-      </header>
+      </motion.header>
 
       {/* XLM Balance — Level 1 requirement */}
       <section className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div className="muted" style={{ fontSize: 12 }}>XLM Balance ({NETWORK})</div>
           <div className="numeric" style={{ fontSize: 22, fontWeight: 700 }}>
-            {xlmBalance !== null ? `${Number(xlmBalance).toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM` : "Loading…"}
+            {xlmBalance !== null ? (
+              <><AnimatedNumber value={Number(xlmBalance)} decimals={2} /> XLM</>
+            ) : (
+              "Loading…"
+            )}
           </div>
         </div>
         {xlmBalance !== null && Number(xlmBalance) === 0 && NETWORK === "testnet" && (
@@ -214,15 +225,21 @@ export function Home() {
             </p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column" }}>
-              {activity.slice(0, 5).map((a) => (
-                <div key={a.id} style={{ padding: "11px 0", borderBottom: "1px solid #1f2732", display: "flex", justifyContent: "space-between", gap: 12 }}>
+              {activity.slice(0, 5).map((a, i) => (
+                <motion.div
+                  key={a.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  style={{ padding: "11px 0", borderBottom: "1px solid #1f2732", display: "flex", justifyContent: "space-between", gap: 12 }}
+                >
                   <span style={{ fontSize: 14, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</span>
                   <span className="numeric muted">
                     {a.amountXlm !== undefined
                       ? `${a.amountXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`
                       : `$${fmtUsdc(a.amountUsdc ?? 0)}`}
                   </span>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
