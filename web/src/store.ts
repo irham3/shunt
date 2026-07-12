@@ -121,12 +121,20 @@ export const useShunt = create<ShuntState>()(
       setAddress: (address) => set({ address }),
       setWalletId: (walletId) => set({ walletId }),
       setBuckets: (buckets) => set({ buckets }),
-      setBucketPct: (id, pct) =>
+      setBucketPct: (id, pct) => {
+        const buckets = get().buckets;
+        const current = buckets.find((b) => b.id === id)?.pct ?? 0;
+        const othersSum = totalPct(buckets) - current;
+        // Clamp against the room left by every other bucket — the total can
+        // never exceed 100%. Only the dragged bucket is ever touched; no
+        // silent auto-adjust of its siblings (DESIGN.md §5.2 decision).
+        const max = Math.max(0, 100 - othersSum);
         set({
-          buckets: get().buckets.map((b) =>
-            b.id === id ? { ...b, pct: Math.max(0, Math.min(100, Math.round(pct))) } : b,
+          buckets: buckets.map((b) =>
+            b.id === id ? { ...b, pct: Math.max(0, Math.min(max, Math.round(pct))) } : b,
           ),
-        }),
+        });
+      },
       addBucket: (name, kind) => {
         const buckets = get().buckets;
         const extraCount = buckets.length - 4;

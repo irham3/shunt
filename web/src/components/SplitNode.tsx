@@ -1,8 +1,10 @@
+import { motion } from "framer-motion";
 import type { Bucket } from "../store";
 
 /**
  * Circuit-trace split-node motif (DESIGN.md §2.3): one input line branching
  * into one lane per bucket, stroke width proportional to allocation.
+ * Branches reflow with a spring as allocations change.
  */
 export function SplitNode({ buckets, height = 140 }: { buckets: Bucket[]; height?: number }) {
   const w = 340;
@@ -10,6 +12,7 @@ export function SplitNode({ buckets, height = 140 }: { buckets: Bucket[]; height
   const cy = height / 2;
   const laneX = w - 20;
   const n = buckets.length;
+  const spring = { type: "spring" as const, stiffness: 140, damping: 22 };
 
   return (
     <svg viewBox={`0 0 ${w} ${height}`} width="100%" role="img" aria-label="Diagram split">
@@ -23,17 +26,29 @@ export function SplitNode({ buckets, height = 140 }: { buckets: Bucket[]; height
         const midX = cx + (laneX - cx) * 0.55;
         return (
           <g key={b.id}>
-            <path
-              d={`M ${cx + 8} ${cy} C ${midX} ${cy}, ${midX} ${ly}, ${laneX - 60} ${ly}`}
+            <motion.path
               fill="none"
               stroke={b.color}
-              strokeWidth={sw}
               strokeLinecap="round"
               opacity="0.9"
+              initial={false}
+              animate={{
+                d: `M ${cx + 8} ${cy} C ${midX} ${cy}, ${midX} ${ly}, ${laneX - 60} ${ly}`,
+                strokeWidth: sw,
+              }}
+              transition={spring}
             />
-            <text x={laneX - 52} y={ly + 4} fill={b.color} fontSize="12" fontFamily="var(--font-body)">
+            <motion.text
+              x={laneX - 52}
+              fill={b.color}
+              fontSize="12"
+              fontFamily="var(--font-body)"
+              initial={false}
+              animate={{ y: ly + 4 }}
+              transition={spring}
+            >
               {b.name} {b.pct}%
-            </text>
+            </motion.text>
           </g>
         );
       })}

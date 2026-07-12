@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Lock, Wallet, ArrowUpRight, Plus } from "lucide-react";
 import { SplitNode } from "../components/SplitNode";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 import { vaultSetRules } from "../lib/vault";
 import { formatError } from "../lib/stellar";
 import { CORE_BUCKET_IDS, totalPct, useShunt } from "../store";
@@ -95,12 +97,12 @@ export function ConfigureShunt() {
                 marginTop: 14,
                 paddingTop: 12,
                 borderTop: "1px solid #1f2732",
-                color: valid ? "var(--color-accent-primary)" : "#ffb4ab",
+                color: valid ? "var(--color-accent-primary)" : "var(--color-text-secondary)",
               }}
             >
-              <span>Total allocation</span>
+              <span>{valid ? "Total allocation" : `${100 - total}% left to allocate`}</span>
               <span className="numeric">
-                {total}% {valid ? "✓" : total > 100 ? `(${total - 100}% over)` : `(${100 - total}% short)`}
+                <AnimatedNumber value={total} suffix="%" /> {valid && "✓"}
               </span>
             </div>
           </div>
@@ -108,8 +110,17 @@ export function ConfigureShunt() {
 
         {/* Sliders + timelock + save */}
         <div className="col-main">
-          {buckets.map((b) => (
-            <div key={b.id} className="card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {buckets.map((b, i) => {
+            const roomLeft = 100 - (total - b.pct);
+            return (
+            <motion.div
+              key={b.id}
+              className="card"
+              style={{ display: "flex", flexDirection: "column", gap: 6 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 600, color: b.color, display: "flex", alignItems: "center", gap: 6 }}>
                   {getKindIcon(b.kind)} {b.name}
@@ -123,11 +134,12 @@ export function ConfigureShunt() {
                     −
                   </button>
                   <span className="numeric" style={{ width: 48, textAlign: "center", fontWeight: 700 }}>
-                    {b.pct}%
+                    <AnimatedNumber value={b.pct} suffix="%" />
                   </span>
                   <button
                     className="chip"
                     aria-label={`Increase ${b.name}`}
+                    disabled={b.pct >= roomLeft}
                     onClick={() => setBucketPct(b.id, b.pct + 5)}
                   >
                     +
@@ -142,7 +154,7 @@ export function ConfigureShunt() {
               <input
                 type="range"
                 min={0}
-                max={100}
+                max={roomLeft}
                 value={b.pct}
                 aria-label={`${b.name} percent`}
                 onChange={(e) => setBucketPct(b.id, Number(e.target.value))}
@@ -152,8 +164,9 @@ export function ConfigureShunt() {
                   Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product.
                 </p>
               )}
-            </div>
-          ))}
+            </motion.div>
+            );
+          })}
 
           {!showAdd ? (
             <button className="btn-ghost" onClick={() => setShowAdd(true)} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
