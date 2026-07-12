@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { SplitNode } from "../components/SplitNode";
+import { DonutChart } from "../components/DonutChart";
 import { DEFAULT_BUCKETS } from "../store";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { ShinyText } from "../components/ShinyText";
@@ -35,7 +35,9 @@ export function Onboarding() {
           </button>
           
           <div style={{ marginTop: 60, width: "100%", maxWidth: 600 }}>
-            <SplitNode buckets={DEFAULT_BUCKETS} height={200} />
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <DonutChart buckets={DEFAULT_BUCKETS} size={200} strokeWidth={28} />
+            </div>
           </div>
         </section>
 

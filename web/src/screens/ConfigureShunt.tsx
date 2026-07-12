@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Lock, Wallet, ArrowUpRight, Plus } from "lucide-react";
-import { SplitNode } from "../components/SplitNode";
+import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { vaultSetRules } from "../lib/vault";
 import { formatError } from "../lib/stellar";
@@ -55,12 +55,12 @@ export function ConfigureShunt() {
     setErr(null);
     try {
       if (address) {
-        const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
+        const pctKind = (kind: string) => buckets.filter(b => b.kind === kind).reduce((sum, b) => sum + b.pct, 0);
         // The deployed contract splits three ways; Needs and Invest both stay
         // wallet-side, so the contract receives their sum as the wallet-tier
         // share. The invest slice is then DCA-converted by a follow-up path
         // payment (F12) — the vault contract stays frozen (11 tests intact).
-        await vaultSetRules(address, pct("needs") + pct("invest"), pct("savings"), pct("buffer"), lockSecs);
+        await vaultSetRules(address, pctKind("needs") + pctKind("invest"), pctKind("savings"), pctKind("buffer"), lockSecs);
       }
       markRulesSaved();
       persistLockSecs(lockSecs);
@@ -87,7 +87,9 @@ export function ConfigureShunt() {
         <div className="col-side sticky-col">
           <div className="card">
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Split preview</div>
-            <SplitNode buckets={buckets} height={40 + buckets.length * 36} />
+            <div style={{ padding: "16px 0", display: "flex", justifyContent: "center" }}>
+              <DonutChart buckets={buckets} size={180} strokeWidth={24} />
+            </div>
             <div
               role="status"
               style={{

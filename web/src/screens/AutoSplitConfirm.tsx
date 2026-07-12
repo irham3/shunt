@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { SplitNode } from "../components/SplitNode";
+import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { markComplete, type PendingSplit } from "../lib/keeper";
 import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
@@ -99,8 +99,8 @@ export function AutoSplitConfirm() {
         <AnimatedNumber value={amount} decimals={2} /> <span style={{ fontSize: 18 }}>USDC</span>
       </motion.div>
 
-      <div className="card">
-        <SplitNode buckets={buckets} height={130} />
+      <div className="card" style={{ padding: "16px 0", display: "flex", justifyContent: "center" }}>
+        <DonutChart buckets={buckets} size={150} strokeWidth={20} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
