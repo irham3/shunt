@@ -2,7 +2,7 @@
 
 use super::*;
 use soroban_sdk::testutils::{Address as _, Ledger};
-use soroban_sdk::{token::StellarAssetClient, vec, Address, BytesN, Env};
+use soroban_sdk::{token::StellarAssetClient, vec, Address, BytesN, Env, String};
 
 fn setup(env: &Env) -> (ShuntVaultClient<'_>, Address, Address, StellarAssetClient<'_>) {
     env.mock_all_auths();
@@ -162,4 +162,132 @@ fn deposit_extends_lock_monotonically() {
     let lock2 = client.get_lock_until(&user);
     assert!(lock2 > lock1);
     assert_eq!(client.get_savings(&user), 100_0000000);
+}
+
+// ---- Savings goals ----
+
+#[test]
+fn create_goal_within_unallocated_ok() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 10)); // savings = 100 USDC
+
+    let label = String::from_str(&env, "Emergency fund");
+    let id = client.create_savings_goal(&user, &label, &60_0000000);
+    assert_eq!(id, 0);
+    assert_eq!(client.get_unallocated_savings(&user), 40_0000000);
+    let goals = client.get_savings_goals(&user);
+    assert_eq!(goals.len(), 1);
+    assert_eq!(goals.get(0).unwrap().amount, 60_0000000);
+    assert_eq!(client.get_savings(&user), 100_0000000); // aggregate untouched
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #11)")]
+fn create_goal_rejects_over_unallocated() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 11)); // savings = 100 USDC
+
+    let label = String::from_str(&env, "Too big");
+    client.create_savings_goal(&user, &label, &200_0000000); // only 100 available
+}
+
+#[test]
+fn withdraw_from_goal_before_lock_applies_penalty() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &86400, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 12)); // savings = 100 USDC
+
+    let label = String::from_str(&env, "Wedding");
+    let id = client.create_savings_goal(&user, &label, &50_0000000);
+
+    let payout = client.withdraw_from_goal(&user, &id, &20_0000000); // still locked
+    assert_eq!(payout, 18_0000000); // 10% penalty
+    assert_eq!(client.get_buffer_credit(&user), 2_0000000);
+    assert_eq!(client.get_savings(&user), 80_0000000); // aggregate: 100 - 20
+    let goals = client.get_savings_goals(&user);
+    assert_eq!(goals.get(0).unwrap().amount, 30_0000000); // goal: 50 - 20
+}
+
+#[test]
+fn withdraw_from_goal_after_lock_no_penalty() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &1000, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 13)); // savings = 100 USDC
+
+    let label = String::from_str(&env, "Car");
+    let id = client.create_savings_goal(&user, &label, &50_0000000);
+    env.ledger().with_mut(|l| l.timestamp += 2000); // past lock
+
+    let payout = client.withdraw_from_goal(&user, &id, &50_0000000);
+    assert_eq!(payout, 50_0000000);
+    assert_eq!(client.get_savings_goals(&user).get(0).unwrap().amount, 0);
+}
+
+#[test]
+fn delete_goal_releases_to_unallocated() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 14)); // savings = 100 USDC
+
+    let label = String::from_str(&env, "Temp goal");
+    let id = client.create_savings_goal(&user, &label, &70_0000000);
+    assert_eq!(client.get_unallocated_savings(&user), 30_0000000);
+
+    client.delete_savings_goal(&user, &id);
+    assert_eq!(client.get_unallocated_savings(&user), 100_0000000);
+    assert_eq!(client.get_savings_goals(&user).len(), 0);
+    assert_eq!(client.get_savings(&user), 100_0000000); // aggregate untouched by delete
+}
+
+#[test]
+fn rename_goal_updates_label_only() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 15));
+
+    let id = client.create_savings_goal(&user, &String::from_str(&env, "Old name"), &50_0000000);
+    client.rename_savings_goal(&user, &id, &String::from_str(&env, "New name"));
+
+    let goals = client.get_savings_goals(&user);
+    assert_eq!(goals.get(0).unwrap().label, String::from_str(&env, "New name"));
+    assert_eq!(goals.get(0).unwrap().amount, 50_0000000); // untouched
+}
+
+#[test]
+fn multiple_goals_unallocated_arithmetic() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 16)); // savings = 100 USDC
+
+    client.create_savings_goal(&user, &String::from_str(&env, "A"), &30_0000000);
+    client.create_savings_goal(&user, &String::from_str(&env, "B"), &40_0000000);
+    assert_eq!(client.get_unallocated_savings(&user), 30_0000000);
+    assert_eq!(client.get_savings_goals(&user).len(), 2);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #10)")]
+fn withdraw_from_goal_rejects_unknown_id() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env]);
+    client.distribute(&user, &400_0000000, &key(&env, 17));
+    client.withdraw_from_goal(&user, &999, &1_0000000); // no such goal
 }

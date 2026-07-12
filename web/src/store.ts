@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil } from "./lib/vault";
+import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil, vaultGetGoals, vaultGetUnallocatedSavings, type Goal as ChainGoal } from "./lib/vault";
 
 /**
  * Single source of truth for allocation rules (DESIGN.md §5.1):
@@ -28,6 +28,19 @@ export interface ActivityItem {
   bucket?: string;
 }
 
+/**
+ * UI-facing savings goal — mirrors the on-chain `Goal` (id/label/amount are
+ * the source of truth, synced via syncFromChain) plus an optional `target`,
+ * which is a purely client-side motivational number (not a financial
+ * constraint) so it doesn't need on-chain storage.
+ */
+export interface SavingsGoal {
+  id: number;
+  label: string;
+  amountUsdc: number;
+  target?: number;
+}
+
 interface ShuntState {
   address: string | null;
   walletId: string | null;
@@ -40,6 +53,10 @@ interface ShuntState {
   balances: { needs: number; savings: number; buffer: number; invest: number };
   /** XLM units accumulated by the Invest lane's DCA conversions (F12) */
   investXlm: number;
+  /** Named sub-allocations of the on-chain Savings balance, from syncFromChain. */
+  goals: SavingsGoal[];
+  /** Savings not currently assigned to any goal (on-chain, from syncFromChain). */
+  unallocatedSavings: number;
   /** On-chain native XLM balance (Level 1 requirement) */
   xlmBalance: string | null;
   activity: ActivityItem[];
@@ -64,6 +81,8 @@ interface ShuntState {
   /** Record a direct wallet-to-wallet XLM payment (Send & Pay, XLM tab). */
   recordXlmPayment: (destination: string, amountXlm: string, txHash: string) => void;
   setLockUntil: (t: number) => void;
+  /** Set the client-side-only motivational target for a goal's progress ring. */
+  setGoalTarget: (goalId: number, target: number | undefined) => void;
   showToast: (msg: string) => void;
   clearToast: () => void;
   syncFromChain: (address: string) => Promise<void>;
@@ -93,6 +112,8 @@ export const useShunt = create<ShuntState>()(
       lockSecs: 30 * 86400,
       balances: { needs: 0, savings: 0, buffer: 0, invest: 0 },
       investXlm: 0,
+      goals: [],
+      unallocatedSavings: 0,
       xlmBalance: null,
       activity: [],
       toast: null,
@@ -264,6 +285,11 @@ export const useShunt = create<ShuntState>()(
         });
       },
 
+      setGoalTarget: (goalId, target) =>
+        set({
+          goals: get().goals.map((g) => (g.id === goalId ? { ...g, target } : g)),
+        }),
+
       setLockUntil: (lockUntil) => set({ lockUntil }),
       showToast: (toast) => set({ toast }),
       clearToast: () => set({ toast: null }),
@@ -273,12 +299,28 @@ export const useShunt = create<ShuntState>()(
           const savingsBig = await vaultGetSavings(address);
           const bufferCreditBig = await vaultGetBufferCredit(address);
           const lockUntilBig = await vaultGetLockUntil(address);
-          
+          const [chainGoals, unallocatedBig] = await Promise.all([
+            vaultGetGoals(address),
+            vaultGetUnallocatedSavings(address),
+          ]);
+
           set((state) => {
+            // Preserve client-side-only `target` values across a re-sync,
+            // matched by goal id (the chain has no concept of a target).
+            const prevTargets = new Map(state.goals.map((g) => [g.id, g.target]));
+            const goals: SavingsGoal[] = chainGoals.map((g: ChainGoal) => ({
+              id: Number(g.id),
+              label: g.label,
+              amountUsdc: Number(g.amount) / 10_000_000,
+              target: prevTargets.get(Number(g.id)),
+            }));
+
             // Buffer is a mix of local wallet buffer + in-vault credit from penalties.
             // When we sync, we ensure savings matches the vault exactly.
             return {
               lockUntil: Number(lockUntilBig),
+              goals,
+              unallocatedSavings: Number(unallocatedBig) / 10_000_000,
               balances: {
                 ...state.balances,
                 savings: Number(savingsBig) / 10000000,
@@ -295,7 +337,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 2,
+      version: 3,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -314,6 +356,11 @@ export const useShunt = create<ShuntState>()(
               kind: b.kind || (b.id.startsWith("lane-") ? "needs" : b.id),
             }));
           }
+        }
+        if (version < 3 && persisted) {
+          // Savings goals — new on-chain contract (CB27...), populated on next syncFromChain.
+          persisted.goals = persisted.goals ?? [];
+          persisted.unallocatedSavings = persisted.unallocatedSavings ?? 0;
         }
         return persisted;
       },

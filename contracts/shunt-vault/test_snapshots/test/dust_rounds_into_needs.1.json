@@ -662,27 +662,57 @@
             "topics": [
               {
                 "symbol": "split"
-              },
-              {
-                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
               }
             ],
             "data": {
-              "vec": [
+              "map": [
                 {
-                  "i128": "7"
+                  "key": {
+                    "symbol": "amount"
+                  },
+                  "val": {
+                    "i128": "7"
+                  }
                 },
                 {
-                  "i128": "5"
+                  "key": {
+                    "symbol": "buffer"
+                  },
+                  "val": {
+                    "i128": "1"
+                  }
                 },
                 {
-                  "i128": "1"
+                  "key": {
+                    "symbol": "inflow_key"
+                  },
+                  "val": {
+                    "bytes": "0202020202020202020202020202020202020202020202020202020202020202"
+                  }
                 },
                 {
-                  "i128": "1"
+                  "key": {
+                    "symbol": "needs"
+                  },
+                  "val": {
+                    "i128": "5"
+                  }
                 },
                 {
-                  "bytes": "0202020202020202020202020202020202020202020202020202020202020202"
+                  "key": {
+                    "symbol": "savings"
+                  },
+                  "val": {
+                    "i128": "1"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "user"
+                  },
+                  "val": {
+                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                  }
                 }
               ]
             }

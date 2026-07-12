@@ -13,7 +13,7 @@
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error, token,
-    Address, BytesN, Env, Vec,
+    Address, BytesN, Env, String, Vec,
 };
 
 #[contractevent(topics = ["split"])]
@@ -72,6 +72,9 @@ pub enum Error {
     InsufficientSavings = 7,
     InsufficientBuffer = 8,
     AnchorNotAllowlisted = 9,
+    GoalNotFound = 10,
+    InsufficientUnallocated = 11,
+    LabelTooLong = 12,
 }
 
 #[contracttype]
@@ -86,6 +89,20 @@ pub struct Rules {
     /// Allowlisted anchor addresses permitted to receive off-ramp USDC
     /// (PRD §12: we lock the anchor address, not the bank account).
     pub anchors: Vec<Address>,
+}
+
+/// A user-labeled sub-allocation of their aggregate Savings balance.
+/// Purely a bookkeeping split of `Savings(Address)` — `amount` across all of
+/// a user's goals must never exceed that aggregate; the difference is the
+/// "unallocated" pool (`get_unallocated_savings`). No separate custody: a
+/// goal's funds are the same USDC already held by the vault.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Goal {
+    pub id: u32,
+    pub label: String,
+    pub amount: i128,
+    pub created_at: u64,
 }
 
 #[contracttype]
@@ -103,6 +120,8 @@ pub enum DataKey {
     BufferCredit(Address),
     /// Idempotency guard keyed by inflow tx hash (keeper supplies it).
     Processed(BytesN<32>),
+    /// Goals(user) — this user's named sub-allocations of Savings.
+    Goals(Address),
 }
 
 #[contract]
@@ -225,39 +244,7 @@ impl ShuntVault {
     /// Returns the amount actually sent to the wallet.
     pub fn withdraw_savings(env: Env, user: Address, amount: i128) -> i128 {
         user.require_auth();
-        if amount <= 0 {
-            panic_with_error!(&env, Error::AmountNotPositive);
-        }
-        let bal_key = DataKey::Savings(user.clone());
-        let balance: i128 = env.storage().persistent().get(&bal_key).unwrap_or(0);
-        if amount > balance {
-            panic_with_error!(&env, Error::InsufficientSavings);
-        }
-
-        let lock_until: u64 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::LockUntil(user.clone()))
-            .unwrap_or(0);
-        let now = env.ledger().timestamp();
-
-        let penalty = if now < lock_until { amount * PENALTY_BPS / BPS_DENOM } else { 0 };
-        let payout = amount - penalty;
-
-        env.storage().persistent().set(&bal_key, &(balance - amount));
-        if penalty > 0 {
-            let credit_key = DataKey::BufferCredit(user.clone());
-            let credit: i128 = env.storage().persistent().get(&credit_key).unwrap_or(0);
-            env.storage().persistent().set(&credit_key, &(credit + penalty));
-            env.storage().persistent().extend_ttl(&credit_key, BUMP_THRESHOLD, BUMP_AMOUNT);
-        }
-
-        let token = Self::token(&env);
-        token::Client::new(&env, &token).transfer(
-            &env.current_contract_address(),
-            &user,
-            &payout,
-        );
+        let (payout, penalty) = Self::debit_savings(&env, &user, amount);
         WithdrawEvent {
             user,
             amount,
@@ -265,6 +252,102 @@ impl ShuntVault {
             penalty,
         }.publish(&env);
         payout
+    }
+
+    /// Create a new named sub-allocation of the user's aggregate Savings
+    /// balance. `initial_amount` is drawn from the unallocated pool
+    /// (`get_unallocated_savings`) — no funds move, this is bookkeeping
+    /// only. Returns the new goal's id.
+    pub fn create_savings_goal(env: Env, user: Address, label: String, initial_amount: i128) -> u32 {
+        user.require_auth();
+        if initial_amount < 0 {
+            panic_with_error!(&env, Error::AmountNotPositive);
+        }
+        if label.len() > 64 {
+            panic_with_error!(&env, Error::LabelTooLong);
+        }
+
+        let goals_key = DataKey::Goals(user.clone());
+        let mut goals: Vec<Goal> = env.storage().persistent().get(&goals_key).unwrap_or(Vec::new(&env));
+
+        let total: i128 = env.storage().persistent().get(&DataKey::Savings(user.clone())).unwrap_or(0);
+        let mut allocated: i128 = 0;
+        let mut next_id: u32 = 0;
+        for g in goals.iter() {
+            allocated += g.amount;
+            if g.id >= next_id {
+                next_id = g.id + 1;
+            }
+        }
+        if initial_amount > total - allocated {
+            panic_with_error!(&env, Error::InsufficientUnallocated);
+        }
+
+        goals.push_back(Goal {
+            id: next_id,
+            label,
+            amount: initial_amount,
+            created_at: env.ledger().timestamp(),
+        });
+        env.storage().persistent().set(&goals_key, &goals);
+        env.storage().persistent().extend_ttl(&goals_key, BUMP_THRESHOLD, BUMP_AMOUNT);
+        next_id
+    }
+
+    /// Withdraw from a specific goal — same penalty/timelock rules as
+    /// `withdraw_savings` (goals share the vault's one timelock), and also
+    /// decrements the goal's own tracked amount. Returns the payout.
+    pub fn withdraw_from_goal(env: Env, user: Address, goal_id: u32, amount: i128) -> i128 {
+        user.require_auth();
+        let goals_key = DataKey::Goals(user.clone());
+        let mut goals: Vec<Goal> = env.storage().persistent().get(&goals_key).unwrap_or(Vec::new(&env));
+        let idx = Self::find_goal_index(&env, &goals, goal_id);
+        let mut goal = goals.get(idx).unwrap();
+        if amount > goal.amount {
+            panic_with_error!(&env, Error::InsufficientSavings);
+        }
+
+        let (payout, penalty) = Self::debit_savings(&env, &user, amount);
+
+        goal.amount -= amount;
+        goals.set(idx, goal);
+        env.storage().persistent().set(&goals_key, &goals);
+        env.storage().persistent().extend_ttl(&goals_key, BUMP_THRESHOLD, BUMP_AMOUNT);
+
+        WithdrawEvent {
+            user,
+            amount,
+            payout,
+            penalty,
+        }.publish(&env);
+        payout
+    }
+
+    /// Rename an existing goal. Purely cosmetic — no balance change.
+    pub fn rename_savings_goal(env: Env, user: Address, goal_id: u32, new_label: String) {
+        user.require_auth();
+        if new_label.len() > 64 {
+            panic_with_error!(&env, Error::LabelTooLong);
+        }
+        let goals_key = DataKey::Goals(user.clone());
+        let mut goals: Vec<Goal> = env.storage().persistent().get(&goals_key).unwrap_or(Vec::new(&env));
+        let idx = Self::find_goal_index(&env, &goals, goal_id);
+        let mut goal = goals.get(idx).unwrap();
+        goal.label = new_label;
+        goals.set(idx, goal);
+        env.storage().persistent().set(&goals_key, &goals);
+    }
+
+    /// Delete a goal. Its principal isn't moved — it simply becomes
+    /// unallocated again, since unallocated is always
+    /// `Savings(user) - sum(goal.amount for goal in goals)`.
+    pub fn delete_savings_goal(env: Env, user: Address, goal_id: u32) {
+        user.require_auth();
+        let goals_key = DataKey::Goals(user.clone());
+        let mut goals: Vec<Goal> = env.storage().persistent().get(&goals_key).unwrap_or(Vec::new(&env));
+        let idx = Self::find_goal_index(&env, &goals, goal_id);
+        goals.remove(idx);
+        env.storage().persistent().set(&goals_key, &goals);
     }
 
     /// Withdraw in-vault Buffer credit (accrued penalties). No timelock.
@@ -330,6 +413,21 @@ impl ShuntVault {
         env.storage().persistent().has(&DataKey::Processed(inflow_key))
     }
 
+    pub fn get_savings_goals(env: Env, user: Address) -> Vec<Goal> {
+        env.storage().persistent().get(&DataKey::Goals(user)).unwrap_or(Vec::new(&env))
+    }
+
+    /// Savings not currently assigned to any goal.
+    pub fn get_unallocated_savings(env: Env, user: Address) -> i128 {
+        let total: i128 = env.storage().persistent().get(&DataKey::Savings(user.clone())).unwrap_or(0);
+        let goals: Vec<Goal> = env.storage().persistent().get(&DataKey::Goals(user)).unwrap_or(Vec::new(&env));
+        let mut allocated: i128 = 0;
+        for g in goals.iter() {
+            allocated += g.amount;
+        }
+        total - allocated
+    }
+
     // ---- Internals ----
 
     fn token(env: &Env) -> Address {
@@ -337,6 +435,57 @@ impl ShuntVault {
             .instance()
             .get(&DataKey::Token)
             .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
+    }
+
+    /// Shared debit + penalty + payout for withdraw_savings and
+    /// withdraw_from_goal — decrements the aggregate Savings(user) balance,
+    /// applies the early-withdrawal penalty to Buffer credit if still
+    /// locked, and pays out the net amount. Caller handles require_auth()
+    /// and any goal-specific bookkeeping.
+    fn debit_savings(env: &Env, user: &Address, amount: i128) -> (i128, i128) {
+        if amount <= 0 {
+            panic_with_error!(env, Error::AmountNotPositive);
+        }
+        let bal_key = DataKey::Savings(user.clone());
+        let balance: i128 = env.storage().persistent().get(&bal_key).unwrap_or(0);
+        if amount > balance {
+            panic_with_error!(env, Error::InsufficientSavings);
+        }
+
+        let lock_until: u64 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LockUntil(user.clone()))
+            .unwrap_or(0);
+        let now = env.ledger().timestamp();
+
+        let penalty = if now < lock_until { amount * PENALTY_BPS / BPS_DENOM } else { 0 };
+        let payout = amount - penalty;
+
+        env.storage().persistent().set(&bal_key, &(balance - amount));
+        if penalty > 0 {
+            let credit_key = DataKey::BufferCredit(user.clone());
+            let credit: i128 = env.storage().persistent().get(&credit_key).unwrap_or(0);
+            env.storage().persistent().set(&credit_key, &(credit + penalty));
+            env.storage().persistent().extend_ttl(&credit_key, BUMP_THRESHOLD, BUMP_AMOUNT);
+        }
+
+        let token = Self::token(env);
+        token::Client::new(env, &token).transfer(
+            &env.current_contract_address(),
+            user,
+            &payout,
+        );
+        (payout, penalty)
+    }
+
+    fn find_goal_index(env: &Env, goals: &Vec<Goal>, goal_id: u32) -> u32 {
+        for (i, g) in goals.iter().enumerate() {
+            if g.id == goal_id {
+                return i as u32;
+            }
+        }
+        panic_with_error!(env, Error::GoalNotFound)
     }
 
     fn credit_savings(env: &Env, user: &Address, amount: i128, lock_secs: u64) {

@@ -6,7 +6,7 @@
  * The bindings Client handles simulation, assembly, and XDR encoding.
  * We only need to plug in the wallet signer from StellarWalletsKit.
  */
-import { Client, networks, type Rules } from "./vault-contract";
+import { Client, networks, type Rules, type Goal } from "./vault-contract";
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
 import { RPC_URL, VAULT_CONTRACT_ID, NETWORK_PASSPHRASE } from "./stellar";
 
@@ -149,4 +149,74 @@ export async function vaultGetBufferCredit(user: string): Promise<bigint> {
   return tx.result;
 }
 
-export { type Rules } from "./vault-contract";
+// ---------------------------------------------------------------------------
+// Savings goals — named sub-allocations of the aggregate Savings balance.
+// No separate custody: a goal's `amount` is drawn from — and released back
+// to — the same on-chain Savings(user) total (contracts/shunt-vault/src/lib.rs).
+// ---------------------------------------------------------------------------
+
+/** Create a goal, allocating `usdc` from the unallocated Savings pool. */
+export async function vaultCreateGoal(
+  user: string,
+  label: string,
+  usdc: number,
+): Promise<{ hash: string; goalId: number }> {
+  const client = getVaultClient(user);
+  const tx = await client.create_savings_goal({
+    user,
+    label,
+    initial_amount: BigInt(Math.round(usdc * 10_000_000)),
+  });
+  const result = await tx.signAndSend();
+  return { hash: (result as any).hash ?? "", goalId: Number(result.result) };
+}
+
+/** Withdraw from a specific goal (same penalty/timelock rules as Savings). */
+export async function vaultWithdrawFromGoal(
+  user: string,
+  goalId: number,
+  usdc: number,
+): Promise<string> {
+  const client = getVaultClient(user);
+  const tx = await client.withdraw_from_goal({
+    user,
+    goal_id: goalId,
+    amount: BigInt(Math.round(usdc * 10_000_000)),
+  });
+  const result = await tx.signAndSend();
+  return (result as any).hash ?? "";
+}
+
+/** Rename a goal — cosmetic only, no balance change. */
+export async function vaultRenameGoal(
+  user: string,
+  goalId: number,
+  newLabel: string,
+): Promise<string> {
+  const client = getVaultClient(user);
+  const tx = await client.rename_savings_goal({ user, goal_id: goalId, new_label: newLabel });
+  const result = await tx.signAndSend();
+  return (result as any).hash ?? "";
+}
+
+/** Delete a goal — its principal becomes unallocated again, no fund movement. */
+export async function vaultDeleteGoal(user: string, goalId: number): Promise<string> {
+  const client = getVaultClient(user);
+  const tx = await client.delete_savings_goal({ user, goal_id: goalId });
+  const result = await tx.signAndSend();
+  return (result as any).hash ?? "";
+}
+
+export async function vaultGetGoals(user: string): Promise<Goal[]> {
+  const client = getVaultClient(user);
+  const tx = await client.get_savings_goals({ user });
+  return [...(tx.result ?? [])];
+}
+
+export async function vaultGetUnallocatedSavings(user: string): Promise<bigint> {
+  const client = getVaultClient(user);
+  const tx = await client.get_unallocated_savings({ user });
+  return tx.result;
+}
+
+export { type Rules, type Goal } from "./vault-contract";

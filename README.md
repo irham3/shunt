@@ -85,25 +85,25 @@ Early savings withdrawals are possible but cost a **10% penalty — which isn't 
 
 | Item                  | Value                                                                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Vault contract (USDC) | [`CA65BKKNEZEXOXK54G6BAVE3O4QMTCXGSA7YULHADELX5HOIOZPO7JUM`](https://stellar.expert/explorer/testnet/contract/CA65BKKNEZEXOXK54G6BAVE3O4QMTCXGSA7YULHADELX5HOIOZPO7JUM) |
-| Proof vault (XLM)     | [`CADI23I2J2DMRB4YS63MGXJQCIN7QYYBCOIH6YSXJZFY63SPRNJDCMNL`](https://stellar.expert/explorer/testnet/contract/CADI23I2J2DMRB4YS63MGXJQCIN7QYYBCOIH6YSXJZFY63SPRNJDCMNL) |
+| Vault contract (USDC) | [`CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K`](https://stellar.expert/explorer/testnet/contract/CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K) |
 | USDC SAC (testnet)    | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`                                                                                                             |
+| Keeper (Cloudflare Worker) | [`shunt-keeper.irhamtria.workers.dev`](https://shunt-keeper.irhamtria.workers.dev/health)                                                                        |
 
-The main vault ran the **complete lifecycle on-chain with real testnet USDC** (acquired on the DEX via path payment — every hash below is clickable proof):
+The vault ran the **complete lifecycle on-chain with real testnet USDC** (acquired on the DEX via path payment), including the savings-goals feature — every hash below is clickable proof:
 
 ```text
-change_trust USDC                                       ✓ trustline added
-path_payment XLM → USDC (25 USDC via DEX)               ✓ real USDC, no faucet
+init (USDC SAC)                                         ✓ contract initialized
 set_rules  60/25/15, 1-day timelock                     ✓ stored on-chain
 distribute 10 USDC                                      ✓ split exactly 6 / 2.5 / 1.5, `split` event emitted
-distribute (replayed same inflow_key)                   ✗ rejected — Error #6, double-splits impossible
-withdraw_savings 1.0 (still locked)                     ✓ paid 0.9 — 10% penalty → Buffer credit, not lost
-get_savings / get_buffer_credit                         ✓ 1.5 / 0.1 — state readable by anyone
+create_savings_goal "Emergency fund" 1.5 USDC            ✓ drawn from unallocated, aggregate untouched
+withdraw_from_goal 0.5 (still locked)                   ✓ paid 0.45 — 10% penalty → Buffer credit, goal decrements
+rename_savings_goal → "Dana Darurat"                    ✓ cosmetic only, amount unchanged
+delete_savings_goal                                     ✓ 1.0 USDC principal released back to unallocated
 ```
 
-Proof transactions: [trustline](https://stellar.expert/explorer/testnet/tx/429694ebefb36b9f41b0033b174f3a503b6f975ddb22a9867b70a3720ead093f) · [USDC purchase](https://stellar.expert/explorer/testnet/tx/3bf334a7d55f83bf9e13ef665a912e5eccab02e71286dcebaedde15aaa3e7b33) · [set_rules](https://stellar.expert/explorer/testnet/tx/ccf020a0e95f8ba1aab12721863c14b9d5d41d233b77d67185d6703462d5cd9c) · [distribute](https://stellar.expert/explorer/testnet/tx/85cde3c33ac058dbe5b5c1e7b246147d75e239aae20adf00a70a8a2a6badfe06) · [withdraw + penalty](https://stellar.expert/explorer/testnet/tx/d60b135cc7e6fccf600ad6cd86aa97a692c9bfe41a111ee667469519ee72ef1e)
+Proof transactions: [deploy](https://stellar.expert/explorer/testnet/tx/25122644dc58ce1b041d72aac91d2885b208bc56042fb43d2e04bbff19d31cc2) · [init](https://stellar.expert/explorer/testnet/tx/eae9a0f8959db28603a0f2662d0b5bb9b529eb467de6d414f531c21c2dd42e19) · [set_rules](https://stellar.expert/explorer/testnet/tx/2ef8083f38e14c379812b593f795253322c22f84f55e9062fbb483ad04f11068) · [distribute](https://stellar.expert/explorer/testnet/tx/ce3ce8010df371369f0350b42b3a3fb973fd66d2feac747b208933b2beae5a11) · [create_savings_goal](https://stellar.expert/explorer/testnet/tx/698b60e1f87ab16dbe817e4efc7f046fc86427aefc9940dc82ee5cd64116209f) · [withdraw_from_goal](https://stellar.expert/explorer/testnet/tx/910b71a337e7d9843f65e3923e6870ec11efb67fa05e21f3359f103f0c2ef898) · [rename_savings_goal](https://stellar.expert/explorer/testnet/tx/73aaf921551e8ff41cd4d83a807c0a7b5b745734779cb96df8b3afd3f9523abe) · [delete_savings_goal](https://stellar.expert/explorer/testnet/tx/0e5faa0d837a07e1dfb492fd86e9e70b4bb456e44e34c25158f01c6e7a069906)
 
-An earlier identical lifecycle ran on the XLM proof vault (`CADI…`) — same code path, 7-decimal arithmetic.
+An earlier lifecycle proof (trustline, DEX purchase, basic split/withdraw) ran on the prior contract instance before the goals feature was added — same code path, same 7-decimal arithmetic, superseded by the deployment above.
 
 ## The app
 
@@ -149,9 +149,14 @@ Three deliberate design principles:
 | `withdraw_savings(user, amount)`                                          | user | Free after the timelock; 10% penalty → Buffer credit before it.                                  |
 | `withdraw_buffer(user, amount)`                                           | user | Withdraw Buffer credit — never locked.                                                           |
 | `offramp(user, anchor, amount)`                                           | user | Sends USDC only to**allowlisted** anchor addresses.                                         |
+| `create_savings_goal(user, label, initial_amount)`                        | user | Names a sub-allocation, drawn from the unallocated Savings pool. No funds move — bookkeeping only. |
+| `withdraw_from_goal(user, goal_id, amount)`                               | user | Same penalty/timelock as `withdraw_savings`, scoped to one goal.                                  |
+| `rename_savings_goal(user, goal_id, new_label)`                           | user | Cosmetic — no balance change.                                                                      |
+| `delete_savings_goal(user, goal_id)`                                      | user | Removes the goal; its principal simply becomes unallocated again.                                 |
 | `get_rules / get_savings / get_buffer_credit / get_lock`                  | —   | Read-only views.                                                                                  |
+| `get_savings_goals / get_unallocated_savings`                             | —   | Read-only views for the goals feature.                                                            |
 
-Errors are explicit (`NotInitialized`=1 … `AnchorNotAllowlisted`=9); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. Eleven unit tests cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, and the allowlist. **The Invest lane deliberately does not touch this contract** — the invest share stays wallet-side and converts via a classic path payment, so the audited surface stays small and the deployed vault stays frozen.
+Errors are explicit (`NotInitialized`=1 … `LabelTooLong`=12); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. Nineteen unit tests (the original eleven, untouched, plus eight new ones) cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, and the full goals lifecycle. **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a classic path payment. The savings-goals functions were added additively: they only read/write a new `Goals(Address)` key and never touch the existing `Savings`/`LockUntil`/`BufferCredit` logic those eleven original tests exercise, so the contract's core split-and-lock guarantees are unchanged even though it's no longer literally frozen.
 
 ## Money in, money out (the anchor stack)
 
