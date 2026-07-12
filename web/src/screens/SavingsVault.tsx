@@ -1,14 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Pencil, Trash2, Target } from "lucide-react";
 import { getIdrRate } from "../lib/rates";
-import { vaultWithdrawSavings } from "../lib/vault";
-import { fmtIdr, fmtUsdc, useShunt } from "../store";
+import { vaultWithdrawSavings, vaultCreateGoal, vaultWithdrawFromGoal, vaultRenameGoal, vaultDeleteGoal } from "../lib/vault";
+import { fmtIdr, fmtUsdc, useShunt, type SavingsGoal } from "../store";
 import { formatError } from "../lib/stellar";
+import { AnimatedNumber } from "../components/AnimatedNumber";
+import { ProgressRing } from "../components/ProgressRing";
 
 const PENALTY_PCT = 10; // must match PENALTY_BPS in the contract
 
 /** Desktop layout: balance + growth chart left, lock status + withdraw right. */
 export function SavingsVault() {
-  const { address, balances, lockUntil, activity, withdrawSavings, showToast } = useShunt();
+  const {
+    address,
+    balances,
+    lockUntil,
+    activity,
+    withdrawSavings,
+    showToast,
+    goals,
+    unallocatedSavings,
+    setGoalTarget,
+    syncFromChain,
+  } = useShunt();
   const [ccy, setCcy] = useState<"USD" | "IDR">("USD");
   const [idr, setIdr] = useState(18000);
   const [stale, setStale] = useState(false);
@@ -22,6 +37,10 @@ export function SavingsVault() {
       setStale(r.stale);
     });
   }, []);
+
+  useEffect(() => {
+    if (address) syncFromChain(address);
+  }, [address, syncFromChain]);
 
   const locked = lockUntil * 1000 > Date.now();
   const balance = balances.savings;
@@ -93,7 +112,11 @@ export function SavingsVault() {
 
           <div>
             <div className="numeric" style={{ fontSize: "clamp(34px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.1 }}>
-              {ccy === "USD" ? `$${fmtUsdc(balance)}` : fmtIdr(balance * idr)}
+              {ccy === "USD" ? (
+                <>$<AnimatedNumber value={balance} decimals={2} /></>
+              ) : (
+                fmtIdr(balance * idr)
+              )}
             </div>
             {ccy === "IDR" && (
               <div className="muted" style={{ fontSize: 12 }}>
@@ -109,6 +132,16 @@ export function SavingsVault() {
               <path d={path.line} fill="none" stroke="var(--color-accent-primary)" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
           </div>
+
+          <SavingsGoals
+            address={address}
+            goals={goals}
+            unallocated={unallocatedSavings}
+            locked={locked}
+            onSetGoalTarget={setGoalTarget}
+            onRefresh={() => address && syncFromChain(address)}
+            showToast={showToast}
+          />
         </div>
 
         <div className="col-side">
@@ -143,7 +176,6 @@ export function SavingsVault() {
             <button className="btn-secondary" disabled={busy || balance <= 0} onClick={onWithdraw}>
               {busy ? "Processing…" : "Withdraw"}
             </button>
-            <button className="btn-ghost">Change goal</button>
           </div>
           {err && (
             <p role="alert" className="muted" style={{ fontSize: 13, margin: 0 }}>
@@ -153,5 +185,330 @@ export function SavingsVault() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Savings goals — named sub-allocations of the balance above.
+// ---------------------------------------------------------------------------
+
+function SavingsGoals({
+  address,
+  goals,
+  unallocated,
+  locked,
+  onSetGoalTarget,
+  onRefresh,
+  showToast,
+}: {
+  address: string | null;
+  goals: SavingsGoal[];
+  unallocated: number;
+  locked: boolean;
+  onSetGoalTarget: (id: number, target: number | undefined) => void;
+  onRefresh: () => void;
+  showToast: (msg: string) => void;
+}) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onCreate() {
+    if (!address) return;
+    const usdc = Number(newAmount);
+    if (!newLabel.trim()) {
+      setErr("Give the goal a name.");
+      return;
+    }
+    if (!usdc || usdc <= 0 || usdc > unallocated) {
+      setErr(`Invalid amount or exceeds unallocated (${fmtUsdc(unallocated)} USDC).`);
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await vaultCreateGoal(address, newLabel.trim(), usdc);
+      showToast(`Goal "${newLabel.trim()}" created`);
+      setNewLabel("");
+      setNewAmount("");
+      setShowCreate(false);
+      onRefresh();
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain call failed (${formatted})`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>Savings goals</div>
+        <span className="muted numeric" style={{ fontSize: 13 }}>
+          <AnimatedNumber value={unallocated} decimals={2} /> USDC unallocated
+        </span>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {goals.map((g) => (
+          <GoalRow
+            key={g.id}
+            address={address}
+            goal={g}
+            locked={locked}
+            onSetTarget={(t) => onSetGoalTarget(g.id, t)}
+            onRefresh={onRefresh}
+            showToast={showToast}
+          />
+        ))}
+      </AnimatePresence>
+
+      {!showCreate ? (
+        <button
+          className="btn-ghost"
+          onClick={() => setShowCreate(true)}
+          style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+        >
+          <Plus size={16} /> New goal
+        </button>
+      ) : (
+        <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10, border: "1px solid var(--color-accent-primary)" }}>
+          <input
+            type="text"
+            placeholder="Goal name (e.g. Emergency fund)"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            maxLength={64}
+          />
+          <input
+            type="number"
+            placeholder={`Amount (up to ${fmtUsdc(unallocated)} USDC unallocated)`}
+            value={newAmount}
+            min={0}
+            onChange={(e) => setNewAmount(e.target.value)}
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-secondary" onClick={() => { setShowCreate(false); setErr(null); }}>
+              Cancel
+            </button>
+            <button className="btn-primary" disabled={busy} onClick={onCreate}>
+              {busy ? "Creating…" : "Create goal"}
+            </button>
+          </div>
+        </div>
+      )}
+      {err && (
+        <p role="alert" className="muted" style={{ fontSize: 13, margin: 0 }}>
+          {err}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function GoalRow({
+  address,
+  goal,
+  locked,
+  onSetTarget,
+  onRefresh,
+  showToast,
+}: {
+  address: string | null;
+  goal: SavingsGoal;
+  locked: boolean;
+  onSetTarget: (target: number | undefined) => void;
+  onRefresh: () => void;
+  showToast: (msg: string) => void;
+}) {
+  const [mode, setMode] = useState<"idle" | "withdraw" | "rename" | "target">("idle");
+  const [amount, setAmount] = useState("");
+  const [label, setLabel] = useState(goal.label);
+  const [target, setTarget] = useState(goal.target ? String(goal.target) : "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const progress = goal.target && goal.target > 0 ? goal.amountUsdc / goal.target : undefined;
+
+  async function onWithdraw() {
+    if (!address) return;
+    const usdc = Number(amount);
+    if (!usdc || usdc <= 0 || usdc > goal.amountUsdc) {
+      setErr("Invalid amount or exceeds this goal's balance.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await vaultWithdrawFromGoal(address, goal.id, usdc);
+      showToast(locked ? `Withdrawn — ${PENALTY_PCT}% penalty → Buffer` : "Withdrawn from goal");
+      setMode("idle");
+      setAmount("");
+      onRefresh();
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain call failed (${formatted})`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRename() {
+    if (!address || !label.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await vaultRenameGoal(address, goal.id, label.trim());
+      showToast("Goal renamed");
+      setMode("idle");
+      onRefresh();
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain call failed (${formatted})`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!address) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await vaultDeleteGoal(address, goal.id);
+      showToast(`"${goal.label}" deleted — funds released to unallocated`);
+      onRefresh();
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain call failed (${formatted})`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onSaveTarget() {
+    const t = Number(target);
+    onSetTarget(t > 0 ? t : undefined);
+    setMode("idle");
+  }
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.25 }}
+      style={{ overflow: "hidden" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "10px 0",
+          borderTop: "1px solid #1f2732",
+        }}
+      >
+        {progress !== undefined ? (
+          <ProgressRing progress={progress} size={44} strokeWidth={4}>
+            <span style={{ fontSize: 10, fontWeight: 700 }}>{Math.round(progress * 100)}%</span>
+          </ProgressRing>
+        ) : (
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: "var(--color-bg-elevated)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Target size={18} className="muted" />
+          </div>
+        )}
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {goal.label}
+          </div>
+          <div className="numeric muted" style={{ fontSize: 13 }}>
+            <AnimatedNumber value={goal.amountUsdc} decimals={2} /> USDC
+            {goal.target ? ` of ${fmtUsdc(goal.target)}` : ""}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 4 }}>
+          <button className="chip" aria-label={`Rename ${goal.label}`} onClick={() => setMode(mode === "rename" ? "idle" : "rename")}>
+            <Pencil size={14} />
+          </button>
+          <button className="chip" aria-label={`Set target for ${goal.label}`} onClick={() => setMode(mode === "target" ? "idle" : "target")}>
+            <Target size={14} />
+          </button>
+          <button className="chip" aria-label={`Withdraw from ${goal.label}`} onClick={() => setMode(mode === "withdraw" ? "idle" : "withdraw")}>
+            Withdraw
+          </button>
+          <button className="chip" aria-label={`Delete ${goal.label}`} onClick={onDelete} disabled={busy}>
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {mode === "withdraw" && (
+        <div style={{ display: "flex", gap: 8, paddingBottom: 10 }}>
+          <input
+            type="number"
+            placeholder="Amount in USDC"
+            value={amount}
+            min={0}
+            onChange={(e) => setAmount(e.target.value)}
+            aria-label={`${goal.label} withdrawal amount`}
+          />
+          <button className="btn-secondary" disabled={busy} onClick={onWithdraw} style={{ width: "auto", padding: "0 20px" }}>
+            {busy ? "…" : "Go"}
+          </button>
+        </div>
+      )}
+      {mode === "rename" && (
+        <div style={{ display: "flex", gap: 8, paddingBottom: 10 }}>
+          <input
+            type="text"
+            value={label}
+            maxLength={64}
+            onChange={(e) => setLabel(e.target.value)}
+            aria-label="New goal name"
+          />
+          <button className="btn-secondary" disabled={busy} onClick={onRename} style={{ width: "auto", padding: "0 20px" }}>
+            {busy ? "…" : "Save"}
+          </button>
+        </div>
+      )}
+      {mode === "target" && (
+        <div style={{ display: "flex", gap: 8, paddingBottom: 10 }}>
+          <input
+            type="number"
+            placeholder="Target amount (display only, not enforced)"
+            value={target}
+            min={0}
+            onChange={(e) => setTarget(e.target.value)}
+            aria-label={`Target for ${goal.label}`}
+          />
+          <button className="btn-secondary" onClick={onSaveTarget} style={{ width: "auto", padding: "0 20px" }}>
+            Save
+          </button>
+        </div>
+      )}
+      {err && (
+        <p role="alert" className="muted" style={{ fontSize: 12, margin: "0 0 10px" }}>
+          {err}
+        </p>
+      )}
+    </motion.div>
   );
 }
