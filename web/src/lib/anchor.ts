@@ -10,7 +10,7 @@
  * Demo target: SDF test anchor. Production target: IDRX or a PHP-corridor
  * anchor once verified on Stellar.
  */
-import { isConnected, signTransaction } from "@stellar/freighter-api";
+import { signTxXdr } from "./signer";
 import { NETWORK_PASSPHRASE } from "./stellar";
 
 export const ANCHOR_HOME_DOMAIN =
@@ -62,11 +62,8 @@ export async function discoverAnchor(): Promise<AnchorInfo> {
   return cachedInfo;
 }
 
-/** SEP-10: obtain a JWT by signing the anchor's challenge with Freighter. */
+/** SEP-10: obtain a JWT by signing the anchor's challenge with the wallet. */
 export async function authenticate(account: string): Promise<string> {
-  if (!(await isConnected())) {
-    throw new Error("Freighter wallet is not installed. Please install the Freighter extension.");
-  }
   const { webAuthEndpoint } = await discoverAnchor();
   const chRes = await fetch(
     `${webAuthEndpoint}?account=${encodeURIComponent(account)}`,
@@ -74,10 +71,7 @@ export async function authenticate(account: string): Promise<string> {
   if (!chRes.ok) throw new Error(await anchorErrorMessage(chRes, "SEP-10 challenge failed"));
   const { transaction } = await chRes.json();
 
-  const signed = await signTransaction(transaction, {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
-  if (signed.error) throw new Error(String(signed.error));
+  const signed = await signTxXdr(transaction, NETWORK_PASSPHRASE);
 
   const tokRes = await fetch(webAuthEndpoint, {
     method: "POST",

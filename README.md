@@ -51,6 +51,7 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 | **In**        | **Top Up (SEP-24 deposit)** — IDR in through a licensed anchor's hosted flow, lands as USDC                                                                                                     | ✅ shipped (testnet anchor)   |
 | **Structure** | **One-tap split** into Needs / Savings / Buffer / Invest, atomic on-chain                                                                                                                        | ✅ shipped                    |
 | **Structure** | **Invest lane** — spot DCA to XLM via path payment after each split                                                                                                                             | ✅ shipped                    |
+| **Structure** | **In-app Convert** — XLM ⇄ USDC swap on the Stellar DEX (live quote, slippage floor), no third party                                                                                            | ✅ shipped                    |
 | **Structure** | **Code-custody savings** with timelock + penalty-to-your-buffer                                                                                                                                  | ✅ shipped                    |
 | **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to IDR/PHP bank via allowlisted anchors, rate & fee shown first                                                                                     | ✅ shipped                    |
 
@@ -198,6 +199,12 @@ npx wrangler dev --local        # http://localhost:8787
 cd web
 cp .env.example .env            # VITE_VAULT_CONTRACT_ID (+ anchor domain, keeper URL)
 npm install && npm run dev      # http://localhost:5173
+
+# 4. End-to-end tests — REAL testnet, no mocks (see web/e2e/README.md)
+npx playwright install chromium # once
+npm run test:e2e                # funds a throwaway account via Friendbot, buys real
+                                # USDC on the DEX, then walks the whole loop:
+                                # rules → split → vault & goals → anchor in/out → send
 ```
 
 No contract configured? The app runs in **local demo mode** — the full flow (connect → rules → simulated income → one-tap split → vault → cash-out) works with local state, so you can feel the product before touching a faucet. The "Simulate incoming income" button lives in Settings.

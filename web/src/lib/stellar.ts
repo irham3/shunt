@@ -2,6 +2,7 @@ import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
 import { FreighterModule } from "@creit.tech/stellar-wallets-kit/modules/freighter";
 import { AlbedoModule } from "@creit.tech/stellar-wallets-kit/modules/albedo";
 import { xBullModule } from "@creit.tech/stellar-wallets-kit/modules/xbull";
+import { signTxXdr } from "./signer";
 import {
   Address,
   Contract,
@@ -148,10 +149,116 @@ export async function fetchUsdcBalance(address: string): Promise<string> {
   }
   const data = await res.json();
   const usdc = data.balances?.find(
-    (b: { asset_code?: string; asset_issuer?: string }) => 
+    (b: { asset_code?: string; asset_issuer?: string }) =>
       b.asset_code === USDC_CODE && b.asset_issuer === USDC_ISSUER,
   );
   return usdc?.balance ?? "0";
+}
+
+export interface AccountBalances {
+  xlm: string;
+  usdc: string;
+  hasUsdcTrustline: boolean;
+  funded: boolean;
+}
+
+/** One Horizon round-trip for everything Home needs: XLM + USDC + trustline. */
+export async function fetchAccountBalances(address: string): Promise<AccountBalances> {
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (!res.ok) {
+    if (res.status === 404)
+      return { xlm: "0", usdc: "0", hasUsdcTrustline: false, funded: false };
+    throw new Error(`Horizon error ${res.status}`);
+  }
+  const data = await res.json();
+  const balances: any[] = data.balances ?? [];
+  const native = balances.find((b) => b.asset_type === "native");
+  const usdc = balances.find(
+    (b) => b.asset_code === USDC_CODE && b.asset_issuer === USDC_ISSUER,
+  );
+  return {
+    xlm: native?.balance ?? "0",
+    usdc: usdc?.balance ?? "0",
+    hasUsdcTrustline: Boolean(usdc),
+    funded: true,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// On-chain transfer history (Activity tab) — real Horizon payments, in & out.
+// ---------------------------------------------------------------------------
+
+export interface ChainPayment {
+  id: string;
+  txHash: string;
+  direction: "in" | "out";
+  /** "XLM", "USDC", or another asset code. */
+  asset: string;
+  amount: number;
+  /** The other account (or the funder for create_account). */
+  counterparty: string;
+  at: string; // ISO timestamp
+  /** true for self path payments (e.g. the Invest lane's DCA conversion). */
+  isSelfConversion: boolean;
+}
+
+/**
+ * Recent payments touching this account, newest first — direct transfers,
+ * account funding, and path payments — so incoming/outgoing money always
+ * shows up in Activity even when it never went through the app.
+ */
+export async function fetchRecentPayments(
+  address: string,
+  limit = 60,
+): Promise<ChainPayment[]> {
+  const res = await fetch(
+    `${HORIZON_URL}/accounts/${address}/payments?order=desc&limit=${limit}`,
+  );
+  if (!res.ok) return []; // unfunded account / transient error — just show local items
+  const data = await res.json();
+  const records: any[] = data?._embedded?.records ?? [];
+  const out: ChainPayment[] = [];
+  for (const r of records) {
+    if (r.type === "create_account") {
+      if (r.account !== address) continue;
+      out.push({
+        id: r.id,
+        txHash: r.transaction_hash,
+        direction: "in",
+        asset: "XLM",
+        amount: Number(r.starting_balance),
+        counterparty: r.funder,
+        at: r.created_at,
+        isSelfConversion: false,
+      });
+      continue;
+    }
+    if (
+      r.type !== "payment" &&
+      r.type !== "path_payment_strict_send" &&
+      r.type !== "path_payment_strict_receive"
+    )
+      continue;
+    const assetCode =
+      r.asset_type === "native"
+        ? "XLM"
+        : r.asset_code === USDC_CODE && r.asset_issuer === USDC_ISSUER
+          ? "USDC"
+          : (r.asset_code ?? "?");
+    const self = r.from === address && r.to === address;
+    const incoming = r.to === address;
+    out.push({
+      id: r.id,
+      txHash: r.transaction_hash,
+      direction: self || incoming ? "in" : "out",
+      asset: assetCode,
+      amount: Number(r.amount),
+      counterparty: self ? address : incoming ? r.from : r.to,
+      at: r.created_at,
+      isSelfConversion: self,
+    });
+  }
+  return out;
 }
 
 /** Build, sign (WalletKit), and submit a native XLM payment on Horizon. */
@@ -183,10 +290,7 @@ export async function sendXlmPayment(
     .build();
 
   try {
-    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
-      tx.toEnvelope().toXDR("base64"),
-      { networkPassphrase: NETWORK_PASSPHRASE }
-    );
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const result = await horizon.submitTransaction(sendTx as any) as any;
     return result.hash;
@@ -196,15 +300,17 @@ export async function sendXlmPayment(
 }
 
 /**
- * F12 Invest lane: spot-convert USDC -> XLM to self via a classic
- * `pathPaymentStrictSend` through the Stellar DEX. Deliberately a separate
- * classic transaction: a Soroban tx is single-operation by protocol, so the
- * conversion can't ride inside `distribute` — honest two-tap UX (README).
+ * Spot-convert one asset to another *to self* via a classic
+ * `pathPaymentStrictSend` through the Stellar DEX — no third party, the
+ * orderbook/AMM is part of the protocol. Used by the Invest lane's DCA
+ * (USDC→XLM) and the in-app Convert tab (both directions).
  */
-export async function convertUsdcToXlm(
+async function pathPaymentSelf(
   sender: string,
-  usdcAmount: string,
-  minXlm: string,
+  sendAsset: Asset,
+  destAsset: Asset,
+  sendAmount: string,
+  destMin: string,
 ): Promise<string> {
   const horizon = new Horizon.Server(HORIZON_URL);
   let source;
@@ -220,26 +326,70 @@ export async function convertUsdcToXlm(
   })
     .addOperation(
       Operation.pathPaymentStrictSend({
-        sendAsset: new Asset(USDC_CODE, USDC_ISSUER),
-        sendAmount: usdcAmount,
+        sendAsset,
+        sendAmount,
         destination: sender,
-        destAsset: Asset.native(),
-        destMin: minXlm,
+        destAsset,
+        destMin,
       }),
     )
     .setTimeout(300)
     .build();
 
   try {
-    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
-      tx.toEnvelope().toXDR("base64"),
-      { networkPassphrase: NETWORK_PASSPHRASE }
-    );
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const result = await horizon.submitTransaction(sendTx as any) as any;
     return result.hash;
   } catch (e) {
     parseWalletError(e);
+  }
+}
+
+/** F12 Invest lane: USDC → XLM after the split (separate classic tx — a
+ * Soroban tx is single-operation by protocol, honest two-tap UX, README). */
+export async function convertUsdcToXlm(
+  sender: string,
+  usdcAmount: string,
+  minXlm: string,
+): Promise<string> {
+  return pathPaymentSelf(sender, new Asset(USDC_CODE, USDC_ISSUER), Asset.native(), usdcAmount, minXlm);
+}
+
+/** Convert tab: XLM → USDC, e.g. turning testnet XLM into split-able income. */
+export async function convertXlmToUsdc(
+  sender: string,
+  xlmAmount: string,
+  minUsdc: string,
+): Promise<string> {
+  return pathPaymentSelf(sender, Asset.native(), new Asset(USDC_CODE, USDC_ISSUER), xlmAmount, minUsdc);
+}
+
+export type ConvertDirection = "xlm-usdc" | "usdc-xlm";
+
+/**
+ * Live quote for a self-conversion via Horizon's strict-send pathfinding —
+ * the same engine the DEX uses, so the preview matches what would execute.
+ * Returns the estimated destination amount, or null when no path exists.
+ */
+export async function quoteConversion(
+  direction: ConvertDirection,
+  amount: string,
+): Promise<number | null> {
+  const params =
+    direction === "xlm-usdc"
+      ? `source_asset_type=native&source_amount=${amount}&destination_assets=${USDC_CODE}%3A${USDC_ISSUER}`
+      : `source_asset_type=credit_alphanum4&source_asset_code=${USDC_CODE}&source_asset_issuer=${USDC_ISSUER}&source_amount=${amount}&destination_assets=native`;
+  try {
+    const res = await fetch(`${HORIZON_URL}/paths/strict-send?${params}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const records: any[] = data?._embedded?.records ?? [];
+    if (records.length === 0) return null;
+    // Records are candidate paths; take the best (highest) destination amount.
+    return Math.max(...records.map((r) => Number(r.destination_amount)));
+  } catch {
+    return null;
   }
 }
 
@@ -283,10 +433,7 @@ export async function addUsdcTrustline(sender: string): Promise<string> {
     .build();
 
   try {
-    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
-      tx.toEnvelope().toXDR("base64"),
-      { networkPassphrase: NETWORK_PASSPHRASE }
-    );
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const result = await horizon.submitTransaction(sendTx as any) as any;
     return result.hash;
@@ -333,11 +480,11 @@ async function invoke(
 
   try {
     const prepared = await server.prepareTransaction(tx);
-    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
+    const { signedTxXdr } = await signTxXdr(
       prepared.toEnvelope().toXDR("base64"),
-      { networkPassphrase: NETWORK_PASSPHRASE }
+      NETWORK_PASSPHRASE,
     );
-    
+
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const res = await server.sendTransaction(sendTx) as any;
     if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
@@ -381,10 +528,7 @@ export async function txSetRules(
 export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
   try {
     const server = new rpc.Server(RPC_URL);
-    const { signedTxXdr } = await StellarWalletsKit.signTransaction(
-      preparedXdr,
-      { networkPassphrase: NETWORK_PASSPHRASE }
-    );
+    const { signedTxXdr } = await signTxXdr(preparedXdr, NETWORK_PASSPHRASE);
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const res = await server.sendTransaction(sendTx) as any;
     if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);

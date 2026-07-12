@@ -1,7 +1,18 @@
 import { motion } from "framer-motion";
 import type { Bucket } from "../store";
 
-export function DonutChart({ buckets, size = 200, strokeWidth = 24 }: { buckets: Bucket[]; size?: number; strokeWidth?: number }) {
+export function DonutChart({
+  buckets,
+  size = 200,
+  strokeWidth = 24,
+  centerContent,
+}: {
+  buckets: Bucket[];
+  size?: number;
+  strokeWidth?: number;
+  /** Optional custom center content (e.g. total balance) replacing the % readout. */
+  centerContent?: React.ReactNode;
+}) {
   const center = size / 2;
   const radius = center - strokeWidth / 2;
   const circumference = 2 * Math.PI * radius;
@@ -87,20 +98,24 @@ export function DonutChart({ buckets, size = 200, strokeWidth = 24 }: { buckets:
           pointerEvents: "none",
         }}
       >
-        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 2 }}>
-          {isComplete ? "Total" : "Allocated"}
-        </div>
-        <div
-          className="numeric"
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: isComplete ? "var(--color-accent-primary)" : "var(--color-text-primary)",
-            lineHeight: 1,
-          }}
-        >
-          {total}%
-        </div>
+        {centerContent ?? (
+          <>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 2 }}>
+              {isComplete ? "Total" : "Allocated"}
+            </div>
+            <div
+              className="numeric"
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                color: isComplete ? "var(--color-accent-primary)" : "var(--color-text-primary)",
+                lineHeight: 1,
+              }}
+            >
+              {total}%
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

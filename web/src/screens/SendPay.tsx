@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
+import { ArrowDownUp } from "lucide-react";
 import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
-import { sendXlmPayment, fetchXlmBalance, EXPLORER_TX, NETWORK, formatError } from "../lib/stellar";
+import {
+  sendXlmPayment,
+  fetchXlmBalance,
+  convertXlmToUsdc,
+  convertUsdcToXlm,
+  quoteConversion,
+  addUsdcTrustline,
+  type ConvertDirection,
+  EXPLORER_TX,
+  NETWORK,
+  formatError,
+} from "../lib/stellar";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { StrKey } from "@stellar/stellar-sdk";
@@ -15,12 +28,22 @@ const DESTS = [
   { id: "bill", label: "Bills", icon: "🧾" },
 ];
 
-type Tab = "usdc" | "xlm";
+type Tab = "usdc" | "xlm" | "convert";
 
-/** F8/F10: off-ramp from the Needs lane via a SEP-24 anchor + XLM transfer (Level 1). */
+/** Slippage floor for in-app conversions — quote minus 2%. */
+const SLIPPAGE_PCT = 2;
+
+/** F8/F10: off-ramp via SEP-24 anchor + XLM transfer (Level 1) + XLM ⇄ USDC convert. */
 export function SendPay() {
-  const { address, balances, xlmBalance, setXlmBalance, offramp, showToast, activity, recordXlmPayment } = useShunt();
-  const [tab, setTab] = useState<Tab>("xlm");
+  const {
+    address, balances, xlmBalance, usdcBalance, usdcTrustline, refreshWallet,
+    setXlmBalance, offramp, showToast, activity, recordXlmPayment, recordConversion,
+  } = useShunt();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState<Tab>(
+    initialTab === "convert" ? "convert" : initialTab === "usdc" ? "usdc" : "xlm",
+  );
   const [dest, setDest] = useState("bank");
   const [amount, setAmount] = useState("");
   const [idr, setIdr] = useState(18000);
@@ -36,18 +59,35 @@ export function SendPay() {
   const [xlmErr, setXlmErr] = useState<string | null>(null);
   const [xlmBusy, setXlmBusy] = useState(false);
 
+  // Convert (XLM ⇄ USDC) state
+  const [cvDirection, setCvDirection] = useState<ConvertDirection>("xlm-usdc");
+  const [cvAmount, setCvAmount] = useState("");
+  const [cvQuote, setCvQuote] = useState<number | null>(null);
+  const [cvQuoting, setCvQuoting] = useState(false);
+  const [cvBusy, setCvBusy] = useState(false);
+  const [cvErr, setCvErr] = useState<string | null>(null);
+  const [cvResult, setCvResult] = useState<{ hash: string; received: number } | null>(null);
+  const [enablingUsdc, setEnablingUsdc] = useState(false);
+
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
   }, []);
 
+  useEffect(() => {
+    if (address) refreshWallet(address);
+  }, [address, refreshWallet]);
+
   const usdc = Number(amount) || 0;
   const fee = (usdc * FEE_PCT) / 100;
   const receiveIdr = (usdc - fee) * idr;
+  const walletUsdc = Number(usdcBalance ?? 0);
 
   // --- USDC off-ramp submit ---
   async function onSubmitUsdc() {
-    if (usdc <= 0 || usdc > balances.needs) {
-      setErr("Invalid amount or exceeds Needs balance.");
+    // Validate against the real on-chain USDC balance — the Needs lane is
+    // bookkeeping guidance, but the wallet is what actually pays the anchor.
+    if (usdc <= 0 || usdc > walletUsdc) {
+      setErr(`Invalid amount or exceeds your wallet USDC (${fmtUsdc(walletUsdc)} USDC on-chain).`);
       return;
     }
     if (usdc < ANCHOR_MIN_AMOUNT || usdc > ANCHOR_MAX_AMOUNT) {
@@ -102,6 +142,102 @@ export function SendPay() {
     } finally {
       setXlmBusy(false);
     }
+  }
+
+  // --- Convert: live quote from Horizon strict-send pathfinding ---
+  const cvFrom = cvDirection === "xlm-usdc" ? "XLM" : "USDC";
+  const cvTo = cvDirection === "xlm-usdc" ? "USDC" : "XLM";
+  const cvFromBalance = cvDirection === "xlm-usdc" ? Number(xlmBalance ?? 0) : walletUsdc;
+
+  useEffect(() => {
+    const amt = Number(cvAmount);
+    if (!amt || amt <= 0) {
+      setCvQuote(null);
+      return;
+    }
+    setCvQuoting(true);
+    const t = setTimeout(async () => {
+      const q = await quoteConversion(cvDirection, amt.toFixed(7));
+      setCvQuote(q);
+      setCvQuoting(false);
+    }, 400); // debounce typing before hitting Horizon
+    return () => clearTimeout(t);
+  }, [cvAmount, cvDirection]);
+
+  async function onEnableUsdcForConvert() {
+    if (!address) return;
+    setEnablingUsdc(true);
+    setCvErr(null);
+    try {
+      await addUsdcTrustline(address);
+      await refreshWallet(address);
+      showToast("USDC enabled — this wallet can now hold USDC");
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setCvErr(formatted);
+    } finally {
+      setEnablingUsdc(false);
+    }
+  }
+
+  async function onSubmitConvert() {
+    setCvErr(null);
+    if (!address) { setCvErr("No wallet connected."); return; }
+    const amt = Number(cvAmount);
+    if (!amt || amt <= 0) { setCvErr("Enter a valid amount."); return; }
+    if (amt > cvFromBalance) { setCvErr(`Exceeds your ${cvFrom} balance.`); return; }
+    if (cvQuote === null) { setCvErr("No conversion path available right now — try again shortly."); return; }
+
+    setCvBusy(true);
+    try {
+      const destMin = (cvQuote * (1 - SLIPPAGE_PCT / 100)).toFixed(7);
+      const hash =
+        cvDirection === "xlm-usdc"
+          ? await convertXlmToUsdc(address, amt.toFixed(7), destMin)
+          : await convertUsdcToXlm(address, amt.toFixed(7), destMin);
+      recordConversion(cvFrom, amt, cvTo, cvQuote, hash);
+      setCvResult({ hash, received: cvQuote });
+      showToast(`Converted ${cvFrom} → ${cvTo} on the DEX`);
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setCvErr(formatted);
+    } finally {
+      setCvBusy(false);
+    }
+  }
+
+  // --- Convert result ---
+  if (cvResult) {
+    return (
+      <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
+        <div style={{ fontSize: 48 }}>⇄</div>
+        <h2>Conversion Successful</h2>
+        <p className="muted">
+          Converted {cvAmount} {cvFrom} → ≈{" "}
+          {cvResult.received.toLocaleString("en-US", { maximumFractionDigits: 2 })} {cvTo} via the
+          Stellar DEX — no third party, settled on-chain.
+        </p>
+        <div className="card" style={{ textAlign: "left", wordBreak: "break-all" }}>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Transaction Hash</div>
+          <div className="numeric" style={{ fontSize: 13 }}>{cvResult.hash}</div>
+        </div>
+        <a
+          href={EXPLORER_TX(cvResult.hash)}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "var(--color-accent-secondary)" }}
+        >
+          View on Stellar Expert ↗
+        </a>
+        <button
+          className="btn-primary"
+          onClick={() => { setCvResult(null); setCvAmount(""); setCvQuote(null); }}
+          data-testid="convert-again"
+        >
+          Convert another
+        </button>
+      </div>
+    );
   }
 
   // --- USDC off-ramp result ---
@@ -175,6 +311,17 @@ export function SendPay() {
           XLM Transfer
         </button>
         <button
+          onClick={() => setTab("convert")}
+          data-testid="tab-convert"
+          style={{
+            flex: 1, padding: "10px 0", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600,
+            background: tab === "convert" ? "var(--color-accent-primary)" : "var(--color-bg-elevated)",
+            color: tab === "convert" ? "var(--color-text-on-accent)" : "var(--color-text-secondary)",
+          }}
+        >
+          Convert
+        </button>
+        <button
           onClick={() => setTab("usdc")}
           style={{
             flex: 1, padding: "10px 0", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600,
@@ -234,11 +381,100 @@ export function SendPay() {
         </motion.div>
       )}
 
+      {/* ─── Convert Tab: XLM ⇄ USDC via the DEX, no third party ─── */}
+      {tab === "convert" && (
+        <motion.div key="convert" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+          <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
+            Swap between XLM and USDC directly on the Stellar DEX — one signature, settled in
+            seconds, sub-cent fee. No third party.
+          </p>
+
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <label className="muted" style={{ fontSize: 13 }}>
+              You pay ({cvFrom}) — balance:{" "}
+              <span className="numeric">
+                {cvFromBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} {cvFrom}
+              </span>
+              <input
+                type="number"
+                placeholder="0"
+                min={0}
+                step="any"
+                value={cvAmount}
+                onChange={(e) => setCvAmount(e.target.value)}
+                style={{ marginTop: 6 }}
+                aria-label={`Amount in ${cvFrom}`}
+                data-testid="convert-amount"
+              />
+            </label>
+
+            <button
+              className="chip"
+              onClick={() => { setCvDirection(cvDirection === "xlm-usdc" ? "usdc-xlm" : "xlm-usdc"); setCvQuote(null); }}
+              aria-label="Switch conversion direction"
+              data-testid="convert-switch"
+              style={{ alignSelf: "center", display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <ArrowDownUp size={14} /> {cvFrom} → {cvTo}
+            </button>
+
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <span className="muted">You receive (est.)</span>
+              <span className="numeric" data-testid="convert-quote">
+                {cvQuoting
+                  ? "Fetching quote…"
+                  : cvQuote !== null
+                    ? `≈ ${cvQuote.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${cvTo}`
+                    : Number(cvAmount) > 0
+                      ? "No path available"
+                      : "—"}
+              </span>
+            </div>
+            {cvQuote !== null && Number(cvAmount) > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span className="muted">Rate · min. received ({SLIPPAGE_PCT}% slippage)</span>
+                <span className="numeric">
+                  1 {cvFrom} ≈ {(cvQuote / Number(cvAmount)).toLocaleString("en-US", { maximumFractionDigits: 4 })} {cvTo} ·{" "}
+                  {(cvQuote * (1 - SLIPPAGE_PCT / 100)).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {cvDirection === "xlm-usdc" && !usdcTrustline ? (
+            <button className="btn-secondary" disabled={enablingUsdc} onClick={onEnableUsdcForConvert} style={{ marginTop: 12 }}>
+              {enablingUsdc ? "Confirm in wallet…" : "Enable USDC first (add trustline)"}
+            </button>
+          ) : (
+            <button
+              className="btn-primary"
+              style={{ marginTop: 12 }}
+              disabled={cvBusy || cvQuoting || !cvAmount || cvQuote === null}
+              onClick={onSubmitConvert}
+              data-testid="convert-submit"
+            >
+              {cvBusy ? "Signing & submitting…" : `Convert ${cvFrom} → ${cvTo}`}
+            </button>
+          )}
+          <p className="muted" style={{ fontSize: 12, margin: "8px 0 0" }}>
+            Executed as a path payment through the on-chain orderbook/AMM. The rate above is a live
+            quote — the transaction is protected by the minimum-received floor.
+          </p>
+          {cvErr && (
+            <p role="alert" style={{ color: "#ffb4ab", fontSize: 13 }}>
+              {cvErr}
+            </p>
+          )}
+        </motion.div>
+      )}
+
       {/* ─── USDC Off-Ramp Tab ─── */}
       {tab === "usdc" && (
         <motion.div key="usdc" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
-            Cash out from the Needs bucket — balance $<AnimatedNumber value={balances.needs} decimals={2} />.
+            Cash out to your bank — wallet holds{" "}
+            <AnimatedNumber value={walletUsdc} decimals={2} /> USDC on-chain
+            (Needs lane: {fmtUsdc(balances.needs)} USDC).
           </p>
 
           <div style={{ display: "flex", gap: 8 }}>
@@ -293,8 +529,10 @@ export function SendPay() {
             anchor's hosted flow (KYC); the anchor address itself is locked by the on-chain allowlist.
           </p>
 
-          <button className="btn-primary" disabled={usdc <= 0 || busy} onClick={onSubmitUsdc}>
-            {busy ? "Contacting anchor…" : "Continue"}
+          {/* Gate on the balance actually being loaded — clicking against a
+              not-yet-fetched balance would reject honest amounts as "exceeds". */}
+          <button className="btn-primary" disabled={usdc <= 0 || busy || usdcBalance === null} onClick={onSubmitUsdc}>
+            {busy ? "Contacting anchor…" : usdcBalance === null ? "Loading balance…" : "Continue"}
           </button>
           {err && (
             <p role="alert" style={{ color: "#ffb4ab", fontSize: 13 }}>

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil, vaultGetGoals, vaultGetUnallocatedSavings, type Goal as ChainGoal } from "./lib/vault";
+import { fetchAccountBalances } from "./lib/stellar";
 
 /**
  * Single source of truth for allocation rules (DESIGN.md §5.1):
@@ -18,7 +19,7 @@ export interface Bucket {
 
 export interface ActivityItem {
   id: string;
-  kind: "split" | "withdraw" | "offramp" | "deposit" | "invest" | "payment";
+  kind: "split" | "withdraw" | "offramp" | "deposit" | "invest" | "payment" | "convert";
   title: string;
   /** USDC-lane items use this; XLM peer-to-peer sends use amountXlm instead. */
   amountUsdc?: number;
@@ -59,6 +60,12 @@ interface ShuntState {
   unallocatedSavings: number;
   /** On-chain native XLM balance (Level 1 requirement) */
   xlmBalance: string | null;
+  /** On-chain wallet USDC balance (Horizon — the real spendable dollars). */
+  usdcBalance: string | null;
+  /** Whether the wallet has a USDC trustline (can receive USDC at all). */
+  usdcTrustline: boolean;
+  /** On-chain Buffer credit held inside the vault (10% early-exit penalties). */
+  bufferCredit: number;
   activity: ActivityItem[];
   toast: string | null;
 
@@ -71,6 +78,8 @@ interface ShuntState {
   markRulesSaved: () => void;
   setLockSecs: (s: number) => void;
   setXlmBalance: (b: string) => void;
+  /** One Horizon round-trip: refresh XLM + USDC wallet balances + trustline. */
+  refreshWallet: (address: string) => Promise<void>;
   applySplit: (amount: number, txHash?: string) => void;
   withdrawSavings: (amount: number, penalty: number) => void;
   offramp: (amount: number) => void;
@@ -80,6 +89,14 @@ interface ShuntState {
   applyInvestConversion: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
   /** Record a direct wallet-to-wallet XLM payment (Send & Pay, XLM tab). */
   recordXlmPayment: (destination: string, amountXlm: string, txHash: string) => void;
+  /** Record an in-app XLM ⇄ USDC conversion (Convert tab, DEX path payment). */
+  recordConversion: (
+    from: "XLM" | "USDC",
+    fromAmount: number,
+    to: "XLM" | "USDC",
+    toAmount: number,
+    txHash: string,
+  ) => void;
   setLockUntil: (t: number) => void;
   /** Set the client-side-only motivational target for a goal's progress ring. */
   setGoalTarget: (goalId: number, target: number | undefined) => void;
@@ -115,6 +132,9 @@ export const useShunt = create<ShuntState>()(
       goals: [],
       unallocatedSavings: 0,
       xlmBalance: null,
+      usdcBalance: null,
+      usdcTrustline: false,
+      bufferCredit: 0,
       activity: [],
       toast: null,
 
@@ -162,6 +182,15 @@ export const useShunt = create<ShuntState>()(
       setLockSecs: (lockSecs) => set({ lockSecs }),
       setXlmBalance: (xlmBalance) => set({ xlmBalance }),
 
+      refreshWallet: async (address: string) => {
+        try {
+          const b = await fetchAccountBalances(address);
+          set({ xlmBalance: b.xlm, usdcBalance: b.usdc, usdcTrustline: b.hasUsdcTrustline });
+        } catch {
+          // transient Horizon error — keep the last known values
+        }
+      },
+
       applySplit: (amount, txHash) => {
         const { buckets, balances, activity, lockUntil, lockSecs } = get();
         const pctKind = (kind: string) =>
@@ -194,9 +223,13 @@ export const useShunt = create<ShuntState>()(
           ],
         });
         
-        // After optimistic local update for needs/invest, trigger a sync to pull the true contract state
+        // After optimistic local update for needs/invest, pull the true state:
+        // vault balances from the contract, wallet balances from Horizon.
         const address = get().address;
-        if (address) get().syncFromChain(address);
+        if (address) {
+          get().syncFromChain(address);
+          get().refreshWallet(address);
+        }
       },
 
       withdrawSavings: (amount, penalty) => {
@@ -293,6 +326,28 @@ export const useShunt = create<ShuntState>()(
         });
       },
 
+      recordConversion: (from, fromAmount, to, toAmount, txHash) => {
+        const { activity } = get();
+        const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+        set({
+          activity: [
+            {
+              id: `${Date.now()}-cvt`,
+              kind: "convert",
+              title: `Converted ${fmt(fromAmount)} ${from} → ${fmt(toAmount)} ${to}`,
+              // Show what arrived, in its own denomination.
+              ...(to === "XLM" ? { amountXlm: toAmount } : { amountUsdc: toAmount }),
+              txHash,
+              at: new Date().toISOString(),
+            },
+            ...activity,
+          ],
+        });
+        // The swap changed both wallet balances — pull the truth from Horizon.
+        const address = get().address;
+        if (address) get().refreshWallet(address);
+      },
+
       setGoalTarget: (goalId, target) =>
         set({
           goals: get().goals.map((g) => (g.id === goalId ? { ...g, target } : g)),
@@ -329,6 +384,7 @@ export const useShunt = create<ShuntState>()(
               lockUntil: Number(lockUntilBig),
               goals,
               unallocatedSavings: Number(unallocatedBig) / 10_000_000,
+              bufferCredit: Number(bufferCreditBig) / 10_000_000,
               balances: {
                 ...state.balances,
                 savings: Number(savingsBig) / 10000000,
@@ -345,7 +401,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 3,
+      version: 4,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -369,6 +425,12 @@ export const useShunt = create<ShuntState>()(
           // Savings goals — new on-chain contract (CB27...), populated on next syncFromChain.
           persisted.goals = persisted.goals ?? [];
           persisted.unallocatedSavings = persisted.unallocatedSavings ?? 0;
+        }
+        if (version < 4 && persisted) {
+          // Real on-chain wallet balances + vault buffer credit, filled on next refresh.
+          persisted.usdcBalance = persisted.usdcBalance ?? null;
+          persisted.usdcTrustline = persisted.usdcTrustline ?? false;
+          persisted.bufferCredit = persisted.bufferCredit ?? 0;
         }
         return persisted;
       },

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Pencil, Trash2, Target } from "lucide-react";
 import { getIdrRate } from "../lib/rates";
-import { vaultWithdrawSavings, vaultCreateGoal, vaultWithdrawFromGoal, vaultRenameGoal, vaultDeleteGoal } from "../lib/vault";
-import { fmtIdr, fmtUsdc, useShunt, type SavingsGoal } from "../store";
+import { vaultWithdrawSavings, vaultWithdrawBuffer, vaultCreateGoal, vaultWithdrawFromGoal, vaultRenameGoal, vaultDeleteGoal } from "../lib/vault";
+import { fmtIdr, fmtUsdc, totalPct, useShunt, type SavingsGoal } from "../store";
 import { formatError } from "../lib/stellar";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { ProgressRing } from "../components/ProgressRing";
@@ -15,6 +15,8 @@ export function SavingsVault() {
   const {
     address,
     balances,
+    buckets,
+    bufferCredit,
     lockUntil,
     activity,
     withdrawSavings,
@@ -45,6 +47,13 @@ export function SavingsVault() {
   const locked = lockUntil * 1000 > Date.now();
   const balance = balances.savings;
 
+  // Share of each past split that went to Savings — from the actual rules,
+  // not a hardcoded 25%.
+  const savingsShare = useMemo(() => {
+    const pct = buckets.filter((b) => b.kind === "savings").reduce((s, b) => s + b.pct, 0);
+    return totalPct(buckets) > 0 ? pct / 100 : 0.25;
+  }, [buckets]);
+
   const chart = useMemo(() => {
     // savings growth series derived from split/deposit activity
     const pts = activity
@@ -53,12 +62,12 @@ export function SavingsVault() {
       .reverse()
       .reduce<number[]>((acc, a) => {
         const amt = a.amountUsdc ?? 0;
-        const savingsPart = a.kind === "split" ? amt * 0.25 : amt;
+        const savingsPart = a.kind === "split" ? amt * savingsShare : amt;
         acc.push((acc[acc.length - 1] ?? 0) + savingsPart);
         return acc;
       }, []);
     return pts.length >= 2 ? pts : [0, balance];
-  }, [activity, balance]);
+  }, [activity, balance, savingsShare]);
 
   const path = useMemo(() => {
     const max = Math.max(...chart, 1);
@@ -111,9 +120,12 @@ export function SavingsVault() {
           </div>
 
           <div>
-            <div className="numeric" style={{ fontSize: "clamp(34px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.1 }}>
+            <div className="numeric" style={{ fontSize: "clamp(34px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.1 }} data-testid="vault-balance">
               {ccy === "USD" ? (
-                <>$<AnimatedNumber value={balance} decimals={2} /></>
+                <>
+                  <AnimatedNumber value={balance} decimals={2} />{" "}
+                  <span style={{ fontSize: 20, color: "var(--color-text-secondary)" }}>USDC</span>
+                </>
               ) : (
                 fmtIdr(balance * idr)
               )}
@@ -125,14 +137,6 @@ export function SavingsVault() {
             )}
           </div>
 
-          <div className="card">
-            <div className="muted" style={{ fontSize: 13, marginBottom: 8 }}>Savings growth</div>
-            <svg viewBox="0 0 300 100" width="100%" height="130" preserveAspectRatio="none" aria-label="Savings growth chart">
-              <path d={path.area} fill="var(--color-accent-primary)" opacity="0.12" />
-              <path d={path.line} fill="none" stroke="var(--color-accent-primary)" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
-          </div>
-
           <SavingsGoals
             address={address}
             goals={goals}
@@ -142,6 +146,14 @@ export function SavingsVault() {
             onRefresh={() => address && syncFromChain(address)}
             showToast={showToast}
           />
+
+          <div className="card">
+            <div className="muted" style={{ fontSize: 13, marginBottom: 8 }}>Savings growth</div>
+            <svg viewBox="0 0 300 100" width="100%" height="130" preserveAspectRatio="none" aria-label="Savings growth chart">
+              <path d={path.area} fill="var(--color-accent-primary)" opacity="0.12" />
+              <path d={path.line} fill="none" stroke="var(--color-accent-primary)" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+          </div>
         </div>
 
         <div className="col-side">
@@ -182,8 +194,78 @@ export function SavingsVault() {
               {err}
             </p>
           )}
+
+          {bufferCredit > 0 && (
+            <BufferCreditCard
+              address={address}
+              credit={bufferCredit}
+              onRefresh={() => address && syncFromChain(address)}
+              showToast={showToast}
+            />
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Buffer credit — 10% early-exit penalties, parked in the vault, never locked.
+// ---------------------------------------------------------------------------
+
+function BufferCreditCard({
+  address,
+  credit,
+  onRefresh,
+  showToast,
+}: {
+  address: string | null;
+  credit: number;
+  onRefresh: () => void;
+  showToast: (msg: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onWithdrawCredit() {
+    if (!address) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await vaultWithdrawBuffer(address, credit);
+      showToast("Buffer credit withdrawn to your wallet");
+      onRefresh();
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setErr(`On-chain call failed (${formatted})`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="card"
+      style={{ display: "flex", flexDirection: "column", gap: 8, borderLeft: "3px solid var(--color-bucket-buffer)" }}
+      data-testid="buffer-credit-card"
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>Buffer credit</span>
+        <span className="numeric" style={{ fontWeight: 700 }}>
+          <AnimatedNumber value={credit} decimals={2} /> USDC
+        </span>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+        Early-withdrawal penalties land here — yours, in the vault, never locked.
+      </p>
+      <button className="btn-secondary" disabled={busy} onClick={onWithdrawCredit}>
+        {busy ? "Processing…" : "Withdraw to wallet"}
+      </button>
+      {err && (
+        <p role="alert" className="muted" style={{ fontSize: 12, margin: 0 }}>
+          {err}
+        </p>
+      )}
     </div>
   );
 }
@@ -244,11 +326,16 @@ function SavingsGoals({
   }
 
   return (
-    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontWeight: 600, fontSize: 14 }}>Savings goals</div>
-        <span className="muted numeric" style={{ fontSize: 13 }}>
-          <AnimatedNumber value={unallocated} decimals={2} /> USDC unallocated
+    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }} data-testid="savings-goals-card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Labeled sub-vaults</div>
+          <div className="muted" style={{ fontSize: 12 }}>
+            Name slices of your savings for what they're for — stored on-chain.
+          </div>
+        </div>
+        <span className="muted numeric" style={{ fontSize: 13, whiteSpace: "nowrap" }} data-testid="unallocated-savings">
+          <AnimatedNumber value={unallocated} decimals={2} /> USDC free
         </span>
       </div>
 
@@ -271,17 +358,19 @@ function SavingsGoals({
           className="btn-ghost"
           onClick={() => setShowCreate(true)}
           style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+          data-testid="new-goal-button"
         >
-          <Plus size={16} /> New goal
+          <Plus size={16} /> New label — e.g. Dana darurat, Umroh, Laptop
         </button>
       ) : (
         <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10, border: "1px solid var(--color-accent-primary)" }}>
           <input
             type="text"
-            placeholder="Goal name (e.g. Emergency fund)"
+            placeholder="Label (e.g. Emergency fund, Umroh, Laptop)"
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             maxLength={64}
+            data-testid="goal-name-input"
           />
           <input
             type="number"
@@ -289,13 +378,14 @@ function SavingsGoals({
             value={newAmount}
             min={0}
             onChange={(e) => setNewAmount(e.target.value)}
+            data-testid="goal-amount-input"
           />
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn-secondary" onClick={() => { setShowCreate(false); setErr(null); }}>
               Cancel
             </button>
-            <button className="btn-primary" disabled={busy} onClick={onCreate}>
-              {busy ? "Creating…" : "Create goal"}
+            <button className="btn-primary" disabled={busy} onClick={onCreate} data-testid="create-goal-button">
+              {busy ? "Creating…" : "Create label"}
             </button>
           </div>
         </div>

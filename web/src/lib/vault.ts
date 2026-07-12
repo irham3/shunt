@@ -7,7 +7,7 @@
  * We only need to plug in the wallet signer from StellarWalletsKit.
  */
 import { Client, networks, type Rules, type Goal } from "./vault-contract";
-import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
+import { signTxXdr } from "./signer";
 import { RPC_URL, VAULT_CONTRACT_ID, NETWORK_PASSPHRASE } from "./stellar";
 
 // ---------------------------------------------------------------------------
@@ -29,9 +29,7 @@ function getVaultClient(publicKey: string): Client {
     publicKey,
     // The bindings Client calls this to sign assembled transactions.
     async signTransaction(xdr: string) {
-      const result = await StellarWalletsKit.signTransaction(xdr, {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
+      const result = await signTxXdr(xdr, NETWORK_PASSPHRASE);
       return result as any;
     },
   });
