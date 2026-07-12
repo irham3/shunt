@@ -36,7 +36,7 @@ export function Home() {
     refreshWallet,
     showToast,
   } = useShunt();
-  const [view, setView] = useState<AssetView>("USDC");
+  const [view, setView] = useState<AssetView>("XLM");
   const [idr, setIdr] = useState<number | null>(null);
   const [xlmUsd, setXlmUsd] = useState<number | null>(null);
   const [pending, setPending] = useState<PendingSplit[]>([]);
@@ -197,7 +197,7 @@ export function Home() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <div className="muted" style={{ fontSize: 13 }}>Total balance</div>
           <div style={{ display: "flex", gap: 6 }}>
-            {(["USDC", "XLM", "IDR"] as const).map((c) => (
+            {(["XLM", "USDC", "IDR"] as const).map((c) => (
               <button
                 key={c}
                 className={`chip${view === c ? " active" : ""}`}
@@ -215,7 +215,7 @@ export function Home() {
           data-testid="total-balance-value"
         >
           {view === "IDR" ? (
-            <>Rp<AnimatedNumber value={headline.value} decimals={0} /></>
+            <>Rp<AnimatedNumber value={headline.value} decimals={0} locale="id-ID" /></>
           ) : (
             <>
               <AnimatedNumber value={headline.value} decimals={headline.decimals} />{" "}

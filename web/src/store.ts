@@ -443,7 +443,7 @@ export function fmtUsdc(n: number): string {
 }
 
 export function fmtIdr(n: number): string {
-  return "Rp" + Math.round(n).toLocaleString("en-US");
+  return "Rp" + Math.round(n).toLocaleString("id-ID");
 }
 
 export function totalPct(buckets: Bucket[]): number {
