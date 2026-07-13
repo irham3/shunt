@@ -135,7 +135,7 @@ All four requirements are live in the app: wallet connect, XLM balance fetched f
 
 Three deliberate design principles:
 
-- **The keeper holds zero keys.** It only *watches* (Horizon payment stream, cursor-resumed reconnects) and *prepares* (unsigned XDR). Every fund movement requires your signature. If the keeper dies mid-demo, a manual trigger in Settings does the same job.
+- **The keeper holds zero keys — and is now optional for detection.** It only *watches* (Horizon payment stream, cursor-resumed reconnects) and *prepares* (unsigned XDR). Every fund movement requires your signature. Detection no longer depends on it at all: the app polls Horizon itself and flags un-split income client-side. The keeper's only remaining job is preparing the split XDR — stateless, replaceable, and open-API, so the in-app manual trigger does the identical thing and anyone can run their own. If it dies mid-demo, worst case is a short delay, never a fund risk.
 - **Savings must be held by code.** A timelock on funds in your own wallet is theater — you could just transfer them out. `ShuntVault` holds the Savings lane and enforces the lock on-chain; `withdraw_savings` answers to your address and no one else's. Not third-party custody — code custody, owner-only.
 - **Double idempotency.** The keeper deduplicates by transaction hash *and* the contract rejects repeated `inflow_key`s. A retry, a reconnect, or a hostile replay all hit the same wall: one income, one split, ever.
 
@@ -169,11 +169,13 @@ Both directions run on the standard Stellar anchor rails, implemented in [`web/s
 
 Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatible wallet can open — the payee never explains crypto to a client again.
 
-Rate and fee are always shown **before** confirmation. The default anchor is SDF's test anchor; the target corridor is a regulated IDR stablecoin (IDRX) or a PHP anchor — and the on-chain allowlist ensures USDC can only ever flow to an anchor *you* approved when setting rules. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
+Rate and fee are always shown **before** confirmation. The default anchor is SDF's test anchor. **The corridor is pluggable, not hard-wired:** because off-ramp is generic SEP-24 plus an on-chain anchor allowlist, swapping to a production corridor is configuration, not a contract change. A regulated IDR stablecoin (IDRX is one candidate) or a PHP anchor are the corridors we'd target — which one settles fiat in production is a partnership-and-regulation question, not an unsolved technical one — and the allowlist ensures USDC can only ever flow to an anchor *you* approved when setting rules. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
 
 ## Business model — service fees, never interest
 
 Every revenue line is a transparent fee on a service the user *wants*: 0.4% on Needs-lane cash-out, a similar fee on Top Up and on Invest conversions. **No lending, no yield products, no cut of your savings** — by design, not by omission: interest-based yield would add unnecessary smart-contract risk. The 10% early-withdrawal penalty goes to *your own* buffer, not to us. Savings deposits and post-lock withdrawals are free, forever.
+
+Blended take-rate is ~0.29% of processed volume — **15–20× cheaper than the 5–7% remittance/bank conversion** it replaces, so the fee is headroom, not a barrier. A full illustrative model (ARPU, CAC, payback, LTV, break-even, and the assumptions that would break it) lives in [`docs/unit-economics.md`](docs/unit-economics.md).
 
 ## Quickstart
 
@@ -221,7 +223,7 @@ design/                  Diagrams (animated SVG) + app screenshots
 ## Honest limitations
 
 - **One tap per income, by design.** Soroban's `require_auth` wants a signature per invocation — and the Invest conversion is a second signature (a Soroban tx is single-operation by protocol). Never over-claimed as hands-free.
-- **The keeper is centralized** in this version — but it holds zero keys, and a manual trigger makes it optional.
+- **The keeper is centralized** in this version — but it holds zero keys, income detection now runs client-side from Horizon (so the keeper isn't needed to *notice* income), and a manual trigger replaces its one remaining job. A single point of *convenience*, never of custody or fund safety.
 - **Anchor settlement is not instant** — KYC is involved, and the UI says so instead of hiding it.
 - **The vault is unaudited.** Keep real amounts trivial until it is.
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { manualTrigger } from "../lib/keeper";
 import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance, addUsdcTrustline, hasUsdcTrustline, formatError } from "../lib/stellar";
@@ -13,6 +13,8 @@ export function Settings() {
   const [usdcBal, setUsdcBal] = useState("0");
   const [hasUsdcLine, setHasUsdcLine] = useState(true);
   const [enablingUsdc, setEnablingUsdc] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const short = address ? `${address.slice(0, 6)}…${address.slice(-6)}` : "—";
 
@@ -50,9 +52,15 @@ export function Settings() {
   }
 
   async function onDisconnect() {
-    await disconnectWalletKit();
-    setAddress(null);
-    nav("/connect");
+    setSigningOut(true);
+    try {
+      await disconnectWalletKit();
+      setAddress(null);
+      nav("/connect");
+    } finally {
+      setSigningOut(false);
+      setConfirmingSignOut(false);
+    }
   }
 
   async function onSwitchAccount() {
@@ -125,7 +133,7 @@ export function Settings() {
             </div>
           </div>
         </div>
-        
+
         {!hasUsdcLine && (
           <button
             className="btn-secondary"
@@ -148,7 +156,7 @@ export function Settings() {
           <button
             className="btn-ghost"
             style={{ flex: "1 1 100%", color: "var(--color-danger)" }}
-            onClick={onDisconnect}
+            onClick={() => setConfirmingSignOut(true)}
           >
             Sign Out
           </button>
@@ -193,6 +201,64 @@ export function Settings() {
       <div className="muted" style={{ textAlign: "center", fontSize: 12 }}>
         Shunt v0.1.0 — non-custodial, built on Stellar
       </div>
+
+      <AnimatePresence>
+        {confirmingSignOut && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !signingOut && setConfirmingSignOut(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              zIndex: 200,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="card"
+              style={{ maxWidth: 340, width: "100%", padding: 24, textAlign: "center" }}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="signout-confirm-title"
+            >
+              <h3 id="signout-confirm-title" style={{ margin: "0 0 6px", fontSize: 18 }}>
+                Sign out of Shunt?
+              </h3>
+              <p className="muted" style={{ margin: "0 0 20px", fontSize: 13 }}>
+                Your wallet stays yours — nothing is deleted on-chain. You'll need to reconnect to see your buckets again.
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setConfirmingSignOut(false)}
+                  disabled={signingOut}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-primary"
+                  style={{ background: "var(--color-danger)", color: "#2a0a06" }}
+                  onClick={onDisconnect}
+                  disabled={signingOut}
+                >
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -22,10 +22,11 @@ export default function App() {
   const location = useLocation();
   const { pathname } = location;
   const fullScreen = ["/", "/connect", "/confirm", "/pay"].includes(pathname);
+  const isLanding = pathname === "/" && !address;
   const t = (el: React.ReactNode) => <PageTransition>{el}</PageTransition>;
 
   return (
-    <div className={`app-shell ${!fullScreen && address ? "with-rail" : ""}`}>
+    <div className={`app-shell ${!fullScreen && address ? "with-rail" : ""}${isLanding ? " landing-shell" : ""}`}>
       <Toast />
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={pathname}>

@@ -17,8 +17,8 @@
   --color-text-on-accent: #0b0f14;
   --color-danger: #ffb4ab;
 
-  --font-heading: "Space Grotesk", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-heading: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
 
   --radius-card: 16px;
   --radius-pill: 999px;
@@ -37,6 +37,24 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
+
+  /* ---- Landing page additions (Claude Design handoff, shunt-design-system) ----
+     Additive only: named the loose fill/border values already used inline by
+     .card/.bento-card, plus a wider type scale and easing token for the
+     marketing landing page. Nothing above this block changes meaning. */
+  --color-bg-card: rgba(20, 26, 33, 0.6);
+  --color-border-subtle: #1f2732;
+  --color-border-input: #2a3340;
+  --color-border-glass: rgba(255, 255, 255, 0.05);
+  --radius-card-lg: 20px;
+  --blur-card: 12px;
+  --landing-max: 1200px;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --text-display: clamp(48px, 6vw, 72px);
+  --text-h1: clamp(32px, 4vw, 48px);
+  --text-h2: 26px;
+  --text-body-lg: clamp(18px, 2vw, 22px);
 }
 
 * {
@@ -48,6 +66,15 @@ a {
   color: inherit;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 html,
 body {
   margin: 0;
@@ -56,6 +83,11 @@ body {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.5;
+  /* `clip` (not `hidden`) prevents horizontal overflow WITHOUT turning the
+     root into a scroll container — the latter silently breaks `position:
+     sticky` on every descendant (that was why the landing nav never stuck). */
+  overflow-x: clip;
+  max-width: 100vw;
 }
 
 h1,
@@ -176,6 +208,14 @@ button {
   padding-bottom: 76px; /* room for tab bar */
 }
 
+/* Marketing landing (route "/") is full-bleed at EVERY breakpoint — it must
+   not inherit the app's narrow mobile/tablet column. */
+.app-shell.landing-shell {
+  max-width: none;
+  margin: 0;
+  padding-bottom: 0;
+}
+
 .nav-rail {
   display: none;
 }
@@ -193,6 +233,11 @@ button {
     max-width: none;
     margin: 0 auto;
     padding-bottom: 24px;
+  }
+  .app-shell.landing-shell {
+    max-width: none;
+    margin: 0;
+    padding-bottom: 0;
   }
   .app-shell.with-rail {
     margin: 0 0 0 var(--rail-width);
@@ -400,20 +445,65 @@ input[type="number"]:focus {
 }
 .shiny-text.disabled { animation: none; }
 
-/* AnimatedBackground */
+/* AnimatedBackground
+   NOTE: overflow:hidden used to live on .animated-background itself, which
+   silently breaks `position: sticky` on any descendant (a clipped/scroll
+   ancestor kills sticky, even without a visible scrollbar) — that's why the
+   landing nav wasn't sticking. Decorative layers (particle canvas + blobs)
+   now live in their own inset .ab-decor wrapper so the clip stays scoped to
+   them, and .animated-background itself is a plain, unclipped flow parent. */
 .animated-background {
   position: relative;
-  overflow: hidden;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
+.ab-decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+.ab-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.4;
+}
+
+/* Aurora light source — pinned to the top of the page, faded out downward
+   with a mask so lower sections stay clean and legible. */
+.ab-aurora {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: min(78vh, 780px);
+  opacity: 0.7;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 42%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 42%, transparent 100%);
+}
+.aurora-container {
+  width: 100%;
+  height: 100%;
+}
+.aurora-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-aurora {
+    opacity: 0.5;
+  }
+}
 .blob {
   position: absolute;
-  filter: blur(80px);
+  filter: blur(90px);
   z-index: 0;
-  opacity: 0.4;
-  animation: float 10s ease-in-out infinite;
+  opacity: 0.22;
+  animation: float 12s ease-in-out infinite;
 }
 .blob-1 {
   background: var(--color-accent-primary);
@@ -476,4 +566,277 @@ input[type="number"]:focus {
 .bento-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ============ Landing page (marketing) ============ */
+/* Full-bleed sticky bar: the BACKGROUND spans the whole viewport width, while
+   the CONTENT (.lp-nav-inner) is centred to the landing column. Previously the
+   whole nav was max-width:1200 + margin:auto, so on wide screens the bar itself
+   looked cropped ("kepotong kanan-kiri"). */
+.lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px clamp(16px, 4vw, 40px);
+  background: rgba(11, 15, 20, 0.55);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+.lp-nav.scrolled {
+  border-bottom-color: var(--color-border-subtle);
+  background: rgba(11, 15, 20, 0.82);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+.lp-nav-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  max-width: var(--landing-max);
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Brand lockup — the favicon mark on its own tinted tile so it reads on the
+   dark translucent nav, plus the wordmark in Plus Jakarta Sans. */
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.lp-brand-mark {
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(150deg, #151c24, #0d1218);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 14px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+.lp-brand-mark svg {
+  display: block;
+}
+.lp-nav-links {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  min-width: 0;
+}
+.lp-nav-links a {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  position: relative;
+  white-space: nowrap;
+}
+.lp-nav-links a:hover {
+  color: var(--color-text-primary);
+}
+.lp-nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0;
+  height: 1px;
+  background: var(--color-accent-primary);
+  transition: width 0.25s var(--ease-standard);
+}
+.lp-nav-links a:hover::after {
+  width: 100%;
+}
+@media (max-width: 760px) {
+  .lp-nav-links a {
+    display: none;
+  }
+}
+.lp-section {
+  max-width: var(--landing-max);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 24px);
+  width: 100%;
+  box-sizing: border-box;
+  scroll-margin-top: 84px;
+}
+.lp-lane-card {
+  border-radius: var(--radius-card-lg);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-card);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--color-border-glass);
+  transition: transform 0.3s var(--ease-standard), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.lp-lane-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.lp-lane-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.lp-lane-card:hover .lp-lane-glow {
+  opacity: 0.5;
+}
+/* Cursor-following spotlight (reactbits "SpotlightCard" pattern) — driven by
+   --mx/--my set on pointer move. Subtle white lift, tinted per-lane via glow. */
+.lp-lane-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.09), transparent 60%);
+}
+.lp-lane-card:hover::before {
+  opacity: 1;
+}
+/* Lane accent — a slim colored top rule replaces the icon-in-a-solid-box
+   pattern; carries the lane's identity without the templated look. */
+.lp-lane-rule {
+  height: 3px;
+  width: 34px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+.lp-lane-card:hover .lp-lane-rule {
+  width: 52px;
+  transition: width 0.3s var(--ease-standard);
+}
+.lp-step {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.lp-step-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-input);
+  font-family: var(--font-heading);
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.lp-step-dot.in {
+  background: var(--color-accent-primary);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent-primary);
+}
+.lp-step-line {
+  width: 1px;
+  flex: 1;
+  background: var(--color-border-subtle);
+  margin: 4px 0;
+}
+.lp-stat {
+  text-align: center;
+}
+.lp-stat-value {
+  font-family: var(--font-heading);
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 700;
+  color: var(--color-accent-primary);
+}
+.lp-btn-primary-glow {
+  box-shadow: 0 0 0 0 rgba(190, 242, 100, 0);
+  transition: box-shadow 0.3s ease, transform 0.15s ease;
+}
+.lp-btn-primary-glow:hover {
+  box-shadow: 0 0 32px rgba(190, 242, 100, 0.35);
+  transform: translateY(-1px);
+}
+.lp-btn-primary-glow:active {
+  transform: translateY(0) scale(0.98);
+}
+.lp-marquee-track {
+  display: flex;
+  gap: 48px;
+  animation: lp-marquee 22s linear infinite;
+  width: max-content;
+}
+@keyframes lp-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-marquee-track {
+    animation: none;
+  }
+}
+
+/* Gradient headline word (reactbits "GradientText" pattern) */
+.lp-gradient-text {
+  background: linear-gradient(100deg, #bef264 0%, #38bdf8 50%, #a78bfa 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: lp-gradient-pan 6s linear infinite;
+}
+@keyframes lp-gradient-pan {
+  to { background-position: 200% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-gradient-text { animation: none; }
+}
+
+/* Live status chip with a pulsing dot */
+.lp-chip-live {
+  border-color: rgba(190, 242, 100, 0.35);
+  color: var(--color-text-primary);
+}
+.lp-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent-primary);
+  box-shadow: 0 0 0 0 rgba(190, 242, 100, 0.6);
+  animation: lp-pulse 2s ease-out infinite;
+}
+@keyframes lp-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(190, 242, 100, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(190, 242, 100, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(190, 242, 100, 0); }
+}
+.lp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-secondary);
+}
+
+/* Gentle idle float for the hero preview card */
+.lp-float {
+  animation: lp-float-y 7s ease-in-out infinite;
+}
+@keyframes lp-float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-float { animation: none; }
 }
