@@ -1,20 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { DonutChart } from "../components/DonutChart";
 import { AllocationBar } from "../components/AllocationBar";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { DEFAULT_BUCKETS } from "../store";
 import { AnimatedBackground } from "../components/AnimatedBackground";
-
-/** Fade-up-on-scroll used throughout the landing sections below the fold. */
-const EASE_STANDARD = [0.22, 1, 0.36, 1] as const;
-const reveal = (delay = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.2 },
-  transition: { duration: 0.6, ease: EASE_STANDARD, delay },
-});
+import { Reveal } from "../components/Reveal";
 
 /** Problem → outcome, paired — one compact scan, real product language. */
 const PROBLEM_OUTCOME = [
@@ -76,12 +68,36 @@ function StatCard({ stat, inView }: { stat: (typeof STATS)[number]; inView: bool
   );
 }
 
-/** Cursor-following spotlight (reactbits SpotlightCard pattern). */
+/** Timeline dot that fills with the accent as it scrolls into view. Uses the
+    useInView hook (the whileInView prop doesn't hold `initial` in this setup). */
+function StepDot({ n }: { n: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.6 });
+  const off = { background: "#101112", color: "#f4f5f6", borderColor: "#27282b" };
+  const on = { background: "#cdf14a", color: "#0a0c07", borderColor: "#cdf14a" };
+  return (
+    <motion.div ref={ref} className="lp-step-dot" initial={off} animate={inView ? on : off} transition={{ duration: 0.3 }}>
+      {n}
+    </motion.div>
+  );
+}
+
+/** Cursor-following spotlight + subtle 3D tilt (reactbits SpotlightCard /
+    TiltedCard patterns). Sets --mx/--my for the glow and --rx/--ry for tilt. */
 function spotlight(e: React.MouseEvent<HTMLElement>) {
   const el = e.currentTarget;
   const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5;
+  const py = (e.clientY - r.top) / r.height - 0.5;
   el.style.setProperty("--mx", `${e.clientX - r.left}px`);
   el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  el.style.setProperty("--rx", `${px * 9}deg`);
+  el.style.setProperty("--ry", `${-py * 9}deg`);
+}
+function resetTilt(e: React.MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  el.style.setProperty("--rx", "0deg");
+  el.style.setProperty("--ry", "0deg");
 }
 
 export function Onboarding() {
@@ -89,6 +105,11 @@ export function Onboarding() {
   const statsRef = useRef(null);
   const statsInView = useInView(statsRef, { once: true, amount: 0.3 });
   const [scrolled, setScrolled] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  // Scroll-driven motion: a thin top progress bar + gentle hero-card parallax.
+  const { scrollYProgress } = useScroll();
+  const heroCardY = useTransform(scrollYProgress, [0, 0.25], [0, reduceMotion ? 0 : -70]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -98,7 +119,10 @@ export function Onboarding() {
   }, []);
 
   return (
-    <AnimatedBackground aurora>
+    <AnimatedBackground aurora threads>
+      {/* Scroll progress bar */}
+      <motion.div className="lp-scroll-progress" style={{ scaleX: scrollYProgress }} aria-hidden />
+
       {/* Full-bleed sticky nav */}
       <nav className={`lp-nav${scrolled ? " scrolled" : ""}`}>
         <div className="lp-nav-inner">
@@ -127,60 +151,67 @@ export function Onboarding() {
         className="lp-section"
         style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "72px 24px 40px" }}
       >
-        <motion.span
-          {...reveal()}
-          className="chip lp-chip-live"
-          style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-        >
-          <span className="lp-live-dot" /> Live on Stellar testnet
-        </motion.span>
-        <motion.h1
-          {...reveal(0.05)}
-          style={{ fontSize: "var(--text-display)", margin: 0, lineHeight: 1.05, maxWidth: 780, letterSpacing: "-0.02em" }}
-        >
-          Income lands.
-          <br />
-          <span className="lp-gradient-text">Instantly split.</span>
-        </motion.h1>
-        <motion.p {...reveal(0.12)} className="muted" style={{ fontSize: "var(--text-body-lg)", maxWidth: 560, margin: 0 }}>
-          One tap splits every USDC payday into Needs, Savings, Buffer, and Invest — non-custodial, on-chain.
-        </motion.p>
-        <motion.div {...reveal(0.18)} style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-          <button
-            className="btn-primary lp-btn-primary-glow"
-            style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
-            onClick={() => nav("/connect")}
-          >
-            Get Started <i className="ph ph-arrow-right" />
-          </button>
-          <button
-            className="btn-secondary"
-            style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
-            onClick={() => window.open("https://github.com/irham3/shunt", "_blank")}
-          >
-            <i className="ph ph-github-logo" /> View source
-          </button>
-        </motion.div>
-        <motion.div {...reveal(0.24)} style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 2 }}>
-          {["Stellar", "USDC", "Non-custodial"].map((t) => (
-            <span key={t} className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-              <span className="lp-dot" /> {t}
-            </span>
-          ))}
-        </motion.div>
+        <Reveal variant="up">
+          <span className="chip lp-chip-live" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span className="lp-live-dot" /> Live on Stellar testnet
+          </span>
+        </Reveal>
+        <Reveal variant="blur" delay={0.05}>
+          <h1 style={{ fontSize: "var(--text-display)", margin: 0, lineHeight: 1.05, maxWidth: 780, letterSpacing: "-0.02em" }}>
+            Income lands.
+            <br />
+            <span className="lp-gradient-text">Instantly split.</span>
+          </h1>
+        </Reveal>
+        <Reveal variant="up" delay={0.12}>
+          <p className="muted" style={{ fontSize: "var(--text-body-lg)", maxWidth: 560, margin: 0 }}>
+            One tap splits every USDC payday into Needs, Savings, Buffer, and Invest — non-custodial, on-chain.
+          </p>
+        </Reveal>
+        <Reveal variant="up" delay={0.18}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+            <button
+              className="btn-primary lp-btn-primary-glow"
+              style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
+              onClick={() => nav("/connect")}
+            >
+              Get Started <i className="ph ph-arrow-right" />
+            </button>
+            <button
+              className="btn-secondary"
+              style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
+              onClick={() => window.open("https://github.com/irham3/shunt", "_blank")}
+            >
+              <i className="ph ph-github-logo" /> View source
+            </button>
+          </div>
+        </Reveal>
+        <Reveal variant="up" delay={0.24}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 2 }}>
+            {["Stellar", "USDC", "Non-custodial"].map((t) => (
+              <span key={t} className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <span className="lp-dot" /> {t}
+              </span>
+            ))}
+          </div>
+        </Reveal>
 
-        <motion.div {...reveal(0.3)} className="lp-float" style={{ marginTop: 40, width: "100%", maxWidth: 600 }}>
-          <div className="card" style={{ padding: 26 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "center", justifyContent: "center" }}>
-              <DonutChart buckets={DEFAULT_BUCKETS} size={168} strokeWidth={22} />
-              <div style={{ flex: 1, minWidth: 200, textAlign: "left" }}>
-                <div className="muted" style={{ fontSize: 13 }}>Default split rules</div>
-                <div style={{ marginTop: 10 }}>
-                  <AllocationBar buckets={DEFAULT_BUCKETS} />
+        <motion.div style={{ y: heroCardY, marginTop: 40, width: "100%", maxWidth: 600 }}>
+          <Reveal variant="scale" delay={0.3}>
+            <div className="lp-float">
+              <div className="card lp-hero-card" onMouseMove={spotlight} onMouseLeave={resetTilt} style={{ padding: 26 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "center", justifyContent: "center" }}>
+                  <DonutChart buckets={DEFAULT_BUCKETS} size={168} strokeWidth={22} />
+                  <div style={{ flex: 1, minWidth: 200, textAlign: "left" }}>
+                    <div className="muted" style={{ fontSize: 13 }}>Default split rules</div>
+                    <div style={{ marginTop: 10 }}>
+                      <AllocationBar buckets={DEFAULT_BUCKETS} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </motion.div>
       </section>
 
@@ -200,12 +231,15 @@ export function Onboarding() {
 
       {/* 2. Problem → outcome */}
       <section id="why" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
-        <motion.h2 {...reveal()} style={{ fontSize: "var(--text-h1)", margin: 0, textAlign: "center" }}>Why people use it</motion.h2>
+        <Reveal variant="blur">
+          <h2 style={{ fontSize: "var(--text-h1)", margin: 0, textAlign: "center" }}>Why people use it</h2>
+        </Reveal>
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           {PROBLEM_OUTCOME.map((row, i) => (
-            <motion.div
+            <Reveal
               key={row.problem}
-              {...reveal(i * 0.06)}
+              variant={i % 2 === 0 ? "left" : "right"}
+              delay={i * 0.05}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -218,71 +252,71 @@ export function Onboarding() {
               <span className="muted" style={{ fontSize: 14, flex: "1 1 220px" }}>{row.problem}</span>
               <i className="ph ph-arrow-right" style={{ color: "var(--color-accent-primary)", flexShrink: 0 }} />
               <span style={{ fontSize: 14, fontWeight: 600, flex: "1 1 220px" }}>{row.outcome}</span>
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* 3. The loop: four lanes — de-templated, no icon-in-a-box */}
       <section id="loop" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
-        <motion.div {...reveal()} style={{ textAlign: "center" }}>
+        <Reveal variant="up" style={{ textAlign: "center" }}>
           <h2 style={{ fontSize: "var(--text-h1)", margin: 0 }}>One app, the whole loop</h2>
           <p className="muted" style={{ fontSize: 16, marginTop: 8 }}>Money in, structured on-chain, out to your bank.</p>
-        </motion.div>
+        </Reveal>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
           {LANES.map((l, i) => (
-            <motion.div key={l.id} {...reveal(i * 0.08)} className="lp-lane-card" onMouseMove={spotlight}>
-              <div className="lp-lane-glow" style={{ background: `radial-gradient(120px 80px at 30% 0%, ${l.color}33, transparent)` }} />
-              <div className="lp-lane-rule" style={{ background: l.color }} />
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <h3 style={{ margin: 0, fontSize: 17 }}>{l.name}</h3>
-                <span className="numeric" style={{ fontWeight: 700, fontSize: 22, color: l.color }}>{l.pct}%</span>
+            /* Reveal (transform) lives on the wrapper so framer-motion never
+               fights the CSS cursor-tilt transform on .lp-lane-card. */
+            <Reveal key={l.id} variant="scale" delay={i * 0.1} style={{ display: "flex" }}>
+              <div className="lp-lane-card" onMouseMove={spotlight} onMouseLeave={resetTilt} style={{ flex: 1 }}>
+                <div className="lp-lane-glow" style={{ background: `radial-gradient(120px 80px at 30% 0%, ${l.color}33, transparent)` }} />
+                <div className="lp-lane-rule" style={{ background: l.color }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <h3 style={{ margin: 0, fontSize: 17 }}>{l.name}</h3>
+                  <span className="numeric" style={{ fontWeight: 700, fontSize: 22, color: l.color }}>{l.pct}%</span>
+                </div>
+                <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>{l.desc}</p>
               </div>
-              <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>{l.desc}</p>
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* 4. How it works: 5-step timeline */}
       <section id="how" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 36 }}>
-        <motion.h2 {...reveal()} style={{ fontSize: "var(--text-h1)", margin: 0, textAlign: "center" }}>How it works</motion.h2>
+        <Reveal variant="blur">
+          <h2 style={{ fontSize: "var(--text-h1)", margin: 0, textAlign: "center" }}>How it works</h2>
+        </Reveal>
         <div style={{ maxWidth: 600, margin: "0 auto", width: "100%" }}>
           {STEPS.map((s, i) => (
-            <motion.div key={s.title} {...reveal(i * 0.05)} className="lp-step">
+            <Reveal key={s.title} variant="left" delay={i * 0.1} className="lp-step">
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <motion.div
-                  className="lp-step-dot"
-                  initial={{ background: "#141a21", color: "#f5f7fa", borderColor: "#2a3340" }}
-                  whileInView={{ background: "#bef264", color: "#0b0f14", borderColor: "#bef264" }}
-                  viewport={{ once: true, amount: 0.6 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {i + 1}
-                </motion.div>
+                <StepDot n={i + 1} />
                 {i < STEPS.length - 1 && <div className="lp-step-line" />}
               </div>
               <div style={{ paddingBottom: 28 }}>
                 <h3 style={{ margin: "6px 0 4px", fontSize: 17 }}>{s.title}</h3>
                 <p className="muted" style={{ margin: 0, fontSize: 13 }}>{s.body}</p>
               </div>
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* 5. Proof / stats strip */}
       <section id="proof" ref={statsRef} className="lp-section" style={{ padding: "48px 24px" }}>
-        <div className="card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 20, padding: 32 }}>
-          {STATS.map((s) => (
-            <StatCard key={s.label} stat={s} inView={statsInView} />
+        <Reveal variant="up" className="card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 20, padding: 32 }}>
+          {STATS.map((s, i) => (
+            <Reveal key={s.label} variant="scale" delay={i * 0.1}>
+              <StatCard stat={s} inView={statsInView} />
+            </Reveal>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       {/* 6. Fees — service fees, never interest */}
       <section className="lp-section" style={{ padding: "24px 24px 64px" }}>
-        <motion.div {...reveal()} className="card" style={{ padding: 28 }}>
+        <Reveal variant="blur" className="card" style={{ padding: 28 }}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16, alignItems: "baseline" }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 18 }}>Fees, never interest</h3>
@@ -291,21 +325,23 @@ export function Onboarding() {
               </p>
             </div>
             <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
-              {FEES.map((f) => (
-                <div key={f.label} style={{ minWidth: 120 }}>
+              {FEES.map((f, i) => (
+                <Reveal key={f.label} variant="right" delay={0.1 + i * 0.08} style={{ minWidth: 120 }}>
                   <div className="numeric" style={{ fontWeight: 700, fontSize: 19, color: "var(--color-accent-primary)" }}>{f.rate}</div>
                   <div className="muted" style={{ fontSize: 12 }}>{f.label}</div>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
-        </motion.div>
+        </Reveal>
       </section>
 
       {/* 7. Bottom CTA */}
       <section className="lp-section" style={{ textAlign: "center", padding: "48px 24px 96px", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
-        <motion.h2 {...reveal()} style={{ fontSize: "var(--text-h1)", margin: 0 }}>Put your income on autopilot.</motion.h2>
-        <motion.div {...reveal(0.1)}>
+        <Reveal variant="scale">
+          <h2 style={{ fontSize: "var(--text-h1)", margin: 0 }}>Put your income on autopilot.</h2>
+        </Reveal>
+        <Reveal variant="scale" delay={0.12}>
           <button
             className="btn-primary lp-btn-primary-glow"
             style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
@@ -313,7 +349,7 @@ export function Onboarding() {
           >
             Launch App <i className="ph ph-arrow-right" />
           </button>
-        </motion.div>
+        </Reveal>
       </section>
 
       {/* Footer */}

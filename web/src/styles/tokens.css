@@ -1,23 +1,26 @@
 /* Shunt design tokens — DESIGN.md §2 */
 :root {
-  --color-bg-base: #0b0f14;
-  --color-bg-elevated: #141a21;
-  --color-accent-primary: #bef264;
+  --color-bg-base: #060707;
+  --color-bg-elevated: #101112;
+  --color-accent-primary: #cdf14a;
   --color-accent-secondary: #38bdf8;
   --color-accent-tertiary: #a78bfa;
-  --color-bucket-needs: #fbbf24;
-  --color-bucket-savings: #bef264;
-  --color-bucket-buffer: #38bdf8;
+  /* Allocation palette — one lime accent + a restrained neutral ramp. Kept
+     deliberately calm (no neon rainbow) so the donut/lanes read premium, not
+     "AI busy" (feedback 2026-07-13). */
+  --color-bucket-needs: #a8b0bd;
+  --color-bucket-savings: #cdf14a;
+  --color-bucket-buffer: #6b7480;
   /* Extension palette for bucket #4+ (DESIGN.md §8.6 decision) */
-  --color-bucket-extra-1: #a78bfa;
-  --color-bucket-extra-2: #f472b6;
-  --color-text-primary: #f5f7fa;
-  --color-text-secondary: #8a93a3;
+  --color-bucket-extra-1: #4d5561;
+  --color-bucket-extra-2: #d8b26a;
+  --color-text-primary: #f4f5f6;
+  --color-text-secondary: #8c9099;
   /* WCAG: text on lime/amber surfaces must be near-black (DESIGN.md §2.1) */
-  --color-text-on-accent: #0b0f14;
+  --color-text-on-accent: #0a0c07;
   --color-danger: #ffb4ab;
 
-  --font-heading: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-heading: "Montserrat", system-ui, sans-serif;
   --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
 
   --radius-card: 16px;
@@ -42,17 +45,17 @@
      Additive only: named the loose fill/border values already used inline by
      .card/.bento-card, plus a wider type scale and easing token for the
      marketing landing page. Nothing above this block changes meaning. */
-  --color-bg-card: rgba(20, 26, 33, 0.6);
-  --color-border-subtle: #1f2732;
-  --color-border-input: #2a3340;
-  --color-border-glass: rgba(255, 255, 255, 0.05);
+  --color-bg-card: rgba(18, 19, 21, 0.72);
+  --color-border-subtle: #1c1d20;
+  --color-border-input: #27282b;
+  --color-border-glass: rgba(255, 255, 255, 0.06);
   --radius-card-lg: 20px;
   --blur-card: 12px;
   --landing-max: 1200px;
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --text-display: clamp(48px, 6vw, 72px);
-  --text-h1: clamp(32px, 4vw, 48px);
+  --text-display: clamp(46px, 6.4vw, 80px);
+  --text-h1: clamp(32px, 4vw, 50px);
   --text-h2: 26px;
   --text-body-lg: clamp(18px, 2vw, 22px);
 }
@@ -95,6 +98,12 @@ h2,
 h3,
 .numeric {
   font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+h1 {
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
 button {
@@ -465,76 +474,53 @@ input[type="number"]:focus {
   z-index: 0;
   pointer-events: none;
 }
-.ab-particles {
+/* Barely-there dot grid — one flat neutral texture, faded top-to-bottom so
+   it never competes with content. Pure CSS, no canvas. */
+.ab-grid {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.4;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+  -webkit-mask-image: radial-gradient(120% 70% at 50% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(120% 70% at 50% 0%, #000 0%, transparent 72%);
+  opacity: 0.7;
 }
 
-/* Aurora light source — pinned to the top of the page, faded out downward
-   with a mask so lower sections stay clean and legible. */
-.ab-aurora {
+/* Interactive Threads field (reactbits) — pinned to the top like a hero
+   backdrop, faded out downward with a mask so lower sections stay clean. */
+.ab-threads {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: min(78vh, 780px);
-  opacity: 0.7;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 42%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 42%, transparent 100%);
-}
-.aurora-container {
-  width: 100%;
-  height: 100%;
-}
-.aurora-container canvas {
-  width: 100% !important;
-  height: 100% !important;
+  height: min(108vh, 1000px);
+  opacity: 0.9;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 88%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 88%);
 }
 @media (prefers-reduced-motion: reduce) {
-  .ab-aurora {
+  .ab-threads {
     opacity: 0.5;
   }
 }
-.blob {
+
+/* One soft glow behind the hero — a single restrained lime wash, not a
+   multi-color aurora. Sits at the top and dissolves downward. */
+.ab-glow {
   position: absolute;
-  filter: blur(90px);
-  z-index: 0;
-  opacity: 0.22;
-  animation: float 12s ease-in-out infinite;
-}
-.blob-1 {
-  background: var(--color-accent-primary);
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  top: -100px;
-  left: -100px;
-}
-.blob-2 {
-  background: var(--color-accent-secondary);
-  width: 250px;
-  height: 250px;
-  border-radius: 50%;
-  bottom: -50px;
-  right: -50px;
-  animation-delay: -2s;
-}
-.blob-3 {
-  background: var(--color-accent-tertiary);
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  top: 50%;
+  top: -18vh;
   left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: -4s;
+  transform: translateX(-50%);
+  width: min(1100px, 130vw);
+  height: min(720px, 80vh);
+  background: radial-gradient(closest-side, rgba(205, 241, 74, 0.14), rgba(205, 241, 74, 0.04) 55%, transparent 78%);
+  filter: blur(20px);
+  pointer-events: none;
 }
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(20px, -20px) scale(1.05); }
+@media (prefers-reduced-motion: reduce) {
+  .ab-glow {
+    opacity: 0.7;
+  }
 }
 .animated-background-content {
   position: relative;
@@ -673,11 +659,80 @@ input[type="number"]:focus {
   backdrop-filter: blur(var(--blur-card));
   -webkit-backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--color-border-glass);
-  transition: transform 0.3s var(--ease-standard), border-color 0.3s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  /* Cursor tilt (--rx/--ry set on pointer move) + lift on hover (--lift). */
+  transform: perspective(820px) rotateY(var(--rx, 0deg)) rotateX(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  transition: transform 0.18s var(--ease-standard), border-color 0.3s ease, box-shadow 0.3s ease;
 }
 .lp-lane-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --lift: -6px;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-lane-card {
+    transform: none;
+  }
+}
+
+/* Hero preview card — same cursor spotlight as the lane cards. */
+.lp-hero-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.lp-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(205, 241, 74, 0.08), transparent 60%);
+}
+.lp-hero-card:hover::before {
+  opacity: 1;
+}
+.lp-hero-card:hover {
+  border-color: rgba(205, 241, 74, 0.22);
+}
+
+/* Connect-wallet card — glass panel matching the landing surface. */
+.cw-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 30px 26px;
+  border-radius: var(--radius-card-lg);
+  background: var(--color-bg-card);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--color-border-glass);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+/* Scroll progress bar pinned to the top of the viewport. */
+.lp-scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent-primary);
+  transform-origin: 0 50%;
+  z-index: 200;
+  box-shadow: 0 0 12px rgba(205, 241, 74, 0.5);
+}
+
+/* CTA arrow micro-interaction */
+.lp-btn-primary-glow i,
+.btn-secondary i {
+  transition: transform 0.2s var(--ease-standard);
+}
+.lp-btn-primary-glow:hover i,
+.btn-secondary:hover i {
+  transform: translateX(3px);
 }
 .lp-lane-glow {
   position: absolute;
@@ -787,21 +842,10 @@ input[type="number"]:focus {
   }
 }
 
-/* Gradient headline word (reactbits "GradientText" pattern) */
+/* Accent headline word — a single solid lime, no animated rainbow. Restraint
+   over spectacle; the colour does the work (feedback 2026-07-13). */
 .lp-gradient-text {
-  background: linear-gradient(100deg, #bef264 0%, #38bdf8 50%, #a78bfa 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: lp-gradient-pan 6s linear infinite;
-}
-@keyframes lp-gradient-pan {
-  to { background-position: 200% center; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lp-gradient-text { animation: none; }
+  color: var(--color-accent-primary);
 }
 
 /* Live status chip with a pulsing dot */
@@ -826,7 +870,7 @@ input[type="number"]:focus {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-accent-secondary);
+  background: #565a61;
 }
 
 /* Gentle idle float for the hero preview card */
