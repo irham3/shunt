@@ -7,7 +7,7 @@
   <img alt="Soroban" src="https://img.shields.io/badge/Soroban-Rust-F46623?style=flat-square&logo=rust&logoColor=white&labelColor=0B0F14">
   <img alt="React" src="https://img.shields.io/badge/React-TypeScript-38BDF8?style=flat-square&logo=react&logoColor=white&labelColor=0B0F14">
   <img alt="PWA" src="https://img.shields.io/badge/PWA-mobile--first-A78BFA?style=flat-square&labelColor=0B0F14">
-  <img alt="Tests" src="https://img.shields.io/badge/contract_tests-11_passing-BEF264?style=flat-square&labelColor=0B0F14">
+  <img alt="Tests" src="https://img.shields.io/badge/contract_tests-19_passing-BEF264?style=flat-square&labelColor=0B0F14">
 </p>
 
 <p align="center">
@@ -169,7 +169,7 @@ Both directions run on the standard Stellar anchor rails, implemented in [`web/s
 
 Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatible wallet can open — the payee never explains crypto to a client again.
 
-Rate and fee are always shown **before** confirmation. The default anchor is SDF's test anchor. **The corridor is pluggable, not hard-wired:** because off-ramp is generic SEP-24 plus an on-chain anchor allowlist, swapping to a production corridor is configuration, not a contract change. A regulated IDR stablecoin (IDRX is one candidate) or a PHP anchor are the corridors we'd target — which one settles fiat in production is a partnership-and-regulation question, not an unsolved technical one — and the allowlist ensures USDC can only ever flow to an anchor *you* approved when setting rules. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
+Rate and fee are always shown **before** confirmation. The default anchor is SDF's test anchor. **The corridor is pluggable, not hard-wired:** because off-ramp is generic SEP-24 plus an on-chain anchor allowlist, swapping to a production corridor is configuration, not a contract change. A regulated IDR stablecoin (IDRX is one candidate) or a PHP anchor are the corridors we'd target — which one settles fiat in production is a partnership-and-regulation question, not an unsolved technical one. The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
 
 ## Business model — service fees, never interest
 
@@ -182,7 +182,7 @@ Blended take-rate is ~0.29% of processed volume — **15–20× cheaper than the
 ```bash
 # 1. Contracts — test & build (Rust + stellar CLI)
 cd contracts/shunt-vault
-cargo test                      # 11 tests
+cargo test                      # 19 tests
 stellar contract build
 
 #    Deploy your own instance (or use the testnet one above)
@@ -224,8 +224,12 @@ design/                  Diagrams (animated SVG) + app screenshots
 
 - **One tap per income, by design.** Soroban's `require_auth` wants a signature per invocation — and the Invest conversion is a second signature (a Soroban tx is single-operation by protocol). Never over-claimed as hands-free.
 - **The keeper is centralized** in this version — but it holds zero keys, income detection now runs client-side from Horizon (so the keeper isn't needed to *notice* income), and a manual trigger replaces its one remaining job. A single point of *convenience*, never of custody or fund safety.
+- **The keeper watches an explicit account list** (`WATCH_ACCOUNTS`), not every user automatically — its cron poll is demo-scoped. Per-user auto-detection at scale runs client-side today; a subscription/index model for the keeper is roadmap.
+- **The keeper's `/trigger` endpoint is open** (CORS `*`) — by design it only *builds an unsigned XDR* that is worthless without the owner's signature, so it is not a fund risk, but it is unauthenticated and could be spammed; origin-allowlisting and rate-limiting are roadmap hardening.
 - **Anchor settlement is not instant** — KYC is involved, and the UI says so instead of hiding it.
-- **The vault is unaudited.** Keep real amounts trivial until it is.
+- **The vault is unaudited and not upgradeable**, and `init` has no admin gate (first caller binds the token, one-time). Keep real amounts trivial until an audit; an upgradeable admin-gated redeploy is a pre-mainnet step.
+- **Off-ramp destination control:** the shipped cash-out is the anchor's standard SEP-24 hosted withdraw; the contract's allowlisted `offramp()` path exists and is unit-tested but is not yet wired into that hosted flow.
+- **Mainnet:** all on-chain proof today is testnet (with real testnet USDC). A trivial mainnet split is a pre-launch step, not claimed as done.
 
 ## Roadmap
 
