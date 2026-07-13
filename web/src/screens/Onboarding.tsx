@@ -158,9 +158,9 @@ export function Onboarding() {
         </Reveal>
         <Reveal variant="blur" delay={0.05}>
           <h1 style={{ fontSize: "var(--text-display)", margin: 0, lineHeight: 1.05, maxWidth: 780, letterSpacing: "-0.02em" }}>
-            Income lands.
+            Income lands
             <br />
-            <span className="lp-gradient-text">Instantly split.</span>
+            <span className="lp-gradient-text">Instantly split</span>
           </h1>
         </Reveal>
         <Reveal variant="up" delay={0.12}>
