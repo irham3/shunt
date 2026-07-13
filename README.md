@@ -22,7 +22,7 @@ Shunt is a financial autopilot for people who earn from abroad. The moment USDC 
 
 ### Built real, not slideware
 
-- **19 Soroban unit tests** + a **real-testnet end-to-end suite** (Playwright, 20 passing, 1 skipped) that friendbots a fresh account, buys real USDC on the DEX, and walks the whole loop — **no mocks**.
+- **19 Soroban unit tests** + a **real-testnet end-to-end suite** (Playwright, 23 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow — **no mocks**.
 - **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
 - **Double idempotency:** the keeper dedupes by tx hash *and* the contract rejects repeat `inflow_key`s — one income, one split, ever. Replay is rejected on-chain (Error #6).
 - **Verifiable on-chain:** every step of the split + savings-goals lifecycle is a clickable **testnet** hash ([Live on testnet](#live-on-testnet)). Network for this submission is **testnet only** — no mainnet claims.
@@ -43,7 +43,7 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | 💵**Savings that hold value**         | Kept in USDC, not IDR — your safety net stops shrinking                                                                                    |
 | 🔒**Savings you can't sabotage**      | Locked by a Soroban contract with a timelock, not by a label in an app. Early exit costs 10% — which goes to*your own* buffer, not to us |
-| 📈**Investing that actually happens** | A slice of every income is spot-converted (DCA) the moment it lands — the strategy everyone knows and nobody sticks to                     |
+| 📈**Optional investing that actually happens** | If you opt in, a slice of each income is spot-converted (DCA) into XLM or gold the moment it lands — the strategy everyone knows and nobody sticks to. Separate from the safety net; set it to 0% and nothing else changes |
 | 🔁**One app for the whole loop**      | Money in, structured, and out to your bank — anchors and partners handle fiat; you never leave Shunt                                       |
 
 ## One app, the whole money loop
@@ -57,10 +57,10 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 | **In**        | **Payment request links (SEP-7)** — send a link or QR, get paid in USDC from anywhere; no "do you have crypto?" conversation. Card checkout for non-crypto payers lands with an on-ramp partner | ✅ shipped (card checkout 🔜) |
 | **In**        | **Top Up (SEP-24 deposit)** — IDR in through a licensed anchor's hosted flow, lands as USDC                                                                                                     | ✅ shipped (testnet anchor)   |
 | **Structure** | **One-tap split** into Needs / Savings / Buffer / Invest, atomic on-chain                                                                                                                        | ✅ shipped                    |
-| **Structure** | **Invest lane** — spot DCA to XLM via path payment after each split                                                                                                                             | ✅ shipped                    |
+| **Structure** | **Invest lane** *(optional)* — spot DCA into your choice of **XLM or gold (XAUm)** via path payment after each split                                                                            | ✅ shipped                    |
 | **Structure** | **In-app Convert** — XLM ⇄ USDC swap on the Stellar DEX (live quote, slippage floor), no third party                                                                                            | ✅ shipped                    |
 | **Structure** | **Code-custody savings** with timelock + penalty-to-your-buffer                                                                                                                                  | ✅ shipped                    |
-| **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to IDR/PHP bank via allowlisted anchors, rate & fee shown first                                                                                     | ✅ shipped                    |
+| **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to IDR/PHP via a licensed anchor's hosted flow, rate & fee shown first                                                                              | ✅ shipped (testnet anchor)   |
 
 Shunt never touches fiat and never holds your keys — licensed anchors do fiat, your wallet and the vault contract do custody. That's what makes the loop possible without Shunt becoming a bank or a remittance company.
 
@@ -76,7 +76,7 @@ Shunt never touches fiat and never holds your keys — licensed anchors do fiat,
 | 2 | **Set rules**    | Sliders for Needs / Savings / Buffer / Invest + a savings timelock. Saved on-chain via`set_rules` — the contract is the single source of truth.                                                                                                                    |
 | 3 | **Income lands** | Via your payment link, a Top Up, or any direct USDC transfer. The keeper streams Horizon and detects it within seconds.                                                                                                                                               |
 | 4 | **One tap**      | The keeper prepares an unsigned`distribute` transaction. You review the exact breakdown and sign. *Nothing moves without your signature.*                                                                                                                         |
-| 5 | **Auto-split**   | One atomic Soroban transaction: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. The Invest slice is then spot-converted to XLM by a follow-up path payment you approve in the same flow. Sub-cent fees, settled in seconds. |
+| 5 | **Auto-split**   | One atomic Soroban transaction: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is then spot-converted into your chosen asset (XLM or gold/XAUm) by a follow-up path payment you approve in the same flow. Sub-cent fees, settled in seconds. |
 
 **Where each lane lives — and why:**
 
@@ -276,8 +276,8 @@ design/                  Diagrams (animated SVG) + app screenshots
 
 |                 |                                                                                                                                                                                           |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Next**  | Production IDR corridor (IDRX) · card checkout on payment links (on-ramp partner) · anchor status webhooks                                                                              |
-| **Later** | Session keys — truly hands-free splits · split + invest in one signature (AMM router) · allocated-gold invest option · goal-based savings · native mobile · keeper decentralization |
+| **Next**  | Wire the live corridor (MoneyGram Access, PHP) into the hosted cash-out · production IDR corridor (IDRX) · card checkout on payment links (on-ramp partner) · anchor status webhooks       |
+| **Later** | Session keys — truly hands-free splits · split + invest in one signature (AMM router) · deepen the gold (XAUm) invest path once mainnet DEX liquidity is live · native mobile · keeper decentralization |
 
 ---
 
