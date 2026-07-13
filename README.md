@@ -20,6 +20,13 @@ Shunt is a financial autopilot for people who earn from abroad. The moment USDC 
 
 > *Shunt* (electronics): a component that diverts current into parallel paths so no single path overloads. Shunt does the same for your income.
 
+### Built real, not slideware
+
+- **19 Soroban unit tests** + a **real-testnet end-to-end suite** (Playwright, 20 passing, 1 skipped) that friendbots a fresh account, buys real USDC on the DEX, and walks the whole loop — **no mocks**.
+- **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
+- **Double idempotency:** the keeper dedupes by tx hash *and* the contract rejects repeat `inflow_key`s — one income, one split, ever. Replay is rejected on-chain (Error #6).
+- **Verifiable on-chain:** every step of the split + savings-goals lifecycle is a clickable **testnet** hash ([Live on testnet](#live-on-testnet)). Network for this submission is **testnet only** — no mainnet claims.
+
 ---
 
 ## Why people use it
@@ -78,9 +85,23 @@ Shunt never touches fiat and never holds your keys — licensed anchors do fiat,
 | 🟡**Needs**   | Your wallet        | Anytime            | Daily spending; cash out to IDR/PHP via anchor when*you* choose                                     |
 | 🟢**Savings** | The vault contract | After the timelock | Value-holding savings in USDC. Held by code — because a timelock in your own wallet would be fiction |
 | 🔵**Buffer**  | Your wallet        | Instantly          | Emergency fund — no lock, no penalty, no questions                                                   |
-| 🟣**Invest**  | Your wallet        | Anytime            | Spot DCA into XLM via Stellar path payment — an asset purchase, not a yield product                  |
+| 🟣**Invest** *(optional)* | Your wallet | Anytime | Opt-in growth slice — spot DCA (an asset purchase, not a yield product). **Set it to 0% and Shunt's promise is unchanged.** |
+
+> **The value-preservation promise lives in Savings, not Invest.** Savings is 100% USDC, held by code — that is the safety net that resists rupiah erosion. **Invest is a separate, optional lane** for users who explicitly want a growth slice; it is a spot *asset purchase* (bay'/DCA), never presented as safe or value-holding. In the current build the demo asset is **XLM** purely because it's the asset with real DEX liquidity on **testnet** — the intended long-term growth asset is **allocated gold** (a halal, value-holding growth asset), with XLM as the testnet placeholder to prove the path-payment mechanism. Nothing in the safety net depends on Invest.
 
 Early savings withdrawals are possible but cost a **10% penalty — which isn't lost:** it's redirected into your Buffer credit inside the vault, withdrawable anytime. Discipline with a safety valve.
+
+## How a real Indonesian / PH user actually onboards (honest)
+
+Shunt's engine assumes USDC is already on Stellar — getting a non-crypto worker to that point is the hard part, and we don't pretend it's solved. Here is the concrete, staged path with the honest status of each rung:
+
+| User | How they get USDC on Stellar | Status |
+| --- | --- | --- |
+| **Wedge — crypto-aware freelancer / DAO contributor** (the MVP's real target) | Already paid in USDC; connects Freighter directly | ✅ works today |
+| **Freelancer with a foreign client** | Sends a Shunt **payment link (SEP-7)**; the client pays and USDC lands — no "do you have crypto?" conversation | ✅ shipped for crypto-paying clients · 🔜 card-paying clients via an on-ramp partner |
+| **Migrant worker, no crypto** | **SEP-24 Top Up** — IDR in through a licensed anchor's hosted flow, lands as USDC | ⚙️ mechanism shipped on testnet · needs a live regional anchor + simpler-than-Freighter wallet |
+
+**Two gaps we name out loud instead of hiding:** (1) a **licensed regional fiat-in anchor** (the same IDRX / Coins.ph partnership question as the off-ramp), and (2) **self-custody UX** — Freighter is too heavy for a first-time mainstream user, so **passkey / smart-wallet onboarding is on the roadmap**, not claimed today. The MVP deliberately proves the *engine* on the wedge; mainstream onboarding is the next validation step, not a finished feature.
 
 ## Live on testnet
 
@@ -169,7 +190,16 @@ Both directions run on the standard Stellar anchor rails, implemented in [`web/s
 
 Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatible wallet can open — the payee never explains crypto to a client again.
 
-Rate and fee are always shown **before** confirmation. The default anchor is SDF's test anchor. **The corridor is pluggable, not hard-wired:** because off-ramp is generic SEP-24 plus an on-chain anchor allowlist, swapping to a production corridor is configuration, not a contract change. A regulated IDR stablecoin (IDRX is one candidate) or a PHP anchor are the corridors we'd target — which one settles fiat in production is a partnership-and-regulation question, not an unsolved technical one. The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
+Rate and fee are always shown **before** confirmation.
+
+**Testnet demo vs. production corridor — stated plainly.** The working demo runs against **SDF's test anchor** (`testanchor.stellar.org`) — the only anchor in the ecosystem that exposes a *testnet* SEP-24 endpoint, which is why it (not a regional anchor) proves the mechanism end-to-end today. Regional off-ramps run on mainnet only, so we can't wire them to a testnet demo; instead we name the concrete corridors and their evidence:
+
+| Corridor | Real, named target | Regulatory standing (evidence) |
+| --- | --- | --- |
+| 🇮🇩 IDR | **IDRX** — Rupiah-pegged stablecoin | Regulated issuer, CertiK-audited ([idrx.co](https://home.idrx.co/en/)). *Candidate only — Stellar availability still to confirm; we do not claim IDRX is already on Stellar.* |
+| 🇵🇭 PHP | **Coins.ph** — PHP e-wallet / off-ramp | Licensed by Bangko Sentral ng Pilipinas (BSP); live stablecoin + QRPh rails ([coins.ph](https://www.coins.ph/en-ph)) |
+
+Because off-ramp is generic SEP-24 + an on-chain anchor allowlist, **swapping to any of these is configuration** (`VITE_ANCHOR_HOME_DOMAIN`), not a contract change — the anchor's home domain is the only thing that changes. Which one settles fiat first is a partnership-and-regulation question, not an unsolved technical one. The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
 
 ## Business model — service fees, never interest
 

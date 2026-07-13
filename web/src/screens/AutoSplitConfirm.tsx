@@ -5,7 +5,7 @@ import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { markComplete, type PendingSplit } from "../lib/keeper";
 import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
-import { getXlmUsdRate } from "../lib/rates";
+import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
 /**
@@ -16,7 +16,8 @@ export function AutoSplitConfirm() {
   const nav = useNavigate();
   const { state } = useLocation();
   const pending = state as PendingSplit | null;
-  const { address, buckets, applySplit, applyInvestConversion, showToast } = useShunt();
+  const { address, buckets, investAsset, applySplit, applyInvestConversion, showToast } = useShunt();
+  const investLabel = investAsset === "GOLD" ? "Invest → Gold (XAUm)" : "Invest → XLM (DCA)";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [doneHash, setDoneHash] = useState<string | null>(null);
@@ -36,9 +37,9 @@ export function AutoSplitConfirm() {
       { id: "savings", label: "Savings → vault (timelock)", amt: savings },
       { id: "buffer", label: "Buffer → wallet", amt: buffer },
     ];
-    if (invest > 0) out.push({ id: "invest", label: "Invest → XLM (DCA)", amt: invest });
+    if (invest > 0) out.push({ id: "invest", label: investLabel, amt: invest });
     return out;
-  }, [amount, buckets]);
+  }, [amount, buckets, investLabel]);
 
   /**
    * F12: convert the invest slice after the split. A Soroban tx is
@@ -48,6 +49,18 @@ export function AutoSplitConfirm() {
    */
   async function runInvestConversion(splitWasOnChain: boolean) {
     if (investAmt <= 0) return;
+
+    // Gold (XAUm): no XAUm DEX liquidity on testnet, so the slice is recorded
+    // at a labeled reference rate — honest, same pattern as the IDR/XLM fallbacks.
+    if (investAsset === "GOLD") {
+      const { rate } = await getGoldUsdRate();
+      const grams = investAmt / rate;
+      applyInvestConversion(investAmt, grams, undefined, true);
+      showToast("Invest slice earmarked for Gold (XAUm) at reference rate");
+      return;
+    }
+
+    // XLM: real path payment through the Stellar DEX when possible.
     const { rate, stale } = await getXlmUsdRate();
     const estXlm = investAmt / rate;
     if (splitWasOnChain && address) {
@@ -124,7 +137,9 @@ export function AutoSplitConfirm() {
 
       <p className="muted" style={{ fontSize: 13, margin: 0 }}>
         Atomic split in a single transaction · sub-cent network fee
-        {investAmt > 0 && " · invest slice converts via a follow-up path payment"}
+        {investAmt > 0 && (investAsset === "GOLD"
+          ? " · invest slice earmarked for Gold (XAUm)"
+          : " · invest slice converts via a follow-up path payment")}
       </p>
 
       {doneHash ? (

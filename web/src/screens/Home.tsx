@@ -26,6 +26,7 @@ export function Home() {
     buckets,
     balances,
     investXlm,
+    investAsset,
     activity,
     xlmBalance,
     usdcBalance,
@@ -372,7 +373,7 @@ export function Home() {
                     <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>USDC</span>
                     {b.id === "invest" && investXlm > 0 && (
                       <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
-                        {investXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM held
+                        {investXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} {investAsset === "GOLD" ? "g XAUm" : "XLM"} held
                       </span>
                     )}
                     {b.id === "savings" && goals.length > 0 && (

@@ -52,8 +52,13 @@ interface ShuntState {
   lockSecs: number; // timelock duration chosen in Configure Shunt
   /** wallet + vault balances in USDC (display); invest = DCA cost basis */
   balances: { needs: number; savings: number; buffer: number; invest: number };
-  /** XLM units accumulated by the Invest lane's DCA conversions (F12) */
+  /** Invest-asset units accumulated by the Invest lane's DCA conversions (F12).
+      Denominated in whatever `investAsset` is set to (XLM, or grams of XAUm). */
   investXlm: number;
+  /** Which Stellar asset the Invest lane buys. XLM = live testnet DEX liquidity;
+      GOLD = XAUm (Matrixdock, 1 token = 1g LBMA gold) — a value-holding growth
+      asset. Testnet has no XAUm liquidity, so GOLD records at a labeled rate. */
+  investAsset: "XLM" | "GOLD";
   /** Named sub-allocations of the on-chain Savings balance, from syncFromChain. */
   goals: SavingsGoal[];
   /** Savings not currently assigned to any goal (on-chain, from syncFromChain). */
@@ -77,6 +82,7 @@ interface ShuntState {
   removeBucket: (id: string) => void;
   markRulesSaved: () => void;
   setLockSecs: (s: number) => void;
+  setInvestAsset: (a: "XLM" | "GOLD") => void;
   setXlmBalance: (b: string) => void;
   /** One Horizon round-trip: refresh XLM + USDC wallet balances + trustline. */
   refreshWallet: (address: string) => Promise<void>;
@@ -129,6 +135,7 @@ export const useShunt = create<ShuntState>()(
       lockSecs: 30 * 86400,
       balances: { needs: 0, savings: 0, buffer: 0, invest: 0 },
       investXlm: 0,
+      investAsset: "XLM",
       goals: [],
       unallocatedSavings: 0,
       xlmBalance: null,
@@ -180,6 +187,7 @@ export const useShunt = create<ShuntState>()(
       },
       markRulesSaved: () => set({ rulesSavedOnChain: true }),
       setLockSecs: (lockSecs) => set({ lockSecs }),
+      setInvestAsset: (investAsset) => set({ investAsset }),
       setXlmBalance: (xlmBalance) => set({ xlmBalance }),
 
       refreshWallet: async (address: string) => {
@@ -274,14 +282,15 @@ export const useShunt = create<ShuntState>()(
       },
 
       applyInvestConversion: (usd, xlm, txHash, simulated) => {
-        const { investXlm, activity } = get();
+        const { investXlm, activity, investAsset } = get();
+        const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
         set({
           investXlm: investXlm + xlm,
           activity: [
             {
               id: `${Date.now()}-inv`,
               kind: "invest",
-              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM${simulated ? " (simulated rate)" : ""}`,
+              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${unit}${simulated ? " (reference rate)" : ""}`,
               amountUsdc: usd,
               txHash,
               at: new Date().toISOString(),
@@ -401,7 +410,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 4,
+      version: 5,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -431,6 +440,10 @@ export const useShunt = create<ShuntState>()(
           persisted.usdcBalance = persisted.usdcBalance ?? null;
           persisted.usdcTrustline = persisted.usdcTrustline ?? false;
           persisted.bufferCredit = persisted.bufferCredit ?? 0;
+        }
+        if (version < 5 && persisted) {
+          // Invest-asset picker (XLM default; GOLD = XAUm).
+          persisted.investAsset = persisted.investAsset ?? "XLM";
         }
         return persisted;
       },

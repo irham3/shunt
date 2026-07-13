@@ -76,6 +76,65 @@ unaudited status over one that glosses it.
 
 ---
 
+## Q5. "You said mainnet — why is every hash I find on the explorer testnet?"
+
+**30-second answer:** "You're right, and we corrected our own docs before submitting.
+The proof is 100% **testnet**, with real testnet USDC — not mainnet. An early draft
+over-stated 'mainnet'; our position now is explicit: *testnet only, mainnet deferred
+until after an audit.* We deliberately don't put real funds in an unaudited vault."
+
+**Turn it into a strength:** self-correction = integrity. **Don't** mumble "typo" — frame
+it as the disciplined choice (unaudited → no mainnet funds).
+
+---
+
+## Q6. "Why is Invest = XLM? Isn't that volatile 'investment', contradicting hold-value?"
+
+**30-second answer:** "The hold-value promise is **Savings — 100% USDC, code-locked**,
+never touched by volatility. **Invest is a separate, optional lane** (set it to 0% and
+nothing about the promise changes) for users who explicitly want a growth slice — a
+spot purchase, not yield or leverage. It's XLM *only* because that's the asset with real
+DEX liquidity on **testnet** to prove the path-payment mechanism; the intended growth
+asset is **allocated gold**. XLM is a testnet placeholder, not an investment recommendation."
+
+**Don't** defend XLM as a good store of value. Separate the two lanes cleanly.
+
+---
+
+## Q7. "Your migrant worker — how does she get USDC and manage Freighter? Show a real on-ramp."
+
+**30-second answer:** "Honestly: today's MVP targets the **crypto-aware wedge** — someone
+already paid in USDC. For the mainstream we have two real rungs: a **payment link (SEP-7)**
+so a client pays and USDC just lands, and **SEP-24 Top Up** (IDR→USDC via a licensed
+anchor). What we do *not* claim solved is self-custody UX for a first-timer — Freighter is
+too heavy, so **passkey / smart-wallet onboarding is roadmap.** We prove the engine on the
+wedge; mainstream onboarding is the next validation step." (See README → *How a real
+Indonesian / PH user actually onboards*.)
+
+**Don't** pretend Freighter is easy for a non-crypto user. Name the gap; show the staged path.
+
+---
+
+## Q8. "The repo was created recently — what did you build during the mentoring period since June?"
+
+> ⚠️ **Fill this with your REAL history — never invent a June timeline.** Judges can check,
+> and a fabricated story is fatal. Below is the structure; you supply the truth.
+
+**If real work started in June (research / PRD / contract design):** "The public repo was
+initialized recently [because the git history was reset], but the work predates it — here's
+the trail: `[PRD version dates, DESIGN.md, wireframes, mentoring notes, older branches/commits]`."
+→ **Action for you:** gather that evidence *outside git* now (PRD drafts, design files,
+dated notes) so you can show it.
+
+**If the core build really was early July:** own it. "The engine was built intensively in
+early July — and here's the substance: a 19-test Soroban contract, a real-testnet e2e suite,
+double idempotency, a full on-chain lifecycle. Depth over a long timeline." Judges respect
+honest velocity over a polished fake history.
+
+**Never say:** a specific June activity you didn't actually do.
+
+---
+
 ## General posture
 
 - Lead every answer with the **honest boundary**, then the **mitigation**. This

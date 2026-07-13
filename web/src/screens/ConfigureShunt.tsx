@@ -39,6 +39,8 @@ export function ConfigureShunt() {
     showToast,
     lockSecs: storedLockSecs,
     setLockSecs: persistLockSecs,
+    investAsset,
+    setInvestAsset,
   } = useShunt();
   const [lockSecs, setLockSecs] = useState(storedLockSecs);
   const [busy, setBusy] = useState(false);
@@ -280,7 +282,7 @@ export function ConfigureShunt() {
               />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                 <span className="numeric muted" style={{ fontSize: 12 }} data-testid={`lane-nominal-${b.id}`}>
-                  ≈ {fmtUsdc(nominal)} USDC {b.kind === "savings" ? "→ vault" : b.kind === "invest" ? "→ XLM (DCA)" : "stays in wallet"}
+                  ≈ {fmtUsdc(nominal)} USDC {b.kind === "savings" ? "→ vault" : b.kind === "invest" ? (investAsset === "GOLD" ? "→ Gold (XAUm)" : "→ XLM (DCA)") : "stays in wallet"}
                 </span>
                 <AnimatePresence>
                   {clampHint === b.id && (
@@ -297,9 +299,30 @@ export function ConfigureShunt() {
                 </AnimatePresence>
               </div>
               {b.id === "invest" && (
-                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                  Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product.
-                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="muted" style={{ fontSize: 12 }}>Invest into</span>
+                    <button
+                      className={`chip${investAsset === "XLM" ? " active" : ""}`}
+                      onClick={() => setInvestAsset("XLM")}
+                      data-testid="invest-asset-xlm"
+                    >
+                      XLM
+                    </button>
+                    <button
+                      className={`chip${investAsset === "GOLD" ? " active" : ""}`}
+                      onClick={() => setInvestAsset("GOLD")}
+                      data-testid="invest-asset-gold"
+                    >
+                      Gold · XAUm
+                    </button>
+                  </div>
+                  <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                    {investAsset === "GOLD"
+                      ? "XAUm = 1g LBMA gold (Matrixdock, on Stellar) — a value-holding growth asset. Spot purchase, not a yield product. Testnet has no XAUm liquidity yet, so it records at a labeled reference rate."
+                      : "Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product. Live DEX liquidity on testnet."}
+                  </p>
+                </div>
               )}
             </motion.div>
             );

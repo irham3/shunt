@@ -50,11 +50,32 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = path.join(HERE, ".state");
 const STATE_FILE = path.join(STATE_DIR, "account.json");
 
+/**
+ * Fund a testnet account via Friendbot, with retry/backoff. Friendbot is
+ * frequently rate-limited (429/503) — an unretried failure here throws in
+ * globalSetup and Playwright then fails the ENTIRE run, which reads as "all
+ * tests broken" when nothing is actually wrong. Retrying makes the suite
+ * robust to that flakiness.
+ */
 async function friendbot(addr: string): Promise<void> {
-  const res = await fetch(
-    `https://friendbot.stellar.org?addr=${encodeURIComponent(addr)}`,
-  );
-  if (!res.ok) throw new Error(`Friendbot failed for ${addr}: ${res.status}`);
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try {
+      const res = await fetch(
+        `https://friendbot.stellar.org?addr=${encodeURIComponent(addr)}`,
+      );
+      if (res.ok) return;
+      lastStatus = res.status;
+      // Account may already be funded from a prior aborted run — treat as OK.
+      if (res.status === 400) return;
+    } catch {
+      /* network hiccup — retry */
+    }
+    if (attempt < 6) {
+      await new Promise((r) => setTimeout(r, attempt * 2500));
+    }
+  }
+  throw new Error(`Friendbot failed for ${addr} after 6 attempts (last status ${lastStatus})`);
 }
 
 export default async function globalSetup(): Promise<void> {
@@ -63,7 +84,10 @@ export default async function globalSetup(): Promise<void> {
   const dest = Keypair.random();
   console.log(`[e2e setup] test account ${kp.publicKey()}`);
 
-  await Promise.all([friendbot(kp.publicKey()), friendbot(dest.publicKey())]);
+  // Sequential (not Promise.all) — two simultaneous Friendbot hits from one IP
+  // are what trips its rate limiter in the first place.
+  await friendbot(kp.publicKey());
+  await friendbot(dest.publicKey());
   console.log("[e2e setup] both accounts funded (10,000 XLM each)");
 
   // Trustline + DEX purchase in one transaction — one less ledger round-trip.
