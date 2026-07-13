@@ -16,7 +16,7 @@
 
 **Get paid in dollars. Keep them worth something. Never watch a month's income evaporate again.**
 
-Shunt is a financial autopilot for people who earn from abroad. The moment USDC lands in your Stellar wallet, one tap splits it by rules you set once: spending money stays liquid, an emergency buffer builds itself, savings get **locked by code** in hard value the rupiah can't erode, and a slice is **dollar-cost-averaged into assets** — automatically, at the one moment discipline is easy: payday.
+Shunt is a financial autopilot for people who earn from abroad. The moment USDC lands in your Stellar wallet, **one tap** splits it by rules you set once: spending money stays liquid, an emergency buffer fills, savings get **locked by code** in hard value the rupiah can't erode, and — if you opt in — a slice is **dollar-cost-averaged into an asset** (XLM or gold). One tap per income, at the one moment discipline is easy: payday. *(Detection is automatic; the money only ever moves when you sign — never hands-free.)*
 
 > *Shunt* (electronics): a component that diverts current into parallel paths so no single path overloads. Shunt does the same for your income.
 
@@ -192,14 +192,25 @@ Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatibl
 
 Rate and fee are always shown **before** confirmation.
 
-**Testnet demo vs. production corridor — stated plainly.** The working demo runs against **SDF's test anchor** (`testanchor.stellar.org`) — the only anchor in the ecosystem that exposes a *testnet* SEP-24 endpoint, which is why it (not a regional anchor) proves the mechanism end-to-end today. Regional off-ramps run on mainnet only, so we can't wire them to a testnet demo; instead we name the concrete corridors and their evidence:
+**Pluggable to a real APAC corridor — shown, not claimed.** The off-ramp is generic SEP-24, so the production corridor is *one config value* (`VITE_ANCHOR_HOME_DOMAIN`). The corridor that already connects Stellar USDC to a local APAC economy **today, on mainnet** is **MoneyGram Access** — USDC ⇄ local fiat (incl. **PHP, cashed out at physical MoneyGram locations across the Philippines**). Run our SEP-1 discovery against it yourself — no funds, no keys:
 
-| Corridor | Real, named target | Regulatory standing (evidence) |
+```bash
+node scripts/verify-anchor.mjs stellar.moneygram.com
+#   Network:  Public Global Stellar Network ; September 2015
+#   SEP-24:   https://stellar.moneygram.com/stellaradapterservice/sep24
+# ✓ real SEP-24 anchor. Set VITE_ANCHOR_HOME_DOMAIN=stellar.moneygram.com to route cash-out through it.
+
+node scripts/verify-anchor.mjs testanchor.stellar.org   # the SDF testnet anchor the demo uses
+```
+
+**Why the demo uses the SDF test anchor:** MoneyGram (and every regulated regional off-ramp) runs on **mainnet only** — no anchor in the ecosystem exposes a *testnet* SEP-24 endpoint except SDF's, so a testnet demo can only prove the mechanism there. That's a network limitation, not a missing integration: the exact same SEP-1/10/24 code resolves MoneyGram's real endpoints above.
+
+| Corridor | Real, named target | Status |
 | --- | --- | --- |
-| 🇮🇩 IDR | **IDRX** — Rupiah-pegged stablecoin | Regulated issuer, CertiK-audited ([idrx.co](https://home.idrx.co/en/)). *Candidate only — Stellar availability still to confirm; we do not claim IDRX is already on Stellar.* |
-| 🇵🇭 PHP | **Coins.ph** — PHP e-wallet / off-ramp | Licensed by Bangko Sentral ng Pilipinas (BSP); live stablecoin + QRPh rails ([coins.ph](https://www.coins.ph/en-ph)) |
+| 🇵🇭 PHP (live) | **MoneyGram Access** — USDC ⇄ PHP at physical locations | Live on Stellar **mainnet** ([verified toml](https://stellar.moneygram.com/.well-known/stellar.toml)) — `VITE_ANCHOR_HOME_DOMAIN` swap only |
+| 🇮🇩 IDR | **IDRX** — regulated, CertiK-audited Rupiah stablecoin | Roadmap target ([idrx.co](https://home.idrx.co/en/)); Stellar availability still to confirm — *not claimed as on Stellar* |
 
-Because off-ramp is generic SEP-24 + an on-chain anchor allowlist, **swapping to any of these is configuration** (`VITE_ANCHOR_HOME_DOMAIN`), not a contract change — the anchor's home domain is the only thing that changes. Which one settles fiat first is a partnership-and-regulation question, not an unsolved technical one. The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
+Which one Shunt settles IDR/PHP through first is a partnership question, not an unsolved technical one. The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
 
 ## Business model — service fees, never interest
 
@@ -255,9 +266,9 @@ design/                  Diagrams (animated SVG) + app screenshots
 - **One tap per income, by design.** Soroban's `require_auth` wants a signature per invocation — and the Invest conversion is a second signature (a Soroban tx is single-operation by protocol). Never over-claimed as hands-free.
 - **The keeper is centralized** in this version — but it holds zero keys, income detection now runs client-side from Horizon (so the keeper isn't needed to *notice* income), and a manual trigger replaces its one remaining job. A single point of *convenience*, never of custody or fund safety.
 - **The keeper watches an explicit account list** (`WATCH_ACCOUNTS`), not every user automatically — its cron poll is demo-scoped. Per-user auto-detection at scale runs client-side today; a subscription/index model for the keeper is roadmap.
-- **The keeper's `/trigger` endpoint is open** (CORS `*`) — by design it only *builds an unsigned XDR* that is worthless without the owner's signature, so it is not a fund risk, but it is unauthenticated and could be spammed; origin-allowlisting and rate-limiting are roadmap hardening.
+- **The keeper's `/trigger` endpoint is unauthenticated** by design — it only *builds an unsigned XDR* that is worthless without the owner's signature, so it is never a fund risk. It is now **rate-limited per IP** (`isRateLimited`, default 30/min) with an **optional origin allowlist** (`ALLOWED_ORIGINS`) so it can't be spammed into KV-write amplification (`keeper/src/env.ts`; set the env var and `wrangler deploy` to activate on the live worker).
 - **Anchor settlement is not instant** — KYC is involved, and the UI says so instead of hiding it.
-- **The vault is unaudited and not upgradeable**, and `init` has no admin gate (first caller binds the token, one-time). Keep real amounts trivial until an audit; an upgradeable admin-gated redeploy is a pre-mainnet step.
+- **The vault is unaudited and not upgradeable.** `init` binds the token on first call; the **deployed instance ([CB27…](https://stellar.expert/explorer/testnet/contract/CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K)) is already initialized**, so the "first caller could bind a fake token" grief window is closed for the live contract. The clean source-level fix — a Soroban `__constructor` that binds the token atomically at deploy (no front-run window) plus an admin gate — is a pre-mainnet redeploy step, deliberately deferred so the current on-chain proof hashes stay valid. Keep real amounts trivial until an audit.
 - **Off-ramp destination control:** the shipped cash-out is the anchor's standard SEP-24 hosted withdraw; the contract's allowlisted `offramp()` path exists and is unit-tested but is not yet wired into that hosted flow.
 - **Mainnet:** all on-chain proof today is testnet (with real testnet USDC). A trivial mainnet split is a pre-launch step, not claimed as done.
 

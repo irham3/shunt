@@ -5,20 +5,26 @@ Keep answers short out loud; the detail here is backup.
 
 ---
 
-## Q1. "IDRX doesn't exist natively on Stellar — isn't your production corridor a promise with no path?"
+## Q1. "SDF sandbox doesn't connect users to any local economy — where's the real regional anchor?"
 
-**30-second answer:** "The corridor is *pluggable*, not hard-wired. We're live on
-the SDF test anchor today over standard SEP-1/10/24 rails — that proves the
-mechanism end to end. Which regulated anchor we settle IDR through in production
-(IDRX, a PHP anchor, or another) is a partnership-and-regulation question, not an
-unsolved technical one. The on-chain allowlist means USDC can only ever flow to an
-anchor the *user* approved."
+**30-second answer:** "The corridor that already connects Stellar USDC to a local
+APAC economy today is **MoneyGram Access** — USDC cashed out to **PHP at physical
+MoneyGram locations across the Philippines**, live on mainnet. Our off-ramp is
+generic SEP-24, so pointing at it is one config value. Run `node
+scripts/verify-anchor.mjs stellar.moneygram.com` — our SEP-1 discovery resolves
+MoneyGram's real SEP-24 endpoint. The demo uses the SDF test anchor only because
+MoneyGram and every regulated regional off-ramp run on **mainnet only** — no one
+exposes a testnet SEP-24 endpoint except SDF. Same code, different domain."
 
-**Why it holds:** the off-ramp is generic SEP-24 + an on-chain `anchors` allowlist
-in `set_rules`. Swapping corridors is config, not a contract change or a rewrite.
+**Why it holds:** off-ramp = generic SEP-24 + an on-chain `anchors` allowlist in
+`set_rules`. Swapping corridor = `VITE_ANCHOR_HOME_DOMAIN`, not a contract change.
+The verify-anchor script proves the discovery works against MoneyGram's live toml.
 
-**Don't say:** "IDRX is already on Stellar" (unverified). Say "IDRX is one
-*candidate* corridor."
+**For IDR specifically:** IDRX (regulated, CertiK-audited) is the roadmap target —
+say "candidate corridor," never "already on Stellar" (unverified).
+
+**Demo move:** run the verify-anchor script live against `stellar.moneygram.com` to
+show the real endpoints resolve — turns "pluggable" from a claim into a thing on screen.
 
 ---
 

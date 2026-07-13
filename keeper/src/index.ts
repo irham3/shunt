@@ -1,6 +1,6 @@
 import { Horizon } from "@stellar/stellar-sdk";
 import { buildDistributeTx, amountToStroops } from "./distribute";
-import { watchAccounts, type Env } from "./env";
+import { watchAccounts, corsHeaders, isRateLimited, type Env } from "./env";
 
 interface PendingSplit {
   account: string;
@@ -11,16 +11,10 @@ interface PendingSplit {
   error?: string;
 }
 
-const CORS_HEADERS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-headers": "content-type",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-};
-
-function json(data: unknown, status = 200): Response {
+function json(data: unknown, status = 200, cors: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", ...CORS_HEADERS },
+    headers: { "content-type": "application/json", ...cors },
   });
 }
 
@@ -114,8 +108,10 @@ export default {
   },
 
   async fetch(request: Request, env: Env): Promise<Response> {
+    const cors = corsHeaders(env, request.headers.get("origin"));
+
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return new Response(null, { status: 204, headers: cors });
     }
 
     const url = new URL(request.url);
@@ -125,35 +121,42 @@ export default {
         ok: true,
         network: env.NETWORK_PASSPHRASE.includes("Test") ? "testnet" : "mainnet",
         watching: watchAccounts(env),
-      });
+      }, 200, cors);
     }
 
     const pendingMatch = url.pathname.match(/^\/pending\/([^/]+)$/);
     if (pendingMatch && request.method === "GET") {
-      return json(await listPending(env, pendingMatch[1]));
+      return json(await listPending(env, pendingMatch[1]), 200, cors);
     }
 
     if (url.pathname === "/trigger" && request.method === "POST") {
+      // Unauthenticated by design (only builds an unsigned XDR, worthless
+      // without the owner's signature) — but rate-limited per IP so it can't be
+      // spammed into KV-write amplification.
+      const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+      if (await isRateLimited(env, ip)) {
+        return json({ error: "rate limited — slow down" }, 429, cors);
+      }
       const body = (await request.json().catch(() => ({}))) as {
         account?: string;
         amount?: string;
         txHash?: string;
       };
       if (!body.account || !body.amount || !body.txHash) {
-        return json({ error: "account, amount, txHash required" }, 400);
+        return json({ error: "account, amount, txHash required" }, 400, cors);
       }
       const entry = await handleInflow(env, body.account, body.amount, body.txHash);
-      return json(entry);
+      return json(entry, 200, cors);
     }
 
     if (url.pathname === "/complete" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as { txHash?: string };
-      if (!body.txHash) return json({ error: "txHash required" }, 400);
+      if (!body.txHash) return json({ error: "txHash required" }, 400, cors);
       await env.KEEPER_KV.delete(`pending:${body.txHash}`);
       await env.KEEPER_KV.put(`processed:${body.txHash}`, "1", { expirationTtl: 2592000 });
-      return json({ ok: true });
+      return json({ ok: true }, 200, cors);
     }
 
-    return json({ error: "not found" }, 404);
+    return json({ error: "not found" }, 404, cors);
   },
 };

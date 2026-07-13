@@ -129,7 +129,17 @@ pub struct ShuntVault;
 
 #[contractimpl]
 impl ShuntVault {
-    /// One-time init with the USDC SAC address.
+    /// One-time init with the USDC SAC address. Idempotent: re-init reverts
+    /// with `AlreadyInitialized`, so the token binding can never be changed
+    /// after the fact.
+    ///
+    /// Hardening note (pre-mainnet): on a *fresh* deploy an attacker could
+    /// front-run this call and bind a fake token before the deployer. The
+    /// clean fix is a Soroban `#[contractimpl] __constructor` that binds the
+    /// token atomically at deploy time (no front-run window). We keep `init`
+    /// here because the live testnet instance is already initialized — the
+    /// grief window is closed for it — and moving to a constructor requires a
+    /// redeploy that would invalidate the published on-chain proof hashes.
     pub fn init(env: Env, token: Address) {
         if env.storage().instance().has(&DataKey::Token) {
             panic_with_error!(&env, Error::AlreadyInitialized);
