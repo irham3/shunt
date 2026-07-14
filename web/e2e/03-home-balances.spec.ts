@@ -9,10 +9,10 @@ test.describe("home balances", () => {
   test("shows real on-chain balances with an asset selector", async ({ page, e2e }) => {
     await page.goto("/home");
 
-    // Total is denominated in USDC — not a bare dollar sign
+    // Total is denominated — home defaults to XLM (2fc6571: "prioritize XLM").
     const totalCard = page.getByTestId("total-balance-card");
     await expect(totalCard).toContainText("Total balance");
-    await expect(page.getByTestId("total-balance-value")).toContainText("USDC");
+    await expect(page.getByTestId("total-balance-value")).toContainText("XLM");
 
     // Breakdown rows: all live Horizon/contract reads
     await expect(page.getByTestId("row-wallet-usdc")).toContainText("USDC");
@@ -25,15 +25,15 @@ test.describe("home balances", () => {
       await expect(page.getByTestId("row-wallet-usdc")).toContainText(`${Number(e2e.usdcAmount).toFixed(2)} USDC`, { timeout: 30_000 });
     }
 
-    // Flip the denomination: XLM view
-    await page.getByTestId("asset-toggle-xlm").click();
-    await expect(page.getByTestId("total-balance-value")).toContainText("XLM");
+    // Flip the denomination: USDC view
+    await page.getByTestId("asset-toggle-usdc").click();
+    await expect(page.getByTestId("total-balance-value")).toContainText("USDC");
     // IDR view
     await page.getByTestId("asset-toggle-idr").click();
     await expect(page.getByTestId("total-balance-value")).toContainText("Rp");
-    // and back
-    await page.getByTestId("asset-toggle-usdc").click();
-    await expect(page.getByTestId("total-balance-value")).toContainText("USDC");
+    // and back to the default
+    await page.getByTestId("asset-toggle-xlm").click();
+    await expect(page.getByTestId("total-balance-value")).toContainText("XLM");
   });
 
   test("each lane card shows percentage and nominal amount", async ({ page }) => {

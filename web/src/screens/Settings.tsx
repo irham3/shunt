@@ -42,13 +42,32 @@ export function Settings() {
     }
   }
 
-  /** Manual trigger (F4 demo fallback): simulate a detected 500 USDC inflow. */
+  /** Manual trigger (F4 demo fallback): simulate a detected inflow using the
+      actual wallet USDC balance (capped at a sane demo max), same logic as
+      Configure Shunt's post-save panel. */
+  const [simBusy, setSimBusy] = useState(false);
   async function onSimulate() {
-    const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    const p = address ? await manualTrigger(address, "500.0000000", fakeHash) : null;
-    nav("/confirm", { state: p ?? { account: address, amount: "500.0000000", txHash: fakeHash, xdr: null } });
+    if (!address) return;
+    const walletUsdc = parseFloat(usdcBal) || 0;
+    if (walletUsdc < 1) {
+      showToast("Not enough USDC in wallet to simulate — fund your wallet first");
+      return;
+    }
+    const simAmount = Math.min(walletUsdc, 500).toFixed(7);
+    setSimBusy(true);
+    try {
+      const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      const p = await manualTrigger(address, simAmount, fakeHash);
+      if (p && !p.xdr && p.error) {
+        showToast(`Keeper error: ${p.error.slice(0, 120)}`);
+        return;
+      }
+      nav("/confirm", { state: p ?? { account: address, amount: simAmount, txHash: fakeHash, xdr: null } });
+    } finally {
+      setSimBusy(false);
+    }
   }
 
   async function onDisconnect() {
@@ -181,10 +200,10 @@ export function Settings() {
       <section className="card" style={{ border: "1px dashed var(--color-accent-secondary)" }}>
         <div style={{ fontWeight: 600, marginBottom: 4 }}>🧪 Demo fallback</div>
         <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-          Simulate a detected 500 USDC income (manual trigger F4).
+          Simulate a detected income using your actual wallet USDC balance (manual trigger F4).
         </p>
-        <button className="btn-secondary" onClick={onSimulate}>
-          Simulate incoming income
+        <button className="btn-secondary" onClick={onSimulate} disabled={simBusy}>
+          {simBusy ? "Preparing…" : "Simulate incoming income"}
         </button>
       </section>
 

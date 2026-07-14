@@ -27,10 +27,19 @@ async function handleInflow(
   const processedKey = `processed:${txHash}`;
   const pendingKey = `pending:${txHash}`;
 
+  // Already split (completed) → never rebuild; the contract would reject the
+  // replayed inflow_key anyway. This is the terminal idempotency guard.
   if (await env.KEEPER_KV.get(processedKey)) {
     const existing = await env.KEEPER_KV.get(pendingKey, "json");
     return (existing as PendingSplit) ?? { account, amount, txHash, xdr: null, detectedAt: new Date().toISOString(), error: "already processed" };
   }
+
+  // Reuse a previously-prepared XDR (idempotent, avoids rebuild churn) — but
+  // ONLY if that prior build actually succeeded. A cached entry with a null
+  // xdr means the last build FAILED (e.g. rules weren't on-chain yet); fall
+  // through and retry so the split isn't stuck broken until the 24h TTL.
+  const cached = (await env.KEEPER_KV.get(pendingKey, "json")) as PendingSplit | null;
+  if (cached && cached.xdr) return cached;
 
   const entry: PendingSplit = {
     account,
@@ -73,10 +82,15 @@ async function poll(env: Env): Promise<void> {
           payment.asset_code === env.USDC_CODE &&
           payment.asset_issuer === env.USDC_ISSUER;
         if (isUsdcIn) {
-          await handleInflow(env, account, payment.amount, payment.transaction_hash);
-          await env.KEEPER_KV.put(`processed:${payment.transaction_hash}`, "1", {
-            expirationTtl: 2592000, // 30 days
-          });
+          const entry = await handleInflow(env, account, payment.amount, payment.transaction_hash);
+          // Only mark processed once we have a valid prepared XDR. A failed
+          // build (null xdr) stays un-processed so a later /trigger (or the
+          // next detection) can rebuild it instead of being stuck 30 days.
+          if (entry.xdr) {
+            await env.KEEPER_KV.put(`processed:${payment.transaction_hash}`, "1", {
+              expirationTtl: 2592000, // 30 days
+            });
+          }
         }
         await env.KEEPER_KV.put(cursorKey, payment.paging_token);
       }

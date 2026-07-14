@@ -29,8 +29,7 @@ function getVaultClient(publicKey: string): Client {
     publicKey,
     // The bindings Client calls this to sign assembled transactions.
     async signTransaction(xdr: string) {
-      const result = await signTxXdr(xdr, NETWORK_PASSPHRASE);
-      return result.signedTxXdr;
+      return signTxXdr(xdr, NETWORK_PASSPHRASE);
     },
   });
 }

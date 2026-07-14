@@ -7,6 +7,11 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 > Setup before recording: Freighter on testnet with a funded account + USDC
 > trustline; `web` running (`npm run dev`, port 5199) or the live URL; keeper URL
 > set; have the Stellar Expert explorer open in a second tab for the proof hash.
+> If real income isn't already sitting in the wallet, use the **"Try it
+> (simulated income)"** button in Configure Shunt's post-save panel (or
+> Settings → Demo fallback → "Simulate incoming income") — it builds a real
+> `distribute` XDR against the wallet's actual USDC balance via the keeper, so
+> the split that follows is a genuine on-chain transaction, not a mock.
 
 ---
 
@@ -30,7 +35,10 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 
 ### [1:00–1:40] Income lands → one-tap split (the core)
 - **On screen:** Home shows detected un-split USDC → tap Split → review exact
-  breakdown → Freighter signs `distribute` → lanes update.
+  breakdown → Freighter signs `distribute` → lanes update. (No inflow queued
+  yet? Tap "Try it (simulated income)" on Configure Shunt instead — same
+  keeper-prepared XDR, same on-chain split, just triggered manually so the
+  demo isn't blocked on waiting for a real transfer.)
 - **Say:** "Income lands. The app detects it from Horizon, I review the exact
   breakdown, and approve once. One atomic transaction: Needs and Buffer stay in my
   wallet, Savings moves into the vault and the timelock starts."
@@ -62,3 +70,8 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 - [ ] Show at least one real explorer hash (the `distribute` split).
 - [ ] Keep the "honest boundary" lines — they land with judges.
 - [ ] ≤ 3 min; upload unlisted (YouTube/Loom); paste link into SUBMISSION.md.
+- [ ] **Before recording against the live URL:** confirm the deployed build is
+  current — `cd web && npm run build` must succeed locally with no `tsc`
+  errors. A failed Vercel build silently keeps serving the previous good
+  deploy, so a broken build never shows up as "down" — it shows up as stale
+  bugs already fixed in the repo. If in doubt, record against `npm run dev`.

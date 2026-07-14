@@ -118,7 +118,11 @@ export function SendPay() {
     }
   }
 
-  const transferBalance = sendAsset === "XLM" ? Number(xlmBalance ?? 0) : Number(usdcBalance ?? 0);
+  // The relevant balance for whichever asset is selected — null until the
+  // real on-chain read resolves (Horizon fetch on mount).
+  const transferBalanceRaw = sendAsset === "XLM" ? xlmBalance : usdcBalance;
+  const transferBalanceLoaded = transferBalanceRaw !== null;
+  const transferBalance = Number(transferBalanceRaw ?? 0);
 
   // --- Transfer submit (XLM or USDC, user's choice) ---
   async function onSubmitTransfer() {
@@ -130,6 +134,10 @@ export function SendPay() {
     }
     const amt = Number(xlmAmount);
     if (isNaN(amt) || amt <= 0) { setXlmErr("Enter a valid amount."); return; }
+    // Balance hasn't loaded yet — don't reject an honest amount as "exceeds
+    // your balance (0)". The button is disabled for this case too; this is
+    // the defensive check in case submit fires before that state settles.
+    if (!transferBalanceLoaded) { setXlmErr("Still loading your balance — try again in a moment."); return; }
     if (amt > transferBalance) { setXlmErr(`Exceeds your ${sendAsset} balance (${transferBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}).`); return; }
     if (sendAsset === "USDC" && !usdcTrustline) { setXlmErr("Enable USDC on your wallet first (add the trustline)."); return; }
 
@@ -408,8 +416,8 @@ export function SendPay() {
             )}
           </div>
 
-          <button className="btn-primary" disabled={xlmBusy || !xlmAmount || !xlmDest} onClick={onSubmitTransfer}>
-            {xlmBusy ? "Signing & submitting…" : `Send ${sendAsset}`}
+          <button className="btn-primary" disabled={xlmBusy || !xlmAmount || !xlmDest || !transferBalanceLoaded} onClick={onSubmitTransfer} data-testid="send-submit">
+            {xlmBusy ? "Signing & submitting…" : !transferBalanceLoaded ? "Loading balance…" : `Send ${sendAsset}`}
           </button>
           {xlmErr && (
             <p role="alert" style={{ color: "#ffb4ab", fontSize: 13 }}>

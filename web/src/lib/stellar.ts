@@ -14,6 +14,7 @@ import {
   Asset,
   Operation,
   StrKey,
+  Transaction,
 } from "@stellar/stellar-sdk";
 
 export const NETWORK = (import.meta.env.VITE_STELLAR_NETWORK ?? "testnet") as
@@ -540,9 +541,10 @@ export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
   try {
     const server = new rpc.Server(RPC_URL);
 
-    // Parse the keeper-prepared tx to extract the source account
+    // Parse the keeper-prepared tx to extract the source account (the keeper
+    // only ever prepares plain transactions, never fee-bumps).
     const origTx = TransactionBuilder.fromXDR(preparedXdr, NETWORK_PASSPHRASE);
-    const sourceAddr = origTx.source;
+    const sourceAddr = (origTx as Transaction).source;
 
     // Fetch the current sequence number from the network
     let freshSource;
@@ -555,17 +557,19 @@ export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
     // Rebuild the transaction with a fresh sequence number AND time bounds.
     // This preserves all operations, fee, and Soroban auth/resources from
     // the keeper's prepared envelope — only the sequence + timeBounds change.
+    // SequenceNumber/TimePoint are type aliases for Int64/Uint64 (not
+    // separately declared classes) — construct via the underlying class.
     const origEnv = xdr.TransactionEnvelope.fromXDR(preparedXdr, "base64");
     const txV1 = origEnv.v1().tx();
-    txV1.seqNum(xdr.SequenceNumber.fromString(
+    txV1.seqNum(new xdr.Int64(
       (BigInt(freshSource.sequenceNumber()) + 1n).toString(),
     ));
 
     // Extend time bounds: set maxTime to now + 300s so the tx doesn't fail
     // with txTOO_LATE when the keeper prepared it long ago.
     const newMaxTime = Math.floor(Date.now() / 1000) + 300;
-    const zeroTime = xdr.TimePoint.fromString("0");
-    const freshMaxTime = xdr.TimePoint.fromString(newMaxTime.toString());
+    const zeroTime = new xdr.Uint64("0");
+    const freshMaxTime = new xdr.Uint64(newMaxTime.toString());
 
     const condSwitch = txV1.cond().switch().name;
     if (condSwitch === "precondTime") {

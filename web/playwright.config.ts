@@ -19,14 +19,14 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost:5199",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     viewport: { width: 1280, height: 900 },
   },
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:5173",
+    command: "npm run dev -- --port 5199 --strictPort",
+    url: "http://localhost:5199",
     reuseExistingServer: true,
     timeout: 60_000,
   },

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
-import { markComplete, type PendingSplit } from "../lib/keeper";
+import { markComplete, manualTrigger, type PendingSplit } from "../lib/keeper";
 import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
 import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
@@ -96,14 +96,29 @@ export function AutoSplitConfirm() {
         const p = allPending[i];
         const amt = Number(p.amount);
 
-        if (!p.xdr) {
-          const reason = p.error
-            ? `Keeper failed: ${p.error.slice(0, 150)}`
-            : "Missing prepared XDR for split. Ensure Vault contract is deployed and Keeper is running.";
+        // The keeper may have handed us a stale entry with no prepared XDR
+        // (e.g. it was detected before rules were saved on-chain, so the
+        // simulation failed and got cached). Ask it to rebuild once before
+        // giving up — the keeper now retries null-XDR entries.
+        let xdr = p.xdr;
+        let buildError = p.error;
+        if (!xdr) {
+          const rebuilt = await manualTrigger(p.account, p.amount, p.txHash);
+          if (rebuilt?.xdr) {
+            xdr = rebuilt.xdr;
+          } else if (rebuilt?.error) {
+            buildError = rebuilt.error;
+          }
+        }
+
+        if (!xdr) {
+          const reason = buildError
+            ? `Couldn't prepare the split: ${buildError.slice(0, 180)}. If this is a fresh wallet, save your Shunt rules on-chain first.`
+            : "Couldn't prepare the split. Save your Shunt rules on-chain, then try again — and make sure the keeper is reachable.";
           throw new Error(reason);
         }
 
-        const hash = await signAndSubmitXdr(p.xdr);
+        const hash = await signAndSubmitXdr(xdr);
         await markComplete(p.txHash);
         applySplit(amt, hash);
         await runInvestConversion(amt, true);

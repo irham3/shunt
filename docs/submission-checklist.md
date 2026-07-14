@@ -24,6 +24,21 @@ Status as of 2026-07-14. Tick the ⬜ items before you submit.
 eligibility regardless of code quality. Use `docs/demo-script.md`; open a terminal
 in repo root + the app, keep the honest-boundary lines in, show one real explorer hash.
 
+## Deployment gotcha (found + fixed 2026-07-14)
+
+The live Vercel build had been silently stale since the `xdr.SequenceNumber`/
+`TimePoint` sequence-refresh fix (commit `9e659dc`) shipped a `tsc` type error
+that made `npm run build` fail — Vercel keeps serving the last **successful**
+build on a failed one, so this never showed up as a deploy failure, only as
+old bugs (including the hardcoded-500-USDC "simulate income" bug) still being
+live days after they were fixed in the repo. Fixed in `web/src/lib/stellar.ts`
+(`xdr.Int64`/`xdr.Uint64` instead of the non-existent `xdr.SequenceNumber`/
+`TimePoint` value exports) and `web/src/lib/vault.ts` (signTransaction must
+return the `{signedTxXdr}` object, not a bare string). `npm run build` now
+passes clean. **Action needed:** trigger a fresh Vercel deploy (push already
+on `main`; redeploy manually if the auto-deploy hook doesn't fire) and diff
+the live bundle against `main` before recording the demo video.
+
 ## Nice-to-have before submitting (optional, fast)
 
 ⬜ Run the "local economy" beat once to confirm it's smooth on your machine:
