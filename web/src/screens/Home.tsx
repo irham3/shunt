@@ -180,6 +180,15 @@ export function Home() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
       const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash);
+      if (p && !p.xdr && p.error) {
+        if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
+          showToast("Allocation rules not found on-chain. Please configure and save rules first.");
+          nav("/shunt");
+        } else {
+          showToast(`Keeper error: ${p.error.slice(0, 120)}`);
+        }
+        return;
+      }
       nav("/confirm", {
         state: p ?? { account: address, amount: unsplitUsdc.toFixed(7), txHash: syntheticHash, xdr: null },
       });

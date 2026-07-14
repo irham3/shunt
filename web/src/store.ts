@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil, vaultGetGoals, vaultGetUnallocatedSavings, type Goal as ChainGoal } from "./lib/vault";
+import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil, vaultGetGoals, vaultGetUnallocatedSavings, vaultGetRules, type Goal as ChainGoal } from "./lib/vault";
 import { fetchAccountBalances } from "./lib/stellar";
 
 /**
@@ -149,7 +149,7 @@ export const useShunt = create<ShuntState>()(
       activity: [],
       toast: null,
 
-      setAddress: (address) => set({ address }),
+      setAddress: (address) => set({ address, rulesSavedOnChain: false }),
       setWalletId: (walletId) => set({ walletId }),
       setBuckets: (buckets) => set({ buckets }),
       setBucketPct: (id, pct) => {
@@ -418,6 +418,10 @@ export const useShunt = create<ShuntState>()(
 
       syncFromChain: async (address: string) => {
         try {
+          // Check if rules exist on-chain for this account
+          const onChainRules = await vaultGetRules(address).catch(() => null);
+          set({ rulesSavedOnChain: onChainRules !== null });
+
           const savingsBig = await vaultGetSavings(address);
           const bufferCreditBig = await vaultGetBufferCredit(address);
           const lockUntilBig = await vaultGetLockUntil(address);

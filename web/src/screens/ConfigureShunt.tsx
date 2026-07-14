@@ -140,7 +140,11 @@ export function ConfigureShunt() {
         .join("");
       const p = await manualTrigger(address, simAmount, fakeHash);
       if (p && !p.xdr && p.error) {
-        showToast(`Keeper error: ${p.error.slice(0, 120)}`);
+        if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
+          showToast("Allocation rules not found on-chain for this account. Please click Save above first.");
+        } else {
+          showToast(`Keeper error: ${p.error.slice(0, 120)}`);
+        }
         return;
       }
       nav("/confirm", { state: p ?? { account: address, amount: simAmount, txHash: fakeHash, xdr: null } });
