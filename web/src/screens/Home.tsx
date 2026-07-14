@@ -169,6 +169,11 @@ export function Home() {
   /** One-tap split for wallet USDC no lane has claimed (direct transfers). */
   async function onSplitNow() {
     if (!address || unsplitUsdc <= 0) return;
+    if (!rulesSavedOnChain) {
+      showToast("Please configure and save your allocation rules first.");
+      nav("/shunt");
+      return;
+    }
     setSplittingNow(true);
     try {
       const syntheticHash = [...crypto.getRandomValues(new Uint8Array(32))]

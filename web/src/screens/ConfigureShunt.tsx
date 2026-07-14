@@ -41,6 +41,7 @@ export function ConfigureShunt() {
     setLockSecs: persistLockSecs,
     investAsset,
     setInvestAsset,
+    rulesSavedOnChain,
   } = useShunt();
   const [lockSecs, setLockSecs] = useState(storedLockSecs);
   const [busy, setBusy] = useState(false);
@@ -121,6 +122,10 @@ export function ConfigureShunt() {
   /** Demo fallback lives here too: rules just saved → try the loop right away. */
   async function onSimulate() {
     if (!address) return;
+    if (!rulesSavedOnChain) {
+      showToast("Please save your allocation rules first.");
+      return;
+    }
     const walletUsdc = Number(usdcBalance ?? 0);
     if (walletUsdc < 1) {
       showToast("Not enough USDC in wallet to simulate — fund your wallet first");
