@@ -310,17 +310,40 @@ export function Home() {
       </section>
 
       {pending.length > 0 && (
-        <button
+        <div
           className="card"
-          onClick={() => nav("/confirm", { state: pending[0] })}
-          style={{ border: "1px solid var(--color-accent-primary)", textAlign: "left", display: "block" }}
+          style={{ border: "1px solid var(--color-accent-primary)", textAlign: "left" }}
           data-testid="income-detected-banner"
         >
-          <strong style={{ color: "var(--color-accent-primary)" }}>Income detected!</strong>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {pending[0].amount} USDC landed — tap to approve the split.
+          <strong style={{ color: "var(--color-accent-primary)" }}>
+            {pending.length === 1 ? "Income detected!" : `${pending.length} incomes detected!`}
+          </strong>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+            {pending.length === 1
+              ? `${pending[0].amount} USDC landed — tap to approve the split.`
+              : `${fmtUsdc(pending.reduce((s, p) => s + Number(p.amount), 0))} USDC total — split them all in one go, or review individually.`
+            }
           </div>
-        </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              className="btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => nav("/confirm", { state: pending.length === 1 ? pending[0] : pending })}
+              data-testid="split-all-button"
+            >
+              {pending.length === 1 ? "Approve split" : `Split all ${pending.length}`}
+            </button>
+            {pending.length > 1 && (
+              <button
+                className="btn-secondary"
+                style={{ flex: 0, whiteSpace: "nowrap", width: "auto", padding: "0 16px" }}
+                onClick={() => nav("/confirm", { state: pending[0] })}
+              >
+                Review 1st
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {pending.length === 0 && rulesSavedOnChain && unsplitUsdc >= 0.01 && (

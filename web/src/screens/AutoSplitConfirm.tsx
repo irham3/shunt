@@ -9,99 +9,131 @@ import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
 /**
- * F4: one-tap approval of a keeper-prepared split. Also reachable via the
- * manual trigger (demo fallback) with a synthetic amount.
+ * F4: one-tap approval of keeper-prepared splits. Supports both single income
+ * and batch "Split All" (array of PendingSplits processed sequentially).
  */
 export function AutoSplitConfirm() {
   const nav = useNavigate();
   const { state } = useLocation();
-  const pending = state as PendingSplit | null;
+
+  // Normalize: single PendingSplit or PendingSplit[]
+  const allPending: PendingSplit[] = useMemo(() => {
+    if (!state) return [];
+    if (Array.isArray(state)) return state as PendingSplit[];
+    return [state as PendingSplit];
+  }, [state]);
+
+  const isBatch = allPending.length > 1;
+  const totalAmount = useMemo(
+    () => allPending.reduce((s, p) => s + Number(p.amount), 0),
+    [allPending],
+  );
+
   const { address, buckets, investAsset, applySplit, applyInvestConversion, showToast } = useShunt();
   const investLabel = investAsset === "GOLD" ? "Invest → Gold (XAUm)" : "Invest → XLM (DCA)";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [doneHash, setDoneHash] = useState<string | null>(null);
+  const [doneHashes, setDoneHashes] = useState<string[]>([]);
+  const [progress, setProgress] = useState(0); // 0-based index during batch
 
-  const amount = pending ? Number(pending.amount) : 500;
   const investAmt = useMemo(() => {
     const pct = buckets.find((b) => b.id === "invest")?.pct ?? 0;
-    return (amount * pct) / 100;
-  }, [amount, buckets]);
+    return (totalAmount * pct) / 100;
+  }, [totalAmount, buckets]);
+
   const rows = useMemo(() => {
     const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
-    const savings = (amount * pct("savings")) / 100;
-    const buffer = (amount * pct("buffer")) / 100;
-    const invest = (amount * pct("invest")) / 100;
+    const savings = (totalAmount * pct("savings")) / 100;
+    const buffer = (totalAmount * pct("buffer")) / 100;
+    const invest = (totalAmount * pct("invest")) / 100;
     const out = [
-      { id: "needs", label: "Needs → wallet", amt: amount - savings - buffer - invest },
+      { id: "needs", label: "Needs → wallet", amt: totalAmount - savings - buffer - invest },
       { id: "savings", label: "Savings → vault (timelock)", amt: savings },
       { id: "buffer", label: "Buffer → wallet", amt: buffer },
     ];
     if (invest > 0) out.push({ id: "invest", label: investLabel, amt: invest });
     return out;
-  }, [amount, buckets, investLabel]);
+  }, [totalAmount, buckets, investLabel]);
 
   /**
-   * F12: convert the invest slice after the split. A Soroban tx is
-   * single-operation, so this is a separate classic path payment (2nd tap
-   * on-chain); when no wallet/liquidity is available it falls back to a
-   * *labeled* simulated conversion — same honesty pattern as the IDR rate.
+   * F12: convert the invest slice after the split.
    */
-  async function runInvestConversion(splitWasOnChain: boolean) {
-    if (investAmt <= 0) return;
+  async function runInvestConversion(splitAmount: number, splitWasOnChain: boolean) {
+    const pct = buckets.find((b) => b.id === "invest")?.pct ?? 0;
+    const thisInvestAmt = (splitAmount * pct) / 100;
+    if (thisInvestAmt <= 0) return;
 
-    // Gold (XAUm): no XAUm DEX liquidity on testnet, so the slice is recorded
-    // at a labeled reference rate — honest, same pattern as the IDR/XLM fallbacks.
     if (investAsset === "GOLD") {
       const { rate } = await getGoldUsdRate();
-      const grams = investAmt / rate;
-      applyInvestConversion(investAmt, grams, undefined, true);
-      showToast("Invest slice earmarked for Gold (XAUm) at reference rate");
+      const grams = thisInvestAmt / rate;
+      applyInvestConversion(thisInvestAmt, grams, undefined, true);
       return;
     }
 
-    // XLM: real path payment through the Stellar DEX when possible.
     const { rate, stale } = await getXlmUsdRate();
-    const estXlm = investAmt / rate;
+    const estXlm = thisInvestAmt / rate;
     if (splitWasOnChain && address) {
       try {
-        const minXlm = (estXlm * 0.95).toFixed(7); // 5% slippage floor
-        const hash = await convertUsdcToXlm(address, investAmt.toFixed(7), minXlm);
-        applyInvestConversion(investAmt, estXlm, hash, false);
-        showToast("Invest slice converted to XLM");
+        const minXlm = (estXlm * 0.95).toFixed(7);
+        const hash = await convertUsdcToXlm(address, thisInvestAmt.toFixed(7), minXlm);
+        applyInvestConversion(thisInvestAmt, estXlm, hash, false);
         return;
       } catch {
-        showToast(`DEX conversion unavailable — recorded at ${stale ? "fallback" : "market"} rate`);
+        // fall through to simulation
       }
     }
-    applyInvestConversion(investAmt, estXlm, undefined, true);
+    applyInvestConversion(thisInvestAmt, estXlm, undefined, true);
   }
 
   async function onApprove() {
     setBusy(true);
     setErr(null);
+    const hashes: string[] = [];
+
     try {
-      if (!pending?.xdr) {
-        throw new Error("Missing prepared XDR from Keeper. Ensure Vault contract is deployed and Keeper is running.");
+      for (let i = 0; i < allPending.length; i++) {
+        setProgress(i);
+        const p = allPending[i];
+        const amt = Number(p.amount);
+
+        if (!p.xdr) {
+          throw new Error(`Missing prepared XDR for split #${i + 1}. Ensure Vault contract is deployed and Keeper is running.`);
+        }
+
+        const hash = await signAndSubmitXdr(p.xdr);
+        await markComplete(p.txHash);
+        applySplit(amt, hash);
+        await runInvestConversion(amt, true);
+        hashes.push(hash);
       }
-      const hash = await signAndSubmitXdr(pending.xdr);
-      await markComplete(pending.txHash);
-      
-      applySplit(amount, hash);
-      await runInvestConversion(true);
-      setDoneHash(hash);
-      showToast("Income landed — auto-split complete");
+
+      setDoneHashes(hashes);
+      showToast(
+        isBatch
+          ? `All ${allPending.length} incomes split — ${fmtUsdc(totalAmount)} USDC routed`
+          : "Income landed — auto-split complete",
+      );
     } catch (e) {
       const formatted = formatError(e);
       if (formatted) setErr(formatted);
+      // Still save any hashes that succeeded
+      if (hashes.length > 0) setDoneHashes(hashes);
     } finally {
       setBusy(false);
     }
   }
 
+  const done = doneHashes.length > 0;
+
   return (
     <div className="screen" style={{ justifyContent: "center", minHeight: "100dvh", textAlign: "center" }}>
-      <h2 style={{ margin: 0 }}>Income landed</h2>
+      <h2 style={{ margin: 0 }}>
+        {done
+          ? (doneHashes.length === allPending.length ? "All splits complete" : `${doneHashes.length}/${allPending.length} splits complete`)
+          : isBatch
+            ? `${allPending.length} incomes landed`
+            : "Income landed"}
+      </h2>
       <motion.div
         className="numeric"
         style={{ fontSize: 36, fontWeight: 700 }}
@@ -109,8 +141,14 @@ export function AutoSplitConfirm() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 18 }}
       >
-        <AnimatedNumber value={amount} decimals={2} /> <span style={{ fontSize: 18 }}>USDC</span>
+        <AnimatedNumber value={totalAmount} decimals={2} /> <span style={{ fontSize: 18 }}>USDC</span>
       </motion.div>
+
+      {isBatch && (
+        <div className="muted" style={{ fontSize: 13 }}>
+          {allPending.length} transactions combined · one approval flow
+        </div>
+      )}
 
       <div className="card" style={{ padding: "16px 0", display: "flex", justifyContent: "center" }}>
         <DonutChart buckets={buckets} size={150} strokeWidth={20} />
@@ -136,29 +174,39 @@ export function AutoSplitConfirm() {
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-        Atomic split in a single transaction · sub-cent network fee
+        {isBatch ? `${allPending.length} atomic splits · ` : "Atomic split in a single transaction · "}
+        sub-cent network fee
         {investAmt > 0 && (investAsset === "GOLD"
           ? " · invest slice earmarked for Gold (XAUm)"
           : " · invest slice converts via a follow-up path payment")}
       </p>
 
-      {doneHash ? (
+      {done ? (
         <>
-          <a
-            href={EXPLORER_TX(doneHash)}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "var(--color-accent-secondary)" }}
-          >
-            View on explorer ↗
-          </a>
+          {doneHashes.map((h, i) => (
+            <a
+              key={h}
+              href={EXPLORER_TX(h)}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "var(--color-accent-secondary)", fontSize: 13 }}
+            >
+              {isBatch ? `Split #${i + 1} ` : ""}View on explorer ↗
+            </a>
+          ))}
           <button className="btn-primary" onClick={() => nav("/home")}>
             Done
           </button>
         </>
       ) : (
         <button className="btn-primary" disabled={busy} onClick={onApprove}>
-          {busy ? "Processing…" : "Approve split (1 tap)"}
+          {busy
+            ? isBatch
+              ? `Processing ${progress + 1} of ${allPending.length}…`
+              : "Processing…"
+            : isBatch
+              ? `Approve all ${allPending.length} splits (1 flow)`
+              : "Approve split (1 tap)"}
         </button>
       )}
       <button className="btn-ghost" onClick={() => nav("/home")}>
@@ -172,3 +220,4 @@ export function AutoSplitConfirm() {
     </div>
   );
 }
+
