@@ -1,8 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0B0F14"/>
-  <path d="M8 32 H26" stroke="#F5F7FA" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="30" cy="32" r="4" fill="#BEF264"/>
-  <path d="M34 30 C42 26 46 18 54 16" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" fill="none"/>
-  <path d="M34 32 H54" stroke="#BEF264" stroke-width="3" stroke-linecap="round"/>
-  <path d="M34 34 C42 38 46 46 54 48" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#0d1218"/>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" stroke="white" stroke-opacity="0.08" fill="none"/>
+  <path d="M8 32 H25" stroke="#E8ECF2" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M34 30 C42 26 46 18 54 16" stroke="#FBBF24" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M34 32 H54" stroke="#BEF264" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M34 34 C42 38 46 46 54 48" stroke="#38BDF8" stroke-width="3.4" stroke-linecap="round"/>
+  <circle cx="30" cy="32" r="4.4" fill="#BEF264"/>
 </svg>

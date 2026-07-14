@@ -44,13 +44,9 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
   be fiction. Early exit costs 10%, but it's not lost — it goes to your *own*
   buffer. Discipline with a safety valve."
 
-### [2:10–2:35] Cash out (anchor)
-- **On screen:** Send & Pay → withdraw → anchor's SEP-24 hosted flow opens, rate +
-  fee shown before confirm.
-- **Say:** "Cash-out to fiat runs on standard SEP-24 anchor rails. Demo uses SDF's
-  test anchor — the production corridor is a licensed regional anchor like IDRX or
-  Coins.ph; swapping is config, not a rewrite. Settlement is the anchor's, and we
-  say so instead of faking 'instant'."
+### [2:10–2:35] Cash out & Transfer
+- **On screen:** Send & Pay — choose between USDC and XLM for the asset. Show a direct transfer, then withdraw where the anchor's SEP-24 hosted flow opens, rate + fee shown before confirm.
+- **Say:** "You can send either USDC or XLM. Cash-out to fiat runs on standard SEP-24 anchor rails. Demo uses SDF's test anchor — the production corridor is a licensed regional anchor like IDRX or Coins.ph; swapping is config, not a rewrite. Settlement is the anchor's, and we say so instead of faking 'instant'."
 
 ### [2:35–3:00] Honest close
 - **Say:** "What's real today: a 19-test contract, a real-testnet end-to-end suite,

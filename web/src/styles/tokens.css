@@ -267,12 +267,19 @@ button {
     background: #0d1218;
     z-index: 30;
   }
+  /* Default screens are single-column forms — cap them at a comfortable
+     reading width on desktop so inputs/buttons don't stretch across the whole
+     rail-offset viewport. Dashboard-style screens opt into full width with
+     `.screen-wide` (Home, Configure, Savings, Activity). */
   .screen {
     width: 100%;
-    max-width: var(--content-max);
+    max-width: 660px;
     margin: 0 auto;
     padding: 32px 40px;
     gap: 20px;
+  }
+  .screen.screen-wide {
+    max-width: var(--content-max);
   }
 }
 
@@ -370,6 +377,24 @@ button {
 .rail-item.active {
   color: var(--color-accent-primary);
   background: var(--color-bg-elevated);
+}
+
+.rail-group-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  padding: 16px 16px 8px;
+  margin-top: 8px;
+}
+
+.rail-lane-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .toast {

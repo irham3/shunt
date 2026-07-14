@@ -95,6 +95,8 @@ interface ShuntState {
   applyInvestConversion: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
   /** Record a direct wallet-to-wallet XLM payment (Send & Pay, XLM tab). */
   recordXlmPayment: (destination: string, amountXlm: string, txHash: string) => void;
+  /** Record a direct wallet-to-wallet USDC payment (Send & Pay, USDC transfer). */
+  recordUsdcPayment: (destination: string, amountUsdc: string, txHash: string) => void;
   /** Record an in-app XLM ⇄ USDC conversion (Convert tab, DEX path payment). */
   recordConversion: (
     from: "XLM" | "USDC",
@@ -329,6 +331,25 @@ export const useShunt = create<ShuntState>()(
               amountXlm: Number(amountXlm),
               txHash,
               at: new Date().toISOString(),
+            },
+            ...activity,
+          ],
+        });
+      },
+
+      recordUsdcPayment: (destination, amountUsdc, txHash) => {
+        const { activity } = get();
+        const short = `${destination.slice(0, 4)}…${destination.slice(-4)}`;
+        set({
+          activity: [
+            {
+              id: `${Date.now()}`,
+              kind: "payment",
+              title: `Sent USDC to ${short}`,
+              amountUsdc: Number(amountUsdc),
+              txHash,
+              at: new Date().toISOString(),
+              bucket: "needs",
             },
             ...activity,
           ],

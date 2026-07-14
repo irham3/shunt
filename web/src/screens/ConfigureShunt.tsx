@@ -134,7 +134,7 @@ export function ConfigureShunt() {
   }
 
   return (
-    <div className="screen">
+    <div className="screen screen-wide">
       <header>
         <h2 style={{ margin: 0 }}>Configure Shunt</h2>
         <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>

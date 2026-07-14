@@ -187,7 +187,7 @@ export function Home() {
   }, [view, totalUsdc, walletXlm, idr, xlmUsd]);
 
   return (
-    <div className="screen">
+    <div className="screen screen-wide">
       <motion.header
         className="card"
         initial={{ opacity: 0, y: 12 }}

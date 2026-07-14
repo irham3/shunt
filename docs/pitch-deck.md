@@ -65,7 +65,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 > Screen-share the app (testnet). Beats: connect → set rules → income lands →
 > one-tap split → show the explorer hash + `split` event → savings vault with the
-> 10%-penalty-to-buffer safety valve → anchor cash-out with rate+fee shown first.
+> 10%-penalty-to-buffer safety valve → multi-asset transfer (USDC/XLM) → anchor cash-out with rate+fee shown first.
 
 **One line to say while the explorer loads:** "Real on-chain, real testnet USDC — here's the hash."
 

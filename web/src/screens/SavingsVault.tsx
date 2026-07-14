@@ -98,7 +98,7 @@ export function SavingsVault() {
   }
 
   return (
-    <div className="screen">
+    <div className="screen screen-wide">
       <header>
         <h2 style={{ margin: 0 }}>Savings Vault</h2>
         <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>

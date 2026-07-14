@@ -261,11 +261,14 @@ export async function fetchRecentPayments(
   return out;
 }
 
-/** Build, sign (WalletKit), and submit a native XLM payment on Horizon. */
-export async function sendXlmPayment(
+/** Build, sign (WalletKit), and submit a classic payment of `asset` on Horizon.
+    Shared by the XLM and USDC transfer paths — the user picks which asset to
+    send in Send & Pay. */
+async function sendAssetPayment(
   sender: string,
   destination: string,
   amount: string,
+  asset: Asset,
 ): Promise<string> {
   const horizon = new Horizon.Server(HORIZON_URL);
   let source;
@@ -279,13 +282,7 @@ export async function sendXlmPayment(
     fee: "100",
     networkPassphrase: NETWORK_PASSPHRASE,
   })
-    .addOperation(
-      Operation.payment({
-        destination,
-        asset: Asset.native(),
-        amount,
-      }),
-    )
+    .addOperation(Operation.payment({ destination, asset, amount }))
     .setTimeout(300)
     .build();
 
@@ -297,6 +294,17 @@ export async function sendXlmPayment(
   } catch (e) {
     parseWalletError(e);
   }
+}
+
+/** Send native XLM to another wallet. */
+export async function sendXlmPayment(sender: string, destination: string, amount: string): Promise<string> {
+  return sendAssetPayment(sender, destination, amount, Asset.native());
+}
+
+/** Send USDC to another wallet. The recipient must hold a USDC trustline or the
+    payment is rejected by the network (surfaced as an error). */
+export async function sendUsdcPayment(sender: string, destination: string, amount: string): Promise<string> {
+  return sendAssetPayment(sender, destination, amount, new Asset(USDC_CODE, USDC_ISSUER));
 }
 
 /**

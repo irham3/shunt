@@ -6,6 +6,7 @@ import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANC
 import { getIdrRate } from "../lib/rates";
 import {
   sendXlmPayment,
+  sendUsdcPayment,
   fetchXlmBalance,
   convertXlmToUsdc,
   convertUsdcToXlm,
@@ -37,7 +38,7 @@ const SLIPPAGE_PCT = 2;
 export function SendPay() {
   const {
     address, balances, xlmBalance, usdcBalance, usdcTrustline, refreshWallet,
-    setXlmBalance, offramp, showToast, activity, recordXlmPayment, recordConversion,
+    setXlmBalance, offramp, showToast, activity, recordXlmPayment, recordUsdcPayment, recordConversion,
   } = useShunt();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab");
@@ -52,10 +53,11 @@ export function SendPay() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // XLM send state
+  // Transfer state — user picks which asset (XLM or USDC) to send.
+  const [sendAsset, setSendAsset] = useState<"XLM" | "USDC">("XLM");
   const [xlmDest, setXlmDest] = useState("");
   const [xlmAmount, setXlmAmount] = useState("");
-  const [xlmResult, setXlmResult] = useState<{ hash: string } | null>(null);
+  const [xlmResult, setXlmResult] = useState<{ hash: string; asset: string; amount: string; dest: string } | null>(null);
   const [xlmErr, setXlmErr] = useState<string | null>(null);
   const [xlmBusy, setXlmBusy] = useState(false);
 
@@ -116,8 +118,10 @@ export function SendPay() {
     }
   }
 
-  // --- XLM send submit ---
-  async function onSubmitXlm() {
+  const transferBalance = sendAsset === "XLM" ? Number(xlmBalance ?? 0) : Number(usdcBalance ?? 0);
+
+  // --- Transfer submit (XLM or USDC, user's choice) ---
+  async function onSubmitTransfer() {
     setXlmErr(null);
     if (!address) { setXlmErr("No wallet connected."); return; }
     if (!StrKey.isValidEd25519PublicKey(xlmDest.trim())) {
@@ -126,19 +130,28 @@ export function SendPay() {
     }
     const amt = Number(xlmAmount);
     if (isNaN(amt) || amt <= 0) { setXlmErr("Enter a valid amount."); return; }
+    if (amt > transferBalance) { setXlmErr(`Exceeds your ${sendAsset} balance (${transferBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}).`); return; }
+    if (sendAsset === "USDC" && !usdcTrustline) { setXlmErr("Enable USDC on your wallet first (add the trustline)."); return; }
 
     setXlmBusy(true);
     try {
-      const hash = await sendXlmPayment(address, xlmDest.trim(), xlmAmount.trim());
-      setXlmResult({ hash });
-      recordXlmPayment(xlmDest.trim(), xlmAmount.trim(), hash);
-      // Refresh XLM balance
+      const dest = xlmDest.trim();
+      const amountStr = xlmAmount.trim();
+      const hash = sendAsset === "XLM"
+        ? await sendXlmPayment(address, dest, amountStr)
+        : await sendUsdcPayment(address, dest, amountStr);
+      setXlmResult({ hash, asset: sendAsset, amount: amountStr, dest });
+      if (sendAsset === "XLM") recordXlmPayment(dest, amountStr, hash);
+      else recordUsdcPayment(dest, amountStr, hash);
+      await refreshWallet(address);
       const bal = await fetchXlmBalance(address);
       setXlmBalance(bal);
-      showToast("XLM transaction confirmed!");
+      showToast(`${sendAsset} transaction confirmed!`);
     } catch (e) {
       const formatted = formatError(e);
-      if (formatted) setXlmErr(formatted);
+      if (formatted) setXlmErr(sendAsset === "USDC" && /trustline|no.?trust|op_no_trust/i.test(formatted)
+        ? "Recipient can't receive USDC — their wallet has no USDC trustline."
+        : formatted);
     } finally {
       setXlmBusy(false);
     }
@@ -263,14 +276,14 @@ export function SendPay() {
     );
   }
 
-  // --- XLM send result ---
+  // --- Transfer result ---
   if (xlmResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
         <div style={{ fontSize: 48 }}>✅</div>
         <h2>Transaction Successful</h2>
         <p className="muted">
-          Sent {xlmAmount} XLM to {xlmDest.slice(0, 8)}…{xlmDest.slice(-6)}
+          Sent {xlmResult.amount} {xlmResult.asset} to {xlmResult.dest.slice(0, 8)}…{xlmResult.dest.slice(-6)}
         </p>
         <div className="card" style={{ textAlign: "left", wordBreak: "break-all" }}>
           <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Transaction Hash</div>
@@ -308,7 +321,7 @@ export function SendPay() {
             color: tab === "xlm" ? "var(--color-text-on-accent)" : "var(--color-text-secondary)",
           }}
         >
-          XLM Transfer
+          Transfer
         </button>
         <button
           onClick={() => setTab("convert")}
@@ -338,10 +351,29 @@ export function SendPay() {
       {tab === "xlm" && (
         <motion.div key="xlm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
-            Send native XLM on {NETWORK} — balance: {xlmBalance !== null ? `${Number(xlmBalance).toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM` : "…"}
+            Send to another Stellar wallet on {NETWORK}. Choose which asset to pay with.
           </p>
 
+          {/* Which money to send */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }} role="tablist" aria-label="Asset to send">
+            {(["XLM", "USDC"] as const).map((a) => (
+              <button
+                key={a}
+                className={`chip${sendAsset === a ? " active" : ""}`}
+                style={{ flex: 1, justifyContent: "center", display: "flex" }}
+                onClick={() => { setSendAsset(a); setXlmErr(null); }}
+                data-testid={`send-asset-${a.toLowerCase()}`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+
           <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <span className="muted">Your {sendAsset} balance</span>
+              <span className="numeric">{transferBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} {sendAsset}</span>
+            </div>
             <label className="muted" style={{ fontSize: 13 }}>
               Destination (G…)
               <input
@@ -353,7 +385,7 @@ export function SendPay() {
               />
             </label>
             <label className="muted" style={{ fontSize: 13 }}>
-              Amount (XLM)
+              Amount ({sendAsset})
               <input
                 type="number"
                 placeholder="0"
@@ -362,16 +394,22 @@ export function SendPay() {
                 value={xlmAmount}
                 onChange={(e) => setXlmAmount(e.target.value)}
                 style={{ marginTop: 6 }}
+                data-testid="send-amount"
               />
             </label>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span className="muted">Network fee</span>
-              <span className="numeric">0.00001 XLM</span>
+              <span className="numeric">~0.00001 XLM</span>
             </div>
+            {sendAsset === "USDC" && (
+              <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                The recipient needs a USDC trustline to receive it.
+              </p>
+            )}
           </div>
 
-          <button className="btn-primary" disabled={xlmBusy || !xlmAmount || !xlmDest} onClick={onSubmitXlm}>
-            {xlmBusy ? "Signing & submitting…" : "Send XLM"}
+          <button className="btn-primary" disabled={xlmBusy || !xlmAmount || !xlmDest} onClick={onSubmitTransfer}>
+            {xlmBusy ? "Signing & submitting…" : `Send ${sendAsset}`}
           </button>
           {xlmErr && (
             <p role="alert" style={{ color: "#ffb4ab", fontSize: 13 }}>
