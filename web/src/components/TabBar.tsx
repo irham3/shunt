@@ -16,21 +16,60 @@ const laneHref = (id: string) => (id === "savings" ? "/savings" : `/lane/${id}`)
 export function TabBar() {
   const buckets = useShunt((s) => s.buckets);
   const [lanesOpen, setLanesOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <>
       <nav className="tab-bar">
         {TABS.map((t) => (
-          <NavLink key={t.to} to={t.to} className={({ isActive }) => `tab-item${isActive ? " active" : ""}`}>
+          <NavLink key={t.to} to={t.to} onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `tab-item${isActive && !mobileMenuOpen ? " active" : ""}`}>
             {({ isActive }: { isActive: boolean }) => (
               <>
-                <i className={`${isActive ? "ph-fill" : "ph"} ${t.icon}`} style={{ fontSize: 21 }} />
+                <i className={`${isActive && !mobileMenuOpen ? "ph-fill" : "ph"} ${t.icon}`} style={{ fontSize: 21 }} />
                 {t.label}
               </>
             )}
           </NavLink>
         ))}
+        <button className={`tab-item${mobileMenuOpen ? " active" : ""}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <i className={`${mobileMenuOpen ? "ph-fill" : "ph"} ph-list`} style={{ fontSize: 21 }} />
+          Menu
+        </button>
       </nav>
+
+      {/* Mobile Menu Drawer */}
+      {mobileMenuOpen && (
+        <div className="mobile-drawer" style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 60,
+          background: "var(--color-bg-base)", zIndex: 35, display: "flex", flexDirection: "column",
+          padding: "24px 16px", overflowY: "auto"
+        }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 13, textTransform: "uppercase", fontWeight: 700, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+              Your Lanes
+            </div>
+            {buckets.map((b) => (
+              <NavLink key={b.id} to={laneHref(b.id)} onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `rail-item${isActive ? " active" : ""}`} style={{ background: "var(--color-bg-elevated)" }}>
+                <span aria-hidden className="rail-lane-dot" style={{ background: b.color }} />
+                {b.name}
+              </NavLink>
+            ))}
+            
+            <div style={{ borderTop: "1px solid #1f2732", margin: "16px 0" }} />
+            
+            <NavLink to="/settings" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `rail-item${isActive ? " active" : ""}`} style={{ background: "var(--color-bg-elevated)" }}>
+              {({ isActive }: { isActive: boolean }) => (
+                <>
+                  <i className={isActive ? "ph-fill ph-gear" : "ph ph-gear"} style={{ fontSize: 18 }} />
+                  Settings
+                </>
+              )}
+            </NavLink>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Rail */}
       <nav className="nav-rail" style={{ padding: "16px 14px", gap: 0 }}>
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingBottom: 16 }}>
           <div
