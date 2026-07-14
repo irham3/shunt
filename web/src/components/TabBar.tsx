@@ -5,7 +5,6 @@ import { useShunt } from "../store";
 const TABS = [
   { to: "/home", label: "Home", icon: "ph-house" },
   { to: "/shunt", label: "Shunt", icon: "ph-arrows-split" },
-  { to: "/savings", label: "Savings", icon: "ph-vault" },
   { to: "/activity", label: "Activity", icon: "ph-receipt" },
 ];
 
@@ -86,7 +85,7 @@ export function TabBar() {
             <i className="ph-fill ph-arrows-split" style={{ color: "var(--color-accent-primary)" }} />
             Shunt
           </div>
-          {TABS.filter((t) => t.to !== "/savings").map((t) => (
+          {TABS.map((t) => (
             <NavLink key={t.to} to={t.to} className={({ isActive }) => `rail-item${isActive ? " active" : ""}`}>
               {({ isActive }: { isActive: boolean }) => (
                 <>
