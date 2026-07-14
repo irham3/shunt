@@ -265,6 +265,11 @@ export function ConfigureShunt() {
 
         {/* Sliders + timelock + save */}
         <div className="col-main">
+          {!isEditing && rulesSavedOnChain && (
+            <button className="btn-secondary" style={{ width: "100%", marginBottom: 4 }} onClick={() => setIsEditing(true)}>
+              Edit configuration
+            </button>
+          )}
           {buckets.map((b, i) => {
             const nominal = (previewBase * b.pct) / 100;
             return (
@@ -413,20 +418,16 @@ export function ConfigureShunt() {
             </span>
           </div>
 
-          {!isEditing ? (
-            <button className="btn-secondary" style={{ width: "100%" }} onClick={() => setIsEditing(true)}>
-              Edit configuration
-            </button>
-          ) : (
-            <div style={{ display: "flex", gap: 8, width: "100%" }}>
+          {isEditing && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+              <button className="btn-primary" style={{ width: "100%" }} disabled={!valid || busy} onClick={onSave} data-testid="save-rules-button">
+                {busy ? "Saving…" : valid ? (rulesSavedOnChain ? "Update on-chain rules" : "Save to blockchain") : `Allocate ${remaining}% more to save`}
+              </button>
               {rulesSavedOnChain && (
-                <button className="btn-secondary" disabled={busy} onClick={() => setIsEditing(false)}>
+                <button className="btn-secondary" style={{ width: "100%" }} disabled={busy} onClick={() => setIsEditing(false)}>
                   Cancel
                 </button>
               )}
-              <button className="btn-primary" style={{ flex: 1, whiteSpace: "nowrap" }} disabled={!valid || busy} onClick={onSave} data-testid="save-rules-button">
-                {busy ? "Saving…" : valid ? (rulesSavedOnChain ? "Update on-chain rules" : "Save to blockchain") : `Allocate ${remaining}% more to save`}
-              </button>
             </div>
           )}
           {err && (
