@@ -414,17 +414,17 @@ export function ConfigureShunt() {
           </div>
 
           {!isEditing ? (
-            <button className="btn-secondary" onClick={() => setIsEditing(true)}>
+            <button className="btn-secondary" style={{ width: "100%" }} onClick={() => setIsEditing(true)}>
               Edit configuration
             </button>
           ) : (
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, width: "100%" }}>
               {rulesSavedOnChain && (
                 <button className="btn-secondary" disabled={busy} onClick={() => setIsEditing(false)}>
                   Cancel
                 </button>
               )}
-              <button className="btn-primary" style={{ flex: 1 }} disabled={!valid || busy} onClick={onSave} data-testid="save-rules-button">
+              <button className="btn-primary" style={{ flex: 1, whiteSpace: "nowrap" }} disabled={!valid || busy} onClick={onSave} data-testid="save-rules-button">
                 {busy ? "Saving…" : valid ? (rulesSavedOnChain ? "Update on-chain rules" : "Save to blockchain") : `Allocate ${remaining}% more to save`}
               </button>
             </div>
