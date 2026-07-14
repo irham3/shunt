@@ -441,9 +441,7 @@ export const useShunt = create<ShuntState>()(
               target: prevTargets.get(Number(g.id)),
             }));
 
-            // Buffer is a mix of local wallet buffer + in-vault credit from penalties.
-            // When we sync, we ensure savings matches the vault exactly.
-            return {
+            const nextState: Partial<ShuntState> = {
               lockUntil: Number(lockUntilBig),
               goals,
               unallocatedSavings: Number(unallocatedBig) / 10_000_000,
@@ -451,11 +449,39 @@ export const useShunt = create<ShuntState>()(
               balances: {
                 ...state.balances,
                 savings: Number(savingsBig) / 10000000,
-                // We don't overwrite buffer because it tracks the wallet side too,
-                // but if we were strictly syncing, we'd need to know the split history.
-                // For this MVP fix, we just ensure savings and lock are true on-chain.
               }
             };
+
+            if (onChainRules) {
+              const needsPct = Number(onChainRules.needs_bps) / 100;
+              const savingsPct = Number(onChainRules.savings_bps) / 100;
+              const bufferPct = Number(onChainRules.buffer_bps) / 100;
+              const investPct = 100 - needsPct - savingsPct - bufferPct;
+
+              nextState.lockSecs = Number(onChainRules.lock_secs);
+
+              const pctKind = (kind: string) =>
+                state.buckets.filter((b) => b.kind === kind).reduce((sum, b) => sum + b.pct, 0);
+
+              if (
+                pctKind("needs") !== needsPct ||
+                pctKind("savings") !== savingsPct ||
+                pctKind("buffer") !== bufferPct ||
+                pctKind("invest") !== investPct
+              ) {
+                // Local state is out of sync with blockchain (e.g. fresh device).
+                // Reset to 4 default lanes matching on-chain percentages.
+                nextState.buckets = DEFAULT_BUCKETS.map(b => {
+                  if (b.kind === "needs") return { ...b, pct: needsPct };
+                  if (b.kind === "savings") return { ...b, pct: savingsPct };
+                  if (b.kind === "buffer") return { ...b, pct: bufferPct };
+                  if (b.kind === "invest") return { ...b, pct: investPct };
+                  return b;
+                });
+              }
+            }
+
+            return nextState;
           });
         } catch (e) {
           console.warn("Failed to sync from chain (not deployed or RPC error)", e);
