@@ -552,14 +552,40 @@ export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
       throw new Error("Source account not found on network.");
     }
 
-    // Rebuild the transaction with the fresh sequence number.
-    // This preserves all operations, fee, timeout, and Soroban auth/resources
-    // from the keeper's prepared envelope — only the sequence changes.
+    // Rebuild the transaction with a fresh sequence number AND time bounds.
+    // This preserves all operations, fee, and Soroban auth/resources from
+    // the keeper's prepared envelope — only the sequence + timeBounds change.
     const origEnv = xdr.TransactionEnvelope.fromXDR(preparedXdr, "base64");
     const txV1 = origEnv.v1().tx();
     txV1.seqNum(xdr.SequenceNumber.fromString(
       (BigInt(freshSource.sequenceNumber()) + 1n).toString(),
     ));
+
+    // Extend time bounds: set maxTime to now + 300s so the tx doesn't fail
+    // with txTOO_LATE when the keeper prepared it long ago.
+    const newMaxTime = Math.floor(Date.now() / 1000) + 300;
+    const zeroTime = xdr.TimePoint.fromString("0");
+    const freshMaxTime = xdr.TimePoint.fromString(newMaxTime.toString());
+
+    const condSwitch = txV1.cond().switch().name;
+    if (condSwitch === "precondTime") {
+      const old = txV1.cond().timeBounds();
+      txV1.cond(xdr.Preconditions.precondTime(
+        new xdr.TimeBounds({ minTime: old.minTime(), maxTime: freshMaxTime }),
+      ));
+    } else if (condSwitch === "precondV2") {
+      const v2 = txV1.cond().v2();
+      const oldTb = v2.timeBounds();
+      v2.timeBounds(new xdr.TimeBounds({
+        minTime: oldTb ? oldTb.minTime() : zeroTime,
+        maxTime: freshMaxTime,
+      }));
+    } else {
+      // precondNone → add time bounds
+      txV1.cond(xdr.Preconditions.precondTime(
+        new xdr.TimeBounds({ minTime: zeroTime, maxTime: freshMaxTime }),
+      ));
+    }
 
     const freshXdr = origEnv.toXDR("base64");
 
