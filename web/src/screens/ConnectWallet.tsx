@@ -23,7 +23,7 @@ export function ConnectWallet() {
     try {
       const addr = await connectWithAuthModal();
       setAddress(addr);
-      nav("/shunt");
+      nav("/home");
     } catch (e) {
       const formatted = formatError(e);
       if (formatted) setErr(formatted);

@@ -14,7 +14,7 @@ import {
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { BentoGrid, BentoCard } from "../components/BentoGrid";
 import { AnimatedNumber } from "../components/AnimatedNumber";
-import { Lock, Wallet, ArrowUpRight, ShieldCheck, Sparkles } from "lucide-react";
+import { Lock, Wallet, ArrowUpRight, ShieldCheck, Sparkles, SlidersHorizontal } from "lucide-react";
 
 /** Balance denominations the user can flip between (README: XLM + USDC live side by side). */
 type AssetView = "USDC" | "XLM" | "IDR";
@@ -270,6 +270,25 @@ export function Home() {
         )}
       </motion.header>
 
+      {/* First-run nudge: new users now land on Home, so guide them to set rules. */}
+      {!rulesSavedOnChain && (
+        <Link
+          to="/shunt"
+          className="card"
+          style={{ border: "1px solid var(--color-accent-primary)", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 12 }}
+          data-testid="setup-rules-nudge"
+        >
+          <SlidersHorizontal size={20} style={{ color: "var(--color-accent-primary)", flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 600, display: "block" }}>Set your split rules</span>
+            <span className="muted" style={{ fontSize: 12 }}>
+              Decide how each income divides into your lanes — then every payday auto-splits in one tap.
+            </span>
+          </span>
+          <span className="numeric" style={{ color: "var(--color-accent-primary)" }}>→</span>
+        </Link>
+      )}
+
       {/* Quick actions: the in/out loop lives one tap from Home (F11/F13/F8) */}
       <section style={{ display: "flex", gap: 8 }}>
         {[
@@ -344,7 +363,7 @@ export function Home() {
             {buckets.map((b, i) => (
               <BentoCard key={b.id} delay={i * 0.1}>
                 <Link
-                  to={b.id === "savings" ? "/savings" : b.id === "needs" ? "/send" : "/shunt"}
+                  to={b.id === "savings" ? "/savings" : `/lane/${b.id}`}
                   style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, textDecoration: "none", color: "inherit", height: "100%" }}
                   data-testid={`bucket-card-${b.id}`}
                 >
