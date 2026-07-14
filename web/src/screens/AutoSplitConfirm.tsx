@@ -97,7 +97,10 @@ export function AutoSplitConfirm() {
         const amt = Number(p.amount);
 
         if (!p.xdr) {
-          throw new Error(`Missing prepared XDR for split #${i + 1}. Ensure Vault contract is deployed and Keeper is running.`);
+          const reason = p.error
+            ? `Keeper failed: ${p.error.slice(0, 150)}`
+            : "Missing prepared XDR for split. Ensure Vault contract is deployed and Keeper is running.";
+          throw new Error(reason);
         }
 
         const hash = await signAndSubmitXdr(p.xdr);

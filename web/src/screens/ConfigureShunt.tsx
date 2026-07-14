@@ -121,13 +121,24 @@ export function ConfigureShunt() {
   /** Demo fallback lives here too: rules just saved → try the loop right away. */
   async function onSimulate() {
     if (!address) return;
+    const walletUsdc = Number(usdcBalance ?? 0);
+    if (walletUsdc < 1) {
+      showToast("Not enough USDC in wallet to simulate — fund your wallet first");
+      return;
+    }
+    // Use the actual wallet USDC balance (capped at a sane demo max)
+    const simAmount = Math.min(walletUsdc, 500).toFixed(7);
     setSimBusy(true);
     try {
       const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      const p = await manualTrigger(address, "500.0000000", fakeHash);
-      nav("/confirm", { state: p ?? { account: address, amount: "500.0000000", txHash: fakeHash, xdr: null } });
+      const p = await manualTrigger(address, simAmount, fakeHash);
+      if (p && !p.xdr && p.error) {
+        showToast(`Keeper error: ${p.error.slice(0, 120)}`);
+        return;
+      }
+      nav("/confirm", { state: p ?? { account: address, amount: simAmount, txHash: fakeHash, xdr: null } });
     } finally {
       setSimBusy(false);
     }
