@@ -5,7 +5,8 @@ import { Lock, Wallet, ArrowUpRight, SlidersHorizontal } from "lucide-react";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { fmtUsdc, useShunt } from "../store";
 import { vaultWithdrawBuffer } from "../lib/vault";
-import { formatError } from "../lib/stellar";
+import { formatError, convertUsdcToXlm } from "../lib/stellar";
+import { getGoldUsdRate, getXlmUsdRate } from "../lib/rates";
 
 /**
  * Per-lane detail (`/lane/:id`). Full-page layout matching SavingsVault —
@@ -26,9 +27,11 @@ export function LaneDetail() {
   const nav = useNavigate();
   const {
     address, buckets, balances, investXlm, investAsset, bufferCredit,
-    activity, showToast, syncFromChain, refreshWallet,
+    activity, showToast, syncFromChain, refreshWallet, manualInvestBuy
   } = useShunt();
   const [busy, setBusy] = useState(false);
+  const [buyAmount, setBuyAmount] = useState("");
+  const [buying, setBuying] = useState(false);
 
   const bucket = buckets.find((b) => b.id === id);
 
@@ -61,6 +64,33 @@ export function LaneDetail() {
       if (f) showToast(f);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onManualBuy() {
+    const amount = Number(buyAmount);
+    if (!address || amount <= 0 || amount > balances.needs) return;
+    setBuying(true);
+    try {
+      if (investAsset === "GOLD") {
+        const { rate } = await getGoldUsdRate();
+        const goldAmt = amount / rate;
+        manualInvestBuy(amount, goldAmt, "sim-manual-" + Date.now(), true);
+        showToast(`Bought ${goldAmt.toFixed(4)} g XAUm for ${fmtUsdc(amount)} USDC`);
+      } else {
+        const { rate } = await getXlmUsdRate();
+        const expectedXlm = amount / rate;
+        const minXlm = (expectedXlm * 0.98).toFixed(7);
+        const hash = await convertUsdcToXlm(address, amount.toFixed(7), minXlm);
+        manualInvestBuy(amount, expectedXlm, hash, false);
+        showToast(`Bought XLM for ${fmtUsdc(amount)} USDC`);
+      }
+      setBuyAmount("");
+    } catch (e) {
+      const f = formatError(e);
+      if (f) showToast(`Purchase failed: ${f}`);
+    } finally {
+      setBuying(false);
     }
   }
 
@@ -124,19 +154,51 @@ export function LaneDetail() {
 
           {/* Kind-specific explainer + actions */}
           {bucket.kind === "invest" && (
-            <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>Your growth slice</div>
-                <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-                  {investXlm > 0
-                    ? `Spot-purchased into ${investAsset === "GOLD" ? "gold (XAUm — 1 token = 1g LBMA gold)" : "XLM"} after each split. This is an asset purchase, not a yield product — and it's separate from your value-preserving Savings.`
-                    : "Nothing invested yet. Turn on the Invest lane (set a %) in your rules and pick XLM or gold — the slice buys in automatically after each split."}
-                </p>
+            <>
+              <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Buy {investAsset === "GOLD" ? "Gold (XAUm)" : "XLM"} Manually</div>
+                  <p className="muted" style={{ fontSize: 13, margin: "0 0 12px" }}>
+                    Spend your liquid wallet USDC ({fmtUsdc(balances.needs)} available) to buy more {investAsset === "GOLD" ? "gold" : "XLM"} right now.
+                  </p>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                    <div style={{ flex: 1 }}>
+                      <label className="muted" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Amount (USDC)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        max={balances.needs}
+                        value={buyAmount}
+                        onChange={(e) => setBuyAmount(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <button
+                      className="btn-primary"
+                      disabled={buying || !buyAmount || Number(buyAmount) <= 0 || Number(buyAmount) > balances.needs}
+                      onClick={onManualBuy}
+                    >
+                      {buying ? "Processing…" : "Buy"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <Link to="/shunt" className="btn-secondary" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                Choose invest asset (XLM / Gold) & adjust %
-              </Link>
-            </div>
+
+              <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Your growth slice (Auto-DCA)</div>
+                  <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+                    {investXlm > 0
+                      ? `Spot-purchased into ${investAsset === "GOLD" ? "gold (XAUm — 1 token = 1g LBMA gold)" : "XLM"} after each split. This is an asset purchase, not a yield product — and it's separate from your value-preserving Savings.`
+                      : "Nothing invested yet. Turn on the Invest lane (set a %) in your rules and pick XLM or gold — the slice buys in automatically after each split."}
+                  </p>
+                </div>
+                <Link to="/shunt" className="btn-secondary" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  Change auto-invest asset or %
+                </Link>
+              </div>
+            </>
           )}
 
           {bucket.kind === "buffer" && (

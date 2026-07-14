@@ -93,6 +93,8 @@ interface ShuntState {
   recordTopUp: (amount: number) => void;
   /** F12: record a DCA conversion of the invest slice (real tx or labeled simulation). */
   applyInvestConversion: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
+  /** Manually buy invest assets using spendable USDC (moves balance from needs to invest). */
+  manualInvestBuy: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
   /** Record a direct wallet-to-wallet XLM payment (Send & Pay, XLM tab). */
   recordXlmPayment: (destination: string, amountXlm: string, txHash: string) => void;
   /** Record a direct wallet-to-wallet USDC payment (Send & Pay, USDC transfer). */
@@ -292,7 +294,7 @@ export const useShunt = create<ShuntState>()(
             {
               id: `${Date.now()}-inv`,
               kind: "invest",
-              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${unit}${simulated ? " (reference rate)" : ""}`,
+              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${unit}${simulated ? " (reference rate)" : ""}`,
               amountUsdc: usd,
               txHash,
               at: new Date().toISOString(),
@@ -301,6 +303,33 @@ export const useShunt = create<ShuntState>()(
             ...activity,
           ],
         });
+      },
+
+      manualInvestBuy: (usd, xlm, txHash, simulated) => {
+        const { investXlm, activity, investAsset, balances } = get();
+        const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
+        set({
+          balances: {
+            ...balances,
+            needs: Math.max(0, balances.needs - usd),
+            invest: balances.invest + usd,
+          },
+          investXlm: investXlm + xlm,
+          activity: [
+            {
+              id: `${Date.now()}-inv-manual`,
+              kind: "invest",
+              title: `Manual Buy: ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${unit}${simulated ? " (reference rate)" : ""}`,
+              amountUsdc: usd,
+              txHash,
+              at: new Date().toISOString(),
+              bucket: "invest",
+            },
+            ...activity,
+          ],
+        });
+        const address = get().address;
+        if (address) get().refreshWallet(address);
       },
 
       recordTopUp: (amount) => {
