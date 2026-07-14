@@ -532,14 +532,49 @@ export async function txSetRules(
   ]);
 }
 
-/** Sign & submit a distribute tx prepared by the keeper (one-tap approve). */
+/** Sign & submit a distribute tx prepared by the keeper (one-tap approve).
+ *  Re-stamps the sequence number from the network before signing so the XDR
+ *  stays valid even when other transactions (friendbot, trustline, etc.) have
+ *  advanced the account's sequence since the keeper prepared it. */
 export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
   try {
     const server = new rpc.Server(RPC_URL);
-    const { signedTxXdr } = await signTxXdr(preparedXdr, NETWORK_PASSPHRASE);
+
+    // Parse the keeper-prepared tx to extract the source account
+    const origTx = TransactionBuilder.fromXDR(preparedXdr, NETWORK_PASSPHRASE);
+    const sourceAddr = origTx.source;
+
+    // Fetch the current sequence number from the network
+    let freshSource;
+    try {
+      freshSource = await server.getAccount(sourceAddr);
+    } catch {
+      throw new Error("Source account not found on network.");
+    }
+
+    // Rebuild the transaction with the fresh sequence number.
+    // This preserves all operations, fee, timeout, and Soroban auth/resources
+    // from the keeper's prepared envelope — only the sequence changes.
+    const origEnv = xdr.TransactionEnvelope.fromXDR(preparedXdr, "base64");
+    const txV1 = origEnv.v1().tx();
+    txV1.seqNum(xdr.SequenceNumber.fromString(
+      (BigInt(freshSource.sequenceNumber()) + 1n).toString(),
+    ));
+
+    const freshXdr = origEnv.toXDR("base64");
+
+    const { signedTxXdr } = await signTxXdr(freshXdr, NETWORK_PASSPHRASE);
     const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
     const res = await server.sendTransaction(sendTx) as any;
     if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
+
+    // poll until confirmed (Soroban txs need a few ledgers)
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const g = await server.getTransaction(res.hash) as any;
+      if (g.status === "SUCCESS") return res.hash;
+      if (g.status === "FAILED") throw new Error("Transaction failed on the ledger.");
+    }
     return res.hash;
   } catch (e) {
     parseWalletError(e);
