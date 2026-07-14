@@ -99,16 +99,13 @@ export function Home() {
     return () => clearInterval(t);
   }, [address, lastEventCursor, showToast]);
 
-  const bucketBalance = (id: string) =>
-    id === "needs"
-      ? balances.needs
-      : id === "savings"
-        ? balances.savings
-        : id === "buffer"
-          ? balances.buffer
-          : id === "invest"
-            ? balances.invest
-            : 0;
+  const bucketBalance = (id: string) => {
+    const b = buckets.find((x) => x.id === id);
+    if (!b) return 0;
+    const kindTotal = balances[b.kind as keyof typeof balances] || 0;
+    const kindPct = buckets.filter((x) => x.kind === b.kind).reduce((s, x) => s + x.pct, 0);
+    return kindPct > 0 ? kindTotal * (b.pct / kindPct) : 0;
+  };
 
   const bucketNote = (kind: string) =>
     kind === "savings" ? "in vault · locked" : kind === "invest" ? "DCA cost basis" : "in wallet";

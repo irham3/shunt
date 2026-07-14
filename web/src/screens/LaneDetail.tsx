@@ -40,12 +40,9 @@ export function LaneDetail() {
     }
   }, [address, syncFromChain, refreshWallet]);
 
-  const balance =
-    id === "needs" ? balances.needs
-    : id === "savings" ? balances.savings
-    : id === "buffer" ? balances.buffer
-    : id === "invest" ? balances.invest
-    : 0;
+  const kindTotal = bucket ? balances[bucket.kind as keyof typeof balances] || 0 : 0;
+  const kindPct = buckets.filter((x) => x.kind === bucket?.kind).reduce((s, x) => s + x.pct, 0);
+  const balance = kindPct > 0 && bucket ? kindTotal * (bucket.pct / kindPct) : 0;
 
   const laneActivity = useMemo(
     () => activity.filter((a) => a.bucket === id || (id === "invest" && a.kind === "invest")).slice(0, 10),
