@@ -55,29 +55,33 @@ export function AutoSplitConfirm() {
   const insufficientForSavings = usdcBalance !== null && savingsToMove > walletUsdc + 1e-7;
 
   const investAmt = useMemo(() => {
-    const pct = buckets.find((b) => b.id === "invest")?.pct ?? 0;
+    const pct = buckets.filter((b) => b.kind === "invest").reduce((s, b) => s + b.pct, 0);
     return (totalAmount * pct) / 100;
   }, [totalAmount, buckets]);
 
   const rows = useMemo(() => {
-    const pct = (id: string) => buckets.find((b) => b.id === id)?.pct ?? 0;
-    const savings = (totalAmount * pct("savings")) / 100;
-    const buffer = (totalAmount * pct("buffer")) / 100;
-    const invest = (totalAmount * pct("invest")) / 100;
-    const out = [
-      { id: "needs", label: "Needs → wallet", amt: totalAmount - savings - buffer - invest },
-      { id: "savings", label: "Savings → vault (timelock)", amt: savings },
-      { id: "buffer", label: "Buffer → wallet", amt: buffer },
-    ];
-    if (invest > 0) out.push({ id: "invest", label: investLabel, amt: invest });
-    return out;
+    // Show every bucket (including custom lanes) with its individual share.
+    // Group label shows where the funds end up.
+    const kindDest: Record<string, string> = {
+      needs: "→ wallet",
+      savings: "→ vault (timelock)",
+      buffer: "→ wallet",
+      invest: investLabel.replace("Invest ", ""),
+    };
+    return buckets
+      .filter((b) => b.pct > 0)
+      .map((b) => ({
+        id: b.id,
+        label: `${b.name} ${kindDest[b.kind] ?? "→ wallet"}`,
+        amt: (totalAmount * b.pct) / 100,
+      }));
   }, [totalAmount, buckets, investLabel]);
 
   /**
    * F12: convert the invest slice after the split.
    */
   async function runInvestConversion(splitAmount: number, splitWasOnChain: boolean) {
-    const pct = buckets.find((b) => b.id === "invest")?.pct ?? 0;
+    const pct = buckets.filter((b) => b.kind === "invest").reduce((s, b) => s + b.pct, 0);
     const thisInvestAmt = (splitAmount * pct) / 100;
     if (thisInvestAmt <= 0) return;
 

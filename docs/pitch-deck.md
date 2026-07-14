@@ -39,10 +39,11 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 ## 4 — How it works (the loop)
 
 1. **Connect** — Freighter, no sign-up, no custody.
-2. **Set rules once** — Needs / Savings / Buffer / Invest, saved on-chain (`set_rules`).
+2. **Set rules once** — Needs / Savings / Buffer / Invest (+ optional custom lanes like "Holiday"), saved on-chain (`set_rules`). Badge shows **"Active on-chain"** once saved; fields lock until you click **Edit**.
 3. **Income lands** — detected from Horizon in seconds.
-4. **One tap** — review the exact breakdown, sign. *Nothing moves without you.*
+4. **One tap** — review the exact per-lane breakdown (including custom lanes), sign. *Nothing moves without you.*
 5. **Auto-split** — one atomic Soroban tx: Needs & Buffer stay liquid, Savings locks in the vault.
+6. **Reallocate** — changed your mind? Edit rules, re-save, and instantly re-split your existing balance with one tap.
 
 > Emphasize: "automatic" = automatic *detection + preparation*, one-touch confirm. We never over-claim hands-free.
 
@@ -54,7 +55,8 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 | --- | --- | --- |
 | 🟡 Needs | Your wallet | Daily spend; cash out to IDR/PHP when you choose |
 | 🟢 **Savings** | **Vault contract** | Value-holding USDC, **locked by code** — a timelock in your own wallet would be fiction |
-| 🔵 Buffer | Your wallet | Instant emergency fund, no lock |
+| 🟢 *Custom savings lanes* | **Vault contract** | Named sub-allocations (e.g. "Holiday", "Education") — same vault, individual tracking |
+| 🟤 Buffer | Your wallet | Instant emergency fund, no lock |
 | 🟣 Invest *(optional)* | Your wallet | Opt-in growth slice — **XLM** (live) or **Gold / XAUm** (1g LBMA gold on Stellar) |
 
 > The value-preservation promise is **Savings (100% USDC)**. Invest is separate and optional — set it to 0% and the promise is unchanged.
@@ -63,11 +65,14 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 ## 6 — Live demo
 
-> Screen-share the app (testnet). Beats: connect → set rules → income lands
+> Screen-share the app (testnet). Beats: connect → set rules (show the "Active
+> on-chain" badge) → optionally add a custom lane like "Holiday" → income lands
 > (or tap "Try it — simulated income" for a keeper-prepared split against the
-> wallet's real balance, no waiting on a transfer; easily fund testnet USDC from the Home screen) → one-tap split → show the
-> explorer hash + `split` event → savings vault with the 10%-penalty-to-buffer
-> safety valve → multi-asset transfer (USDC/XLM) → anchor cash-out with rate+fee shown first.
+> wallet's real balance, no waiting on a transfer; easily fund testnet USDC from the Home screen) → one-tap split (confirm page
+> shows every lane including custom ones) → show the explorer hash + `split` event
+> → edit rules & **Reallocate** existing balance with new percentages
+> → savings vault with the 10%-penalty-to-buffer safety valve
+> → multi-asset transfer (USDC/XLM) → anchor cash-out with rate+fee shown first.
 
 **One line to say while the explorer loads:** "Real on-chain, real testnet USDC — here's the hash."
 
@@ -110,9 +115,11 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 | Real today (testnet) | Roadmap |
 | --- | --- |
 | Atomic on-chain split + code-custody vault | Live regional IDR/PHP anchor |
-| SEP-1/10/24 anchor stack + SEP-7 links | Passkey / smart-wallet onboarding |
-| Invest lane (XLM live; Gold/XAUm option) | Session keys (hands-free), AMM 1-sig split+invest |
-| 19 tests + real-testnet e2e | Audit → then mainnet |
+| Custom lanes (sub-allocations of savings/needs/invest) | Passkey / smart-wallet onboarding |
+| Edit mode + instant reallocate with new rules | Session keys (hands-free), AMM 1-sig split+invest |
+| SEP-1/10/24 anchor stack + SEP-7 links | Audit → then mainnet |
+| Invest lane (XLM live; Gold/XAUm option) | |
+| 19 tests + real-testnet e2e | |
 
 > No mainnet claims. Audit before any real funds.
 

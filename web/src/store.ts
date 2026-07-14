@@ -453,31 +453,71 @@ export const useShunt = create<ShuntState>()(
             };
 
             if (onChainRules) {
-              const needsPct = Number(onChainRules.needs_bps) / 100;
-              const savingsPct = Number(onChainRules.savings_bps) / 100;
-              const bufferPct = Number(onChainRules.buffer_bps) / 100;
-              const investPct = 100 - needsPct - savingsPct - bufferPct;
+              // On-chain needs_bps = Needs + Invest (the contract only has 3
+              // lanes; invest stays wallet-side). So we compare savings & buffer
+              // individually, and needs+invest as a group.
+              const chainNeedsInvestPct = Number(onChainRules.needs_bps) / 100;
+              const chainSavingsPct = Number(onChainRules.savings_bps) / 100;
+              const chainBufferPct = Number(onChainRules.buffer_bps) / 100;
 
               nextState.lockSecs = Number(onChainRules.lock_secs);
 
               const pctKind = (kind: string) =>
                 state.buckets.filter((b) => b.kind === kind).reduce((sum, b) => sum + b.pct, 0);
 
+              const localNeedsInvest = pctKind("needs") + pctKind("invest");
+
               if (
-                pctKind("needs") !== needsPct ||
-                pctKind("savings") !== savingsPct ||
-                pctKind("buffer") !== bufferPct ||
-                pctKind("invest") !== investPct
+                localNeedsInvest !== chainNeedsInvestPct ||
+                pctKind("savings") !== chainSavingsPct ||
+                pctKind("buffer") !== chainBufferPct
               ) {
-                // Local state is out of sync with blockchain (e.g. fresh device).
-                // Reset to 4 default lanes matching on-chain percentages.
-                nextState.buckets = DEFAULT_BUCKETS.map(b => {
-                  if (b.kind === "needs") return { ...b, pct: needsPct };
-                  if (b.kind === "savings") return { ...b, pct: savingsPct };
-                  if (b.kind === "buffer") return { ...b, pct: bufferPct };
-                  if (b.kind === "invest") return { ...b, pct: investPct };
-                  return b;
+                // Local state is out of sync with blockchain (e.g. fresh device
+                // or another device saved different rules). Adjust buckets to
+                // match on-chain totals while preserving custom lane structure.
+                const scaledBuckets = state.buckets.map(b => {
+                  const kindTotal = pctKind(b.kind);
+                  if (kindTotal === 0) return b; // avoid division by zero
+                  const ratio = b.pct / kindTotal; // this bucket's share within its kind
+                  let chainTotal: number;
+                  if (b.kind === "needs" || b.kind === "invest") {
+                    chainTotal = chainNeedsInvestPct;
+                    // Split the combined needs+invest budget: invest lanes
+                    // keep their proportional share, needs gets the rest.
+                    const investTotal = pctKind("invest");
+                    const needsTotal = pctKind("needs");
+                    if (b.kind === "invest") {
+                      const investShare = needsTotal + investTotal > 0
+                        ? investTotal / (needsTotal + investTotal)
+                        : 0;
+                      chainTotal = Math.round(chainNeedsInvestPct * investShare);
+                    } else {
+                      const needsShare = needsTotal + investTotal > 0
+                        ? needsTotal / (needsTotal + investTotal)
+                        : 1;
+                      chainTotal = Math.round(chainNeedsInvestPct * needsShare);
+                    }
+                  } else if (b.kind === "savings") {
+                    chainTotal = chainSavingsPct;
+                  } else {
+                    chainTotal = chainBufferPct;
+                  }
+                  return { ...b, pct: Math.round(chainTotal * ratio) };
                 });
+
+                // If no existing buckets (fresh state), fall back to defaults
+                if (scaledBuckets.length === 0) {
+                  const defaultInvest = Math.min(10, chainNeedsInvestPct);
+                  nextState.buckets = DEFAULT_BUCKETS.map(b => {
+                    if (b.kind === "needs") return { ...b, pct: chainNeedsInvestPct - defaultInvest };
+                    if (b.kind === "savings") return { ...b, pct: chainSavingsPct };
+                    if (b.kind === "buffer") return { ...b, pct: chainBufferPct };
+                    if (b.kind === "invest") return { ...b, pct: defaultInvest };
+                    return b;
+                  });
+                } else {
+                  nextState.buckets = scaledBuckets;
+                }
               }
             }
 

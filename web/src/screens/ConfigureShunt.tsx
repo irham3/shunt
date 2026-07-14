@@ -49,6 +49,7 @@ export function ConfigureShunt() {
   const [saved, setSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(!rulesSavedOnChain);
   const [simBusy, setSimBusy] = useState(false);
+  const [reallocBusy, setReallocBusy] = useState(false);
   /** bucket id whose last adjustment got clamped (over-allocation feedback) */
   const [clampHint, setClampHint] = useState<string | null>(null);
   const clampTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +153,38 @@ export function ConfigureShunt() {
       nav("/confirm", { state: p ?? { account: address, amount: simAmount, txHash: fakeHash, xdr: null } });
     } finally {
       setSimBusy(false);
+    }
+  }
+
+  /** Reallocate existing wallet USDC using the newly saved rules. */
+  async function onReallocate() {
+    if (!address) return;
+    if (!rulesSavedOnChain) {
+      showToast("Please save your allocation rules first.");
+      return;
+    }
+    const walletUsdc = Number(usdcBalance ?? 0);
+    if (walletUsdc < 0.01) {
+      showToast("No USDC in wallet to reallocate.");
+      return;
+    }
+    setReallocBusy(true);
+    try {
+      const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash);
+      if (p && !p.xdr && p.error) {
+        if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
+          showToast("Allocation rules not found on-chain. Please save first.");
+        } else {
+          showToast(`Keeper error: ${p.error.slice(0, 120)}`);
+        }
+        return;
+      }
+      nav("/confirm", { state: p ?? { account: address, amount: walletUsdc.toFixed(7), txHash: fakeHash, xdr: null } });
+    } finally {
+      setReallocBusy(false);
     }
   }
 
@@ -456,6 +489,19 @@ export function ConfigureShunt() {
                   <li>Shunt detects it within seconds and shows the exact breakdown.</li>
                   <li>You approve with one tap — savings lock in the vault, the rest stays liquid.</li>
                 </ol>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {Number(usdcBalance ?? 0) >= 0.01 && (
+                    <button
+                      className="btn-primary"
+                      style={{ flex: 1, minWidth: 180 }}
+                      disabled={reallocBusy}
+                      onClick={onReallocate}
+                      data-testid="reallocate-balance"
+                    >
+                      {reallocBusy ? "Preparing…" : `Reallocate ${fmtUsdc(Number(usdcBalance ?? 0))} USDC with new rules`}
+                    </button>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Link to="/topup" className="btn-secondary" style={{ flex: 1, minWidth: 120, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                     Top Up

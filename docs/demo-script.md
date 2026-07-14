@@ -29,35 +29,48 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 
 ### [0:35–1:00] Set rules on-chain
 - **On screen:** Configure Shunt — drag sliders Needs/Savings/Buffer/Invest, set
-  timelock, Save → Freighter signs `set_rules`.
+  timelock, Save → Freighter signs `set_rules`. Badge flips to **"Active on-chain"**.
+  Optionally add a **custom lane** (e.g. "Holiday", type: savings) to show the
+  sub-allocation feature.
 - **Say:** "I set the split once — this is stored **on-chain**; the contract is the
-  source of truth. Invest is optional — the value-preservation promise is Savings,
+  source of truth. See the green badge? That means these rules are live on the
+  blockchain. Invest is optional — the value-preservation promise is Savings,
   100% USDC."
 
 ### [1:00–1:40] Income lands → one-tap split (the core)
 - **On screen:** Home shows detected un-split USDC → tap Split → review exact
-  breakdown → Freighter signs `distribute` → lanes update. (No inflow queued
+  breakdown (showing all lanes including custom ones with clear destination
+  labels) → Freighter signs `distribute` → lanes update. (No inflow queued
   yet? Tap "Try it (simulated income)" on Configure Shunt instead — same
   keeper-prepared XDR, same on-chain split, just triggered manually so the
   demo isn't blocked on waiting for a real transfer.)
 - **Say:** "Income lands. The app detects it from Horizon, I review the exact
-  breakdown, and approve once. One atomic transaction: Needs and Buffer stay in my
-  wallet, Savings moves into the vault and the timelock starts."
+  breakdown — every lane, including custom ones like 'Holiday', shows exactly
+  where the funds go — and approve once. One atomic transaction: Needs and
+  Buffer stay in my wallet, Savings moves into the vault and the timelock starts."
 - **On screen:** open the explorer tab, show the `distribute` tx + `split` event.
 - **Say:** "Real on-chain, real testnet USDC — here's the hash, and the split event."
 
-### [1:40–2:10] Savings vault + safety valve
+### [1:40–1:55] Reallocate & Edit mode
+- **On screen:** go back to Configure Shunt → click **"Edit configuration"** →
+  adjust sliders → **"Update on-chain rules"** → Freighter signs → click
+  **"Reallocate X USDC with new rules"** to re-split existing balance.
+- **Say:** "Changed your mind? Edit mode lets you adjust, re-save to the blockchain,
+  then immediately reallocate your existing balance with the new rules — no need
+  to wait for new income."
+
+### [1:55–2:20] Savings vault + safety valve
 - **On screen:** Savings Vault — show locked balance, a goal, then an early
   withdraw showing the 10% penalty → Buffer credit.
 - **Say:** "Savings is held by contract code — a timelock in your own wallet would
   be fiction. Early exit costs 10%, but it's not lost — it goes to your *own*
   buffer. Discipline with a safety valve."
 
-### [2:10–2:35] Cash out & Transfer
+### [2:20–2:45] Cash out & Transfer
 - **On screen:** Send & Pay — choose between USDC and XLM for the asset. Show a direct transfer, then withdraw where the anchor's SEP-24 hosted flow opens, rate + fee shown before confirm.
 - **Say:** "You can send either USDC or XLM. Cash-out to fiat runs on standard SEP-24 anchor rails. Demo uses SDF's test anchor — the production corridor is a licensed regional anchor like IDRX or Coins.ph; swapping is config, not a rewrite. Settlement is the anchor's, and we say so instead of faking 'instant'."
 
-### [2:35–3:00] Honest close
+### [2:45–3:00] Honest close
 - **Say:** "What's real today: a 19-test contract, a real-testnet end-to-end suite,
   double idempotency, zero-key keeper — all on **testnet**, no mainnet claims.
   What's next: a live regional anchor, passkey onboarding for non-crypto users, and
