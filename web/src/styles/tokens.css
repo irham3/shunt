@@ -5,15 +5,14 @@
   --color-accent-primary: #cdf14a;
   --color-accent-secondary: #38bdf8;
   --color-accent-tertiary: #a78bfa;
-  /* Allocation palette — one lime accent + a restrained neutral ramp. Kept
-     deliberately calm (no neon rainbow) so the donut/lanes read premium, not
-     "AI busy" (feedback 2026-07-13). */
-  --color-bucket-needs: #a8b0bd;
-  --color-bucket-savings: #cdf14a;
-  --color-bucket-buffer: #6b7480;
+  /* Allocation palette — each lane gets a semantically distinct color so the
+     donut / bar / cards are instantly readable. Kept saturated but not neon. */
+  --color-bucket-needs: #38bdf8;     /* sky-blue  — everyday spending */
+  --color-bucket-savings: #cdf14a;   /* lime      — growth / lock-up */
+  --color-bucket-buffer: #f59e0b;    /* amber     — safety net */
   /* Extension palette for bucket #4+ (DESIGN.md §8.6 decision) */
-  --color-bucket-extra-1: #4d5561;
-  --color-bucket-extra-2: #d8b26a;
+  --color-bucket-extra-1: #a78bfa;   /* violet    — invest / DCA */
+  --color-bucket-extra-2: #34d399;   /* emerald   — extra custom lane */
   --color-text-primary: #f4f5f6;
   --color-text-secondary: #8c9099;
   /* WCAG: text on lime/amber surfaces must be near-black (DESIGN.md §2.1) */
