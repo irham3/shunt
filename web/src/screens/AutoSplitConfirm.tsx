@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DonutChart } from "../components/DonutChart";
@@ -29,12 +29,30 @@ export function AutoSplitConfirm() {
     [allPending],
   );
 
-  const { address, buckets, investAsset, applySplit, applyInvestConversion, showToast } = useShunt();
+  const { address, buckets, usdcBalance, investAsset, refreshWallet, applySplit, applyInvestConversion, showToast } = useShunt();
   const investLabel = investAsset === "GOLD" ? "Invest → Gold (XAUm)" : "Invest → XLM (DCA)";
+
+  // Pull a fresh on-chain USDC balance so the insufficient-funds pre-flight is
+  // accurate even when the user lands here directly (not via Home's polling).
+  useEffect(() => {
+    if (address) refreshWallet(address);
+  }, [address, refreshWallet]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [doneHashes, setDoneHashes] = useState<string[]>([]);
   const [progress, setProgress] = useState(0); // 0-based index during batch
+
+  // Only the Savings slice actually leaves the wallet (into the vault); Needs,
+  // Buffer and Invest stay put. So the wallet must hold at least the summed
+  // savings share for the split(s) to succeed — otherwise the USDC contract
+  // rejects the transfer (Contract #10). Guard here so we can say so up front
+  // instead of letting the user sign a transaction that can't land.
+  const walletUsdc = Number(usdcBalance ?? 0);
+  const savingsToMove = useMemo(() => {
+    const pct = buckets.filter((b) => b.kind === "savings").reduce((s, b) => s + b.pct, 0);
+    return (totalAmount * pct) / 100;
+  }, [totalAmount, buckets]);
+  const insufficientForSavings = usdcBalance !== null && savingsToMove > walletUsdc + 1e-7;
 
   const investAmt = useMemo(() => {
     const pct = buckets.find((b) => b.id === "invest")?.pct ?? 0;
@@ -86,6 +104,16 @@ export function AutoSplitConfirm() {
   }
 
   async function onApprove() {
+    // Pre-flight: don't prompt the wallet for a split whose savings slice the
+    // wallet can't cover — it would fail on-chain anyway (USDC Contract #10).
+    if (insufficientForSavings) {
+      setErr(
+        `This split moves ${fmtUsdc(savingsToMove)} USDC into the savings vault, ` +
+        `but your wallet only holds ${fmtUsdc(walletUsdc)} USDC. ` +
+        `Split income you actually hold, or top up first.`,
+      );
+      return;
+    }
     setBusy(true);
     setErr(null);
     const hashes: string[] = [];
@@ -112,8 +140,9 @@ export function AutoSplitConfirm() {
         }
 
         if (!xdr) {
-          const reason = buildError
-            ? `Couldn't prepare the split: ${buildError.slice(0, 180)}. If this is a fresh wallet, save your Shunt rules on-chain first.`
+          const friendly = buildError ? formatError(buildError) : "";
+          const reason = friendly
+            ? `Couldn't prepare the split: ${friendly}`
             : "Couldn't prepare the split. Save your Shunt rules on-chain, then try again — and make sure the keeper is reachable.";
           throw new Error(reason);
         }
@@ -199,6 +228,14 @@ export function AutoSplitConfirm() {
           : " · invest slice converts via a follow-up path payment")}
       </p>
 
+      {!done && insufficientForSavings && (
+        <p role="alert" style={{ color: "#ffb4ab", fontSize: 13, margin: 0 }} data-testid="insufficient-usdc-warning">
+          Your wallet holds {fmtUsdc(walletUsdc)} USDC, but this split needs to move{" "}
+          {fmtUsdc(savingsToMove)} USDC into the savings vault. Split income you actually
+          hold, or top up your wallet first.
+        </p>
+      )}
+
       {done ? (
         <>
           {doneHashes.map((h, i) => (
@@ -217,7 +254,7 @@ export function AutoSplitConfirm() {
           </button>
         </>
       ) : (
-        <button className="btn-primary" disabled={busy} onClick={onApprove}>
+        <button className="btn-primary" disabled={busy || insufficientForSavings} onClick={onApprove}>
           {busy
             ? isBatch
               ? `Processing ${progress + 1} of ${allPending.length}…`

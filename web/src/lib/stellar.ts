@@ -59,6 +59,14 @@ export const EXPLORER_ACCOUNT = (addr: string) =>
 export function formatError(e: unknown): string {
   const msg = extractErrorString(e);
   if (msg === "USER_REJECTED") return "";
+  // The USDC token contract rejects a transfer that would overdraw the wallet
+  // with "resulting balance is not within the allowed range". In a split this
+  // means the savings slice can't be moved into the vault — the wallet simply
+  // doesn't hold that much USDC. Translate the host trap into plain language.
+  if (/resulting balance is not within the allowed range/i.test(msg) ||
+      /Error\(Contract, #10\)/.test(msg)) {
+    return "Not enough USDC in your wallet to move the savings portion into the vault. You can only split income you actually hold — top up your wallet or split a smaller amount.";
+  }
   // Fix snake_case errors from Soroban / Stellar
   return msg.replace(/_/g, " ");
 }
