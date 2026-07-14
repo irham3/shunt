@@ -64,6 +64,8 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 
 Shunt never touches fiat and never holds your keys — licensed anchors do fiat, your wallet and the vault contract do custody. That's what makes the loop possible without Shunt becoming a bank or a remittance company.
 
+> **Honest market note:** the value story is Indonesian **rupiah** erosion (our primary market), but the off-ramp that is **live on Stellar today is PHP via MoneyGram** — so the go-to-market is *Philippines-first, Indonesia-next as the IDR corridor lands* (IDRX or MoneyGram-Indonesia). We prove the engine + off-ramp mechanism live in an APAC country now; we don't claim a live rupiah cash-out we don't yet have. Detail in [the anchor stack](#money-in-money-out-the-anchor-stack).
+
 ## How it works
 
 <p align="center">
@@ -192,7 +194,7 @@ Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatibl
 
 Rate and fee are always shown **before** confirmation.
 
-**Pluggable to a real APAC corridor — shown, not claimed.** The off-ramp is generic SEP-24, so the production corridor is *one config value* (`VITE_ANCHOR_HOME_DOMAIN`). The corridor that already connects Stellar USDC to a local APAC economy **today, on mainnet** is **MoneyGram Access** — USDC ⇄ local fiat (incl. **PHP, cashed out at physical MoneyGram locations across the Philippines**). Run our SEP-1 discovery against it yourself — no funds, no keys:
+**Pluggable to a real APAC corridor — shown, not claimed (and framed honestly).** The off-ramp is generic SEP-24, so the production corridor is *one config value* (`VITE_ANCHOR_HOME_DOMAIN`). The corridor that already connects Stellar USDC to fiat in an APAC country **today, on mainnet** is **MoneyGram Ramps** (formerly MoneyGram Access) — USDC → cash pickup, with the **Philippines a supported corridor** since the SDF launch. To be precise: MoneyGram is a *global remittance network* (400k+ locations), a legitimate fiat on/off-ramp — **not** a grassroots local-only anchor, and we don't dress it up as one. It's the real, live rail we can point at today. Run our SEP-1 discovery against it yourself — no funds, no keys:
 
 ```bash
 node scripts/verify-anchor.mjs stellar.moneygram.com
@@ -210,7 +212,9 @@ node scripts/verify-anchor.mjs testanchor.stellar.org   # the SDF testnet anchor
 | 🇵🇭 PHP (live) | **MoneyGram Access** — USDC ⇄ PHP at physical locations | Live on Stellar **mainnet** ([verified toml](https://stellar.moneygram.com/.well-known/stellar.toml)) — `VITE_ANCHOR_HOME_DOMAIN` swap only |
 | 🇮🇩 IDR | **IDRX** — regulated, CertiK-audited Rupiah stablecoin | Roadmap target ([idrx.co](https://home.idrx.co/en/)); Stellar availability still to confirm — *not claimed as on Stellar* |
 
-Which one Shunt settles IDR/PHP through first is a partnership question, not an unsolved technical one. The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
+**Rupiah is the story; the Philippines is the live beachhead — we say so plainly.** Our primary target market is Indonesia (the rupiah-erosion problem the whole product is built around), but the corridor that is *live on Stellar today* is **PHP via MoneyGram** — not IDR. There is no production IDR off-ramp on Stellar yet: IDRX (a regulated rupiah stablecoin) is the target asset but its Stellar availability is unconfirmed, and MoneyGram's Indonesia payout isn't a listed Stellar corridor. So the honest go-to-market is **Philippines-first** (the rail exists) with **Indonesia next** as the IDR corridor lands. We prove the *engine and the off-ramp mechanism* live in an APAC country now; we do not claim a live rupiah cash-out we don't have.
+
+The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
 
 ## Business model — service fees, never interest
 

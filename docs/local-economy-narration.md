@@ -8,11 +8,13 @@ terminal open in the repo root and the app's Send & Pay screen ready.
 
 ---
 
-### [0:00–0:20] Frame the real problem honestly
-**"An Indonesian or Filipino worker earning dollars doesn't want to hold crypto —
-they want rupiah or pesos in their bank, cheaply. So the question that matters for
-a local-finance product is: can Shunt actually put local fiat in their hands? Let
-me show you the real corridor, not a sandbox claim."**
+### [0:00–0:20] Frame the real problem honestly (and name the gap first)
+**"A worker earning dollars in Southeast Asia doesn't want to hold crypto — they
+want their local currency in their bank, cheaply. Our value story is the Indonesian
+rupiah, but I'll be straight: the off-ramp that's *live on Stellar today* is the
+Philippine peso, via MoneyGram — so our go-to-market is Philippines-first, Indonesia
+next as the rupiah corridor lands. Let me show you the real, live rail — not a
+sandbox claim."**
 
 ### [0:20–0:55] Show the live anchor resolve (terminal)
 Run:

@@ -141,6 +141,30 @@ honest velocity over a polished fake history.
 
 ---
 
+## Q9. "Your whole story is rupiah, but your only live corridor is PHP (MoneyGram). The IDR corridor you actually need doesn't exist."
+
+**30-second answer:** "Correct, and we say it in the README rather than hide it. The
+rupiah-erosion problem is our primary market — but the off-ramp that's *live on
+Stellar today* is PHP via MoneyGram, not IDR. There is no production IDR off-ramp on
+Stellar yet: IDRX's Stellar availability is unconfirmed and MoneyGram's Indonesia
+payout isn't a listed Stellar corridor. So our honest go-to-market is
+**Philippines-first** — the rail exists there now — with **Indonesia next** as the
+IDR corridor lands. What we prove today is the engine and the off-ramp *mechanism*,
+live in an APAC country; we don't claim a rupiah cash-out we don't have."
+
+**Why it's a strength, not a dodge:** the split engine, code-custody vault, and
+SEP-24 stack are corridor-agnostic — PH validates them for real, and pointing at an
+IDR anchor is one config value the day one exists. Same rail, different domain.
+
+**Don't:** keep pitching "rupiah, rupiah" while showing a PHP demo without naming the
+gap — that's the exact mismatch a sharp Indonesian judge will attack. Name it first.
+
+**And on MoneyGram itself:** it's a legitimate *global* remittance on/off-ramp, not a
+grassroots local anchor — so we frame it as "the real live fiat rail we can point at
+today," never as deep local-ecosystem integration.
+
+---
+
 ## General posture
 
 - Lead every answer with the **honest boundary**, then the **mitigation**. This

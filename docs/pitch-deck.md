@@ -93,13 +93,13 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 ---
 
-## 9 — Onboarding & corridors (honest)
+## 9 — Corridors & onboarding (honest)
 
-- **Today's wedge:** crypto-aware freelancers already paid in USDC. Payment link (SEP-7) turns "get paid in USD" into the funnel.
-- **Mainstream path:** SEP-24 Top Up (IDR→USDC) via a **licensed regional anchor** — IDRX 🇮🇩 (regulated, CertiK-audited) / Coins.ph 🇵🇭 (BSP-licensed). Swap = one config value.
-- **Named gaps (we say them):** a live regional anchor + passkey/smart-wallet UX (Freighter is too heavy for first-timers) — **roadmap**.
+- **Live rail today:** cash-out to **PHP via MoneyGram** (real, on Stellar mainnet — `verify-anchor` proves it). Rupiah is our market, but the live corridor is Philippine peso → **go-to-market is PH-first, Indonesia-next** as the IDR corridor (IDRX / MoneyGram-ID) lands. We name this gap, not hide it.
+- **Getting in:** crypto-aware freelancers already hold USDC; payment link (SEP-7) turns "get paid in USD" into the funnel; SEP-24 Top Up for fiat-in.
+- **Named gaps:** no live IDR off-ramp yet, plus passkey/smart-wallet UX (Freighter is too heavy for first-timers) — **roadmap**.
 
-> Judges reward a concrete adoption path over a claim. Name the two gaps.
+> The "rupiah story / PHP proof" mismatch is the sharpest attack an Indonesian judge has. Say it first, on this slide.
 
 ---
 
