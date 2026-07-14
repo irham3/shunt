@@ -8,6 +8,8 @@ import {
   fundWithFriendbot,
   fetchLatestSplitEvent,
   addUsdcTrustline,
+  convertXlmToUsdc,
+  quoteConversion,
   NETWORK,
   formatError,
 } from "../lib/stellar";
@@ -43,6 +45,7 @@ export function Home() {
   const [pending, setPending] = useState<PendingSplit[]>([]);
   const [fundingBot, setFundingBot] = useState(false);
   const [enablingUsdc, setEnablingUsdc] = useState(false);
+  const [fundingUsdc, setFundingUsdc] = useState(false);
   const [splittingNow, setSplittingNow] = useState(false);
   const [lastEventCursor, setLastEventCursor] = useState<string>("");
 
@@ -137,6 +140,29 @@ export function Home() {
       if (formatted) showToast(formatted);
     } finally {
       setEnablingUsdc(false);
+    }
+  }
+
+  async function onFundUsdc() {
+    if (!address) return;
+    setFundingUsdc(true);
+    try {
+      // Find out how much 1000 XLM yields in USDC on testnet
+      const estimatedUsdc = await quoteConversion("xlm-usdc", "1000");
+      if (!estimatedUsdc) {
+        throw new Error("No DEX liquidity to swap XLM for USDC on testnet right now.");
+      }
+      
+      const hash = await convertXlmToUsdc(address, "1000", (estimatedUsdc * 0.95).toFixed(7));
+      if (hash) {
+        await refreshWallet(address);
+        showToast(`Swapped 1000 XLM for ~${estimatedUsdc.toFixed(2)} testnet USDC!`);
+      }
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) showToast(`Funding error: ${formatted}`);
+    } finally {
+      setFundingUsdc(false);
     }
   }
 
@@ -254,15 +280,24 @@ export function Home() {
             {fundingBot ? "Funding…" : "Fund with Friendbot (testnet XLM)"}
           </button>
         )}
-        {walletXlm > 0 && !usdcTrustline && (
+        {!usdcTrustline && (
+          <button
+            className="btn-secondary"
+            style={{ fontSize: 13, marginTop: 12, borderColor: "var(--color-accent-primary)", color: "var(--color-accent-primary)" }}
+            disabled={enablingUsdc}
+            onClick={onEnableUsdc}
+          >
+            {enablingUsdc ? "Enabling..." : "Enable USDC (requires XLM)"}
+          </button>
+        )}
+        {usdcTrustline && NETWORK === "testnet" && walletUsdc < 500 && walletXlm > 1000 && (
           <button
             className="btn-secondary"
             style={{ fontSize: 13, marginTop: 12 }}
-            disabled={enablingUsdc}
-            onClick={onEnableUsdc}
-            data-testid="enable-usdc-button"
+            disabled={fundingUsdc}
+            onClick={onFundUsdc}
           >
-            {enablingUsdc ? "Confirm in wallet…" : "Enable USDC — add trustline to receive income"}
+            {fundingUsdc ? "Swapping..." : "Swap 1000 XLM for testnet USDC"}
           </button>
         )}
       </motion.header>
