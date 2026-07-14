@@ -65,7 +65,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 > Screen-share the app (testnet). Beats: connect → set rules → income lands
 > (or tap "Try it — simulated income" for a keeper-prepared split against the
-> wallet's real balance, no waiting on a transfer) → one-tap split → show the
+> wallet's real balance, no waiting on a transfer; easily fund testnet USDC from the Home screen) → one-tap split → show the
 > explorer hash + `split` event → savings vault with the 10%-penalty-to-buffer
 > safety valve → multi-asset transfer (USDC/XLM) → anchor cash-out with rate+fee shown first.
 

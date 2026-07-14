@@ -12,6 +12,7 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 > Settings → Demo fallback → "Simulate incoming income") — it builds a real
 > `distribute` XDR against the wallet's actual USDC balance via the keeper, so
 > the split that follows is a genuine on-chain transaction, not a mock.
+> *(Need USDC? Tap "Swap 1000 XLM for testnet USDC" on the Home screen to instantly fund it via the testnet DEX).*
 
 ---
 

@@ -11,7 +11,8 @@
 </p>
 
 <p align="center">
-  <b>🌐 Live app: <a href="https://shunt-app.vercel.app">shunt-app.vercel.app</a></b> · testnet · connect Freighter and try the loop
+  <b>🌐 Live app: <a href="https://shunt-app.vercel.app">shunt-app.vercel.app</a></b> · testnet · connect Freighter and try the loop<br>
+  <i>(Includes 1-click testnet XLM/USDC funding directly on the Home screen)</i>
 </p>
 
 **Get paid in dollars. Keep them worth something. Never watch a month's income evaporate again.**
