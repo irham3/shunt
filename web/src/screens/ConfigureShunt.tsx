@@ -47,6 +47,7 @@ export function ConfigureShunt() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(!rulesSavedOnChain);
   const [simBusy, setSimBusy] = useState(false);
   /** bucket id whose last adjustment got clamped (over-allocation feedback) */
   const [clampHint, setClampHint] = useState<string | null>(null);
@@ -109,6 +110,7 @@ export function ConfigureShunt() {
       }
       markRulesSaved();
       persistLockSecs(lockSecs);
+      setIsEditing(false);
       setSaved(true);
       showToast("Shunt rules saved on-chain");
     } catch (e) {
@@ -156,10 +158,23 @@ export function ConfigureShunt() {
   return (
     <div className="screen screen-wide">
       <header>
-        <h2 style={{ margin: 0 }}>Configure Shunt</h2>
-        <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>
-          Every incoming income is automatically split by these rules.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <div>
+            <h2 style={{ margin: 0 }}>Configure Shunt</h2>
+            <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>
+              Every incoming income is automatically split by these rules.
+            </p>
+          </div>
+          {rulesSavedOnChain && !isEditing ? (
+            <div className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--color-bucket-savings)", border: "1px solid var(--color-bucket-savings)" }}>
+              <span className="lp-live-dot" style={{ backgroundColor: "var(--color-bucket-savings)" }} /> Active on-chain
+            </div>
+          ) : (
+            <div className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
+              <span className="lp-live-dot" style={{ backgroundColor: "var(--color-text-secondary)" }} /> Unsaved setup
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="split-cols reverse-mobile">
@@ -235,7 +250,7 @@ export function ConfigureShunt() {
                 <AnimatedNumber value={total} suffix="%" /> {valid && "✓"}
               </span>
             </div>
-            {!valid && remaining > 0 && (
+            {isEditing && !valid && remaining > 0 && (
               <button
                 className="btn-ghost"
                 style={{ marginTop: 10, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
@@ -270,6 +285,7 @@ export function ConfigureShunt() {
                   <button
                     className="chip"
                     aria-label={`Decrease ${b.name}`}
+                    disabled={!isEditing}
                     onClick={() => setBucketPct(b.id, b.pct - 5)}
                   >
                     −
@@ -280,12 +296,12 @@ export function ConfigureShunt() {
                   <button
                     className="chip"
                     aria-label={`Increase ${b.name}`}
-                    disabled={remaining <= 0}
+                    disabled={remaining <= 0 || !isEditing}
                     onClick={() => onSliderChange(b.id, b.pct + 5, b.pct)}
                   >
                     +
                   </button>
-                  {!CORE_BUCKET_IDS.includes(b.id) && (
+                  {!CORE_BUCKET_IDS.includes(b.id) && isEditing && (
                     <button className="chip" aria-label={`Remove ${b.name}`} onClick={() => removeBucket(b.id)}>
                       ✕
                     </button>
@@ -299,6 +315,10 @@ export function ConfigureShunt() {
                 value={b.pct}
                 aria-label={`${b.name} percent`}
                 onChange={(e) => onSliderChange(b.id, Number(e.target.value), b.pct)}
+                disabled={!isEditing}
+                style={{
+                  background: `linear-gradient(to right, ${b.color} ${b.pct}%, var(--color-surface-sunken) ${b.pct}%)`,
+                }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                 <span className="numeric muted" style={{ fontSize: 12 }} data-testid={`lane-nominal-${b.id}`}>
@@ -325,6 +345,7 @@ export function ConfigureShunt() {
                     <button
                       className={`chip${investAsset === "XLM" ? " active" : ""}`}
                       onClick={() => setInvestAsset("XLM")}
+                      disabled={!isEditing}
                       data-testid="invest-asset-xlm"
                     >
                       XLM
@@ -332,6 +353,7 @@ export function ConfigureShunt() {
                     <button
                       className={`chip${investAsset === "GOLD" ? " active" : ""}`}
                       onClick={() => setInvestAsset("GOLD")}
+                      disabled={!isEditing}
                       data-testid="invest-asset-gold"
                     >
                       Gold · XAUm
@@ -348,27 +370,31 @@ export function ConfigureShunt() {
             );
           })}
 
-          {!showAdd ? (
-            <button className="btn-ghost" onClick={() => setShowAdd(true)} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
-              <Plus size={16} /> Add custom lane
-            </button>
-          ) : (
-            <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12, border: "1px solid var(--color-accent-primary)" }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>New custom lane</div>
-              <input type="text" placeholder="Lane name (e.g. Holiday)" value={newName} onChange={e => setNewName(e.target.value)} />
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className={`chip ${newKind === "savings" ? "active" : ""}`} onClick={() => setNewKind("savings")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
-                  <Lock size={14} /> Locked
+          {isEditing && (
+            <>
+              {!showAdd ? (
+                <button className="btn-ghost" onClick={() => setShowAdd(true)} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                  <Plus size={16} /> Add custom lane
                 </button>
-                <button className={`chip ${newKind === "needs" ? "active" : ""}`} onClick={() => setNewKind("needs")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
-                  <Wallet size={14} /> Liquid
-                </button>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button className="btn-primary" disabled={!newName.trim()} onClick={() => { addBucket(newName.trim(), newKind); setShowAdd(false); setNewName(""); }}>Add Lane</button>
-              </div>
-            </div>
+              ) : (
+                <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12, border: "1px solid var(--color-accent-primary)" }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>New custom lane</div>
+                  <input type="text" placeholder="Lane name (e.g. Holiday)" value={newName} onChange={e => setNewName(e.target.value)} />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className={`chip ${newKind === "savings" ? "active" : ""}`} onClick={() => setNewKind("savings")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+                      <Lock size={14} /> Locked
+                    </button>
+                    <button className={`chip ${newKind === "needs" ? "active" : ""}`} onClick={() => setNewKind("needs")} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+                      <Wallet size={14} /> Liquid
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+                    <button className="btn-primary" disabled={!newName.trim()} onClick={() => { addBucket(newName.trim(), newKind); setShowAdd(false); setNewName(""); }}>Add Lane</button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="card" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -378,6 +404,7 @@ export function ConfigureShunt() {
                 <button
                   key={o.secs}
                   className={`chip${lockSecs === o.secs ? " active" : ""}`}
+                  disabled={!isEditing}
                   onClick={() => setLockSecs(o.secs)}
                 >
                   {o.label}
@@ -386,9 +413,22 @@ export function ConfigureShunt() {
             </span>
           </div>
 
-          <button className="btn-primary" disabled={!valid || busy} onClick={onSave} data-testid="save-rules-button">
-            {busy ? "Saving…" : valid ? "Save rules" : `Allocate ${remaining}% more to save`}
-          </button>
+          {!isEditing ? (
+            <button className="btn-secondary" onClick={() => setIsEditing(true)}>
+              Edit configuration
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              {rulesSavedOnChain && (
+                <button className="btn-secondary" disabled={busy} onClick={() => setIsEditing(false)}>
+                  Cancel
+                </button>
+              )}
+              <button className="btn-primary" style={{ flex: 1 }} disabled={!valid || busy} onClick={onSave} data-testid="save-rules-button">
+                {busy ? "Saving…" : valid ? (rulesSavedOnChain ? "Update on-chain rules" : "Save to blockchain") : `Allocate ${remaining}% more to save`}
+              </button>
+            </div>
+          )}
           {err && (
             <p role="alert" className="muted" style={{ fontSize: 13, margin: 0 }}>
               {err}
