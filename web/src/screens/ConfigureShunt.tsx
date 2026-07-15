@@ -138,9 +138,11 @@ export function ConfigureShunt() {
     const simAmount = Math.min(walletUsdc, 500).toFixed(7);
     setSimBusy(true);
     try {
-      const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+      const fakeHash =
+        "sim-" +
+        [...crypto.getRandomValues(new Uint8Array(28))]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
       const p = await manualTrigger(address, simAmount, fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
@@ -172,9 +174,11 @@ export function ConfigureShunt() {
     }
     setReallocBusy(true);
     try {
-      const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+      const fakeHash =
+        "sim-" +
+        [...crypto.getRandomValues(new Uint8Array(28))]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
       const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
