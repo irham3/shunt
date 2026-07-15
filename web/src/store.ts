@@ -218,6 +218,7 @@ export const useShunt = create<ShuntState>()(
           lockUntil: savings > 0 ? Math.max(lockUntil, newLock) : lockUntil,
           balances: {
             ...balances,
+            savings: balances.savings + savings,
             needs: balances.needs + needs,
             buffer: balances.buffer + buffer,
             invest: balances.invest + invest,
@@ -235,12 +236,16 @@ export const useShunt = create<ShuntState>()(
           ],
         });
         
-        // After optimistic local update for needs/invest, pull the true state:
-        // vault balances from the contract, wallet balances from Horizon.
+        // After optimistic local update, pull the true state from the network.
+        // We delay this by a few seconds because Soroban RPC nodes often lag by
+        // a ledger or two, and an immediate query will return stale (pre-tx) state
+        // which overwrites the correct optimistic update back to 0.
         const address = get().address;
         if (address) {
-          get().syncFromChain(address);
-          get().refreshWallet(address);
+          setTimeout(() => {
+            get().syncFromChain(address);
+            get().refreshWallet(address);
+          }, 4000);
         }
       },
 
