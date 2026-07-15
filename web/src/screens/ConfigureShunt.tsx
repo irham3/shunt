@@ -556,15 +556,6 @@ export function ConfigureShunt() {
                   <Link to="/request" className="btn-secondary" style={{ flex: 1, minWidth: 120, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                     Payment link
                   </Link>
-                  <button
-                    className="btn-secondary"
-                    style={{ flex: 1, minWidth: 120 }}
-                    disabled={simBusy}
-                    onClick={onSimulate}
-                    data-testid="try-with-simulated-income"
-                  >
-                    {simBusy ? "Preparing…" : "Try it (simulated income)"}
-                  </button>
                 </div>
               </motion.section>
             )}
