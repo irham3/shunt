@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
-import { Lock, Wallet, ArrowUpRight, Plus, CheckCircle2, Wand2 } from "lucide-react";
+import { Lock, Wallet, ArrowUpRight, Plus, CheckCircle2, Wand2, Zap } from "lucide-react";
 import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { vaultSetRules } from "../lib/vault";
@@ -144,7 +144,9 @@ export function ConfigureShunt() {
       const p = await manualTrigger(address, simAmount, fakeHash);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          showToast("Allocation rules not found on-chain for this account. Please click Save above first.");
+          useShunt.setState({ rulesSavedOnChain: false });
+          setIsEditing(true);
+          showToast("Rules expired on-chain (testnet may have reset). Please save again.");
         } else {
           showToast(`Keeper error: ${p.error.slice(0, 120)}`);
         }
@@ -176,7 +178,9 @@ export function ConfigureShunt() {
       const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          showToast("Allocation rules not found on-chain. Please save first.");
+          useShunt.setState({ rulesSavedOnChain: false });
+          setIsEditing(true);
+          showToast("Rules expired on-chain (testnet may have reset). Please save again.");
         } else {
           showToast(`Keeper error: ${p.error.slice(0, 120)}`);
         }
@@ -299,9 +303,52 @@ export function ConfigureShunt() {
         {/* Sliders + timelock + save */}
         <div className="col-main">
           {!isEditing && rulesSavedOnChain && (
-            <button className="btn-secondary" style={{ width: "100%", marginBottom: 4 }} onClick={() => setIsEditing(true)}>
-              Edit configuration
-            </button>
+            <>
+              <section
+                className="card"
+                style={{
+                  border: "1px solid var(--color-accent-secondary)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginBottom: 4,
+                }}
+                data-testid="simulate-section"
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Zap size={18} style={{ color: "var(--color-accent-secondary)" }} />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>Test your rules</span>
+                </div>
+                <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+                  Simulate a detected income using your wallet USDC balance to see how it splits.
+                </p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    className="btn-primary"
+                    style={{ flex: 1, minWidth: 160 }}
+                    disabled={simBusy}
+                    onClick={onSimulate}
+                    data-testid="simulate-income-button"
+                  >
+                    {simBusy ? "Preparing…" : "Simulate incoming income"}
+                  </button>
+                  {Number(usdcBalance ?? 0) >= 0.01 && (
+                    <button
+                      className="btn-secondary"
+                      style={{ flex: 1, minWidth: 160 }}
+                      disabled={reallocBusy}
+                      onClick={onReallocate}
+                      data-testid="reallocate-balance"
+                    >
+                      {reallocBusy ? "Preparing…" : `Reallocate ${fmtUsdc(Number(usdcBalance ?? 0))} USDC`}
+                    </button>
+                  )}
+                </div>
+              </section>
+              <button className="btn-secondary" style={{ width: "100%", marginBottom: 4 }} onClick={() => setIsEditing(true)}>
+                Edit configuration
+              </button>
+            </>
           )}
           {buckets.map((b, i) => {
             const nominal = (previewBase * b.pct) / 100;
@@ -489,7 +536,7 @@ export function ConfigureShunt() {
                   <li>Shunt detects it within seconds and shows the exact breakdown.</li>
                   <li>You approve with one tap — savings lock in the vault, the rest stays liquid.</li>
                 </ol>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: "5px" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: "10px" }}>
                   {Number(usdcBalance ?? 0) >= 0.01 && (
                     <button
                       className="btn-primary"

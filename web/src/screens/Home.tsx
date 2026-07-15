@@ -182,7 +182,8 @@ export function Home() {
       const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          showToast("Allocation rules not found on-chain. Please configure and save rules first.");
+          useShunt.setState({ rulesSavedOnChain: false });
+          showToast("Rules expired on-chain (testnet may have reset). Please save your rules again.");
           nav("/shunt");
         } else {
           showToast(`Keeper error: ${p.error.slice(0, 120)}`);

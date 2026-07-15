@@ -144,6 +144,12 @@ export function AutoSplitConfirm() {
         }
 
         if (!xdr) {
+          // Error #3 = RulesNotSet on-chain — likely testnet reset or contract redeployed.
+          // Reset local state so the user is prompted to re-save their rules.
+          if (buildError && (buildError.includes("#3") || buildError.includes("RulesNotSet"))) {
+            useShunt.setState({ rulesSavedOnChain: false });
+            throw new Error("Rules expired on-chain (testnet may have reset). Go to Configure Shunt and save your rules again.");
+          }
           const friendly = buildError ? formatError(buildError) : "";
           const reason = friendly
             ? `Couldn't prepare the split: ${friendly}`

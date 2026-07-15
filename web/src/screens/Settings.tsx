@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
-import { manualTrigger } from "../lib/keeper";
 import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance, addUsdcTrustline, hasUsdcTrustline, formatError } from "../lib/stellar";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { useShunt } from "../store";
@@ -39,38 +38,6 @@ export function Settings() {
       if (msg) showToast(msg);
     } finally {
       setEnablingUsdc(false);
-    }
-  }
-
-  /** Manual trigger (F4 demo fallback): simulate a detected inflow using the
-      actual wallet USDC balance (capped at a sane demo max), same logic as
-      Configure Shunt's post-save panel. */
-  const [simBusy, setSimBusy] = useState(false);
-  async function onSimulate() {
-    if (!address) return;
-    const walletUsdc = parseFloat(usdcBal) || 0;
-    if (walletUsdc < 1) {
-      showToast("Not enough USDC in wallet to simulate — fund your wallet first");
-      return;
-    }
-    const simAmount = Math.min(walletUsdc, 500).toFixed(7);
-    setSimBusy(true);
-    try {
-      const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-      const p = await manualTrigger(address, simAmount, fakeHash);
-      if (p && !p.xdr && p.error) {
-        if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          showToast("Allocation rules not found on-chain. Go to Configure Shunt and click Save first.");
-        } else {
-          showToast(`Keeper error: ${p.error.slice(0, 120)}`);
-        }
-        return;
-      }
-      nav("/confirm", { state: p ?? { account: address, amount: simAmount, txHash: fakeHash, xdr: null } });
-    } finally {
-      setSimBusy(false);
     }
   }
 
@@ -200,16 +167,6 @@ export function Settings() {
         <span>Display currency</span>
         <span className="muted" style={{ fontSize: 13 }}>USD / IDR</span>
       </div>
-
-      <section className="card" style={{ border: "1px dashed var(--color-accent-secondary)" }}>
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>🧪 Demo fallback</div>
-        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-          Simulate a detected income using your actual wallet USDC balance (manual trigger F4).
-        </p>
-        <button className="btn-secondary" onClick={onSimulate} disabled={simBusy}>
-          {simBusy ? "Preparing…" : "Simulate incoming income"}
-        </button>
-      </section>
 
       <section
         className="card"
