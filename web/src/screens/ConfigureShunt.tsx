@@ -306,105 +306,105 @@ export function ConfigureShunt() {
           {buckets.map((b, i) => {
             const nominal = (previewBase * b.pct) / 100;
             return (
-            <motion.div
-              key={b.id}
-              className="card"
-              style={{ display: "flex", flexDirection: "column", gap: 6 }}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.05 }}
-              data-testid={`lane-${b.id}`}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600, color: b.color, display: "flex", alignItems: "center", gap: 6 }}>
-                  {getKindIcon(b.kind)} {b.name}
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button
-                    className="chip"
-                    aria-label={`Decrease ${b.name}`}
-                    disabled={!isEditing}
-                    onClick={() => setBucketPct(b.id, b.pct - 5)}
-                  >
-                    −
-                  </button>
-                  <span className="numeric" style={{ width: 48, textAlign: "center", fontWeight: 700 }} data-testid={`lane-pct-${b.id}`}>
-                    <AnimatedNumber value={b.pct} suffix="%" />
+              <motion.div
+                key={b.id}
+                className="card"
+                style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                data-testid={`lane-${b.id}`}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600, color: b.color, display: "flex", alignItems: "center", gap: 6 }}>
+                    {getKindIcon(b.kind)} {b.name}
                   </span>
-                  <button
-                    className="chip"
-                    aria-label={`Increase ${b.name}`}
-                    disabled={remaining <= 0 || !isEditing}
-                    onClick={() => onSliderChange(b.id, b.pct + 5, b.pct)}
-                  >
-                    +
-                  </button>
-                  {!CORE_BUCKET_IDS.includes(b.id) && isEditing && (
-                    <button className="chip" aria-label={`Remove ${b.name}`} onClick={() => removeBucket(b.id)}>
-                      ✕
-                    </button>
-                  )}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={b.pct}
-                aria-label={`${b.name} percent`}
-                onChange={(e) => onSliderChange(b.id, Number(e.target.value), b.pct)}
-                disabled={!isEditing}
-                style={{
-                  background: `linear-gradient(to right, ${b.color} ${b.pct}%, var(--color-surface-sunken) ${b.pct}%)`,
-                }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                <span className="numeric muted" style={{ fontSize: 12 }} data-testid={`lane-nominal-${b.id}`}>
-                  ≈ {fmtUsdc(nominal)} USDC {b.kind === "savings" ? "→ vault" : b.kind === "invest" ? (investAsset === "GOLD" ? "→ Gold (XAUm)" : "→ XLM (DCA)") : "stays in wallet"}
-                </span>
-                <AnimatePresence>
-                  {clampHint === b.id && (
-                    <motion.span
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      style={{ fontSize: 12, color: "var(--color-bucket-needs)", fontWeight: 600 }}
-                      data-testid="clamp-hint"
-                    >
-                      Total can't exceed 100% — lower another lane first
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
-              {b.id === "invest" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span className="muted" style={{ fontSize: 12 }}>Invest into</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <button
-                      className={`chip${investAsset === "XLM" ? " active" : ""}`}
-                      onClick={() => setInvestAsset("XLM")}
+                      className="chip"
+                      aria-label={`Decrease ${b.name}`}
                       disabled={!isEditing}
-                      data-testid="invest-asset-xlm"
+                      onClick={() => setBucketPct(b.id, b.pct - 5)}
                     >
-                      XLM
+                      −
                     </button>
+                    <span className="numeric" style={{ width: 48, textAlign: "center", fontWeight: 700 }} data-testid={`lane-pct-${b.id}`}>
+                      <AnimatedNumber value={b.pct} suffix="%" />
+                    </span>
                     <button
-                      className={`chip${investAsset === "GOLD" ? " active" : ""}`}
-                      onClick={() => setInvestAsset("GOLD")}
-                      disabled={!isEditing}
-                      data-testid="invest-asset-gold"
+                      className="chip"
+                      aria-label={`Increase ${b.name}`}
+                      disabled={remaining <= 0 || !isEditing}
+                      onClick={() => onSliderChange(b.id, b.pct + 5, b.pct)}
                     >
-                      Gold · XAUm
+                      +
                     </button>
-                  </div>
-                  <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                    {investAsset === "GOLD"
-                      ? "XAUm = 1g LBMA gold (Matrixdock, on Stellar) — a value-holding growth asset. Spot purchase, not a yield product. Testnet has no XAUm liquidity yet, so it records at a labeled reference rate."
-                      : "Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product. Live DEX liquidity on testnet."}
-                  </p>
+                    {!CORE_BUCKET_IDS.includes(b.id) && isEditing && (
+                      <button className="chip" aria-label={`Remove ${b.name}`} onClick={() => removeBucket(b.id)}>
+                        ✕
+                      </button>
+                    )}
+                  </span>
                 </div>
-              )}
-            </motion.div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={b.pct}
+                  aria-label={`${b.name} percent`}
+                  onChange={(e) => onSliderChange(b.id, Number(e.target.value), b.pct)}
+                  disabled={!isEditing}
+                  style={{
+                    background: `linear-gradient(to right, ${b.color} ${b.pct}%, var(--color-surface-sunken) ${b.pct}%)`,
+                  }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <span className="numeric muted" style={{ fontSize: 12 }} data-testid={`lane-nominal-${b.id}`}>
+                    ≈ {fmtUsdc(nominal)} USDC {b.kind === "savings" ? "→ vault" : b.kind === "invest" ? (investAsset === "GOLD" ? "→ Gold (XAUm)" : "→ XLM (DCA)") : "stays in wallet"}
+                  </span>
+                  <AnimatePresence>
+                    {clampHint === b.id && (
+                      <motion.span
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        style={{ fontSize: 12, color: "var(--color-bucket-needs)", fontWeight: 600 }}
+                        data-testid="clamp-hint"
+                      >
+                        Total can't exceed 100% — lower another lane first
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+                {b.id === "invest" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span className="muted" style={{ fontSize: 12 }}>Invest into</span>
+                      <button
+                        className={`chip${investAsset === "XLM" ? " active" : ""}`}
+                        onClick={() => setInvestAsset("XLM")}
+                        disabled={!isEditing}
+                        data-testid="invest-asset-xlm"
+                      >
+                        XLM
+                      </button>
+                      <button
+                        className={`chip${investAsset === "GOLD" ? " active" : ""}`}
+                        onClick={() => setInvestAsset("GOLD")}
+                        disabled={!isEditing}
+                        data-testid="invest-asset-gold"
+                      >
+                        Gold · XAUm
+                      </button>
+                    </div>
+                    <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                      {investAsset === "GOLD"
+                        ? "XAUm = 1g LBMA gold (Matrixdock, on Stellar) — a value-holding growth asset. Spot purchase, not a yield product. Testnet has no XAUm liquidity yet, so it records at a labeled reference rate."
+                        : "Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product. Live DEX liquidity on testnet."}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
             );
           })}
 
@@ -489,7 +489,7 @@ export function ConfigureShunt() {
                   <li>Shunt detects it within seconds and shows the exact breakdown.</li>
                   <li>You approve with one tap — savings lock in the vault, the rest stays liquid.</li>
                 </ol>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: "5px" }}>
                   {Number(usdcBalance ?? 0) >= 0.01 && (
                     <button
                       className="btn-primary"
