@@ -23,13 +23,14 @@ async function handleInflow(
   account: string,
   amount: string,
   txHash: string,
+  isSimulated = false
 ): Promise<PendingSplit> {
   const processedKey = `processed:${txHash}`;
   const pendingKey = `pending:${txHash}`;
 
   // Already split (completed) → never rebuild; the contract would reject the
   // replayed inflow_key anyway. This is the terminal idempotency guard.
-  if (await env.KEEPER_KV.get(processedKey)) {
+  if (!isSimulated && await env.KEEPER_KV.get(processedKey)) {
     const existing = await env.KEEPER_KV.get(pendingKey, "json");
     return (existing as PendingSplit) ?? { account, amount, txHash, xdr: null, detectedAt: new Date().toISOString(), error: "already processed" };
   }
@@ -38,8 +39,10 @@ async function handleInflow(
   // ONLY if that prior build actually succeeded. A cached entry with a null
   // xdr means the last build FAILED (e.g. rules weren't on-chain yet); fall
   // through and retry so the split isn't stuck broken until the 24h TTL.
-  const cached = (await env.KEEPER_KV.get(pendingKey, "json")) as PendingSplit | null;
-  if (cached && cached.xdr) return cached;
+  if (!isSimulated) {
+    const cached = (await env.KEEPER_KV.get(pendingKey, "json")) as PendingSplit | null;
+    if (cached && cached.xdr) return cached;
+  }
 
   const entry: PendingSplit = {
     account,
@@ -56,7 +59,9 @@ async function handleInflow(
   }
 
   // TTL: pending splits are demo-scoped, expire after a day so KV doesn't grow forever.
-  await env.KEEPER_KV.put(pendingKey, JSON.stringify(entry), { expirationTtl: 86400 });
+  if (!isSimulated) {
+    await env.KEEPER_KV.put(pendingKey, JSON.stringify(entry), { expirationTtl: 86400 });
+  }
   return entry;
 }
 
@@ -155,11 +160,12 @@ export default {
         account?: string;
         amount?: string;
         txHash?: string;
+        isSimulated?: boolean;
       };
       if (!body.account || !body.amount || !body.txHash) {
         return json({ error: "account, amount, txHash required" }, 400, cors);
       }
-      const entry = await handleInflow(env, body.account, body.amount, body.txHash);
+      const entry = await handleInflow(env, body.account, body.amount, body.txHash, !!body.isSimulated);
       return json(entry, 200, cors);
     }
 

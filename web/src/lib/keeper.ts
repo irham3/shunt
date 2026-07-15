@@ -24,12 +24,13 @@ export async function manualTrigger(
   account: string,
   amount: string,
   txHash: string,
+  isSimulated = false
 ): Promise<PendingSplit | null> {
   try {
     const res = await fetch(`${KEEPER_URL}/trigger`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ account, amount, txHash }),
+      body: JSON.stringify({ account, amount, txHash, isSimulated }),
     });
     if (!res.ok) return null;
     return await res.json();

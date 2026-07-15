@@ -141,7 +141,7 @@ export function ConfigureShunt() {
       const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      const p = await manualTrigger(address, simAmount, fakeHash);
+      const p = await manualTrigger(address, simAmount, fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
           useShunt.setState({ rulesSavedOnChain: false });
@@ -175,7 +175,7 @@ export function ConfigureShunt() {
       const fakeHash = [...crypto.getRandomValues(new Uint8Array(32))]
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash);
+      const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
           useShunt.setState({ rulesSavedOnChain: false });

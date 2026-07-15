@@ -179,7 +179,7 @@ export function Home() {
       const syntheticHash = [...crypto.getRandomValues(new Uint8Array(32))]
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash);
+      const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
           useShunt.setState({ rulesSavedOnChain: false });
