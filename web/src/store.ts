@@ -40,6 +40,9 @@ export interface SavingsGoal {
   label: string;
   amountUsdc: number;
   target?: number;
+  /** This goal's own unlock unix timestamp (laddered — independent of the
+   *  aggregate lockUntil). 0/past = unlocked. */
+  unlockAt: number;
 }
 
 interface ShuntState {
@@ -76,6 +79,18 @@ interface ShuntState {
   usdcTrustline: boolean;
   /** On-chain Buffer credit held inside the vault (10% early-exit penalties). */
   bufferCredit: number;
+  /** Threshold Buffer auto-refill target, in USDC (0 = feature off). Stored
+   *  on-chain in Rules.buffer_target; the actual per-split shortfall is
+   *  computed client-side from this vs. the current wallet Buffer estimate
+   *  and passed to distribute() as buffer_topup (see lib/vault.ts docs). */
+  bufferTarget: number;
+  /** Opt-in behavioral nudge: the Savings lane's % climbs by `stepPct` after
+   *  every `everyNSplits` successful splits, capped at `capPct`. Purely
+   *  app-layer — implemented as a follow-up real set_rules call, never
+   *  silent (AutoSplitConfirm shows what changed and why). */
+  autoEscalate: { enabled: boolean; stepPct: number; capPct: number; everyNSplits: number };
+  /** Splits completed since the last auto-escalation bump. */
+  splitsSinceEscalation: number;
   activity: ActivityItem[];
   toast: string | null;
 
@@ -87,6 +102,11 @@ interface ShuntState {
   removeBucket: (id: string) => void;
   markRulesSaved: () => void;
   setLockSecs: (s: number) => void;
+  setBufferTarget: (usdc: number) => void;
+  setAutoEscalate: (a: Partial<ShuntState["autoEscalate"]>) => void;
+  /** Called after each successful split; bumps Savings % on-chain once the
+   *  configured cadence is hit. Returns the new pct if it escalated, else null. */
+  maybeEscalateSavings: () => number | null;
   setInvestAsset: (a: "XLM" | "GOLD") => void;
   setXlmBalance: (b: string) => void;
   /** One Horizon round-trip: refresh XLM + USDC wallet balances + trustline. */
@@ -114,6 +134,8 @@ interface ShuntState {
     toAmount: number,
     txHash: string,
   ) => void;
+  /** Record a USDC -> local-currency demo asset settle (Send & Pay, real path payment). */
+  recordSettle: (assetCode: string, usdcAmount: number, assetAmount: number, txHash: string) => void;
   setLockUntil: (t: number) => void;
   /** Set the client-side-only motivational target for a goal's progress ring. */
   setGoalTarget: (goalId: number, target: number | undefined) => void;
@@ -154,6 +176,9 @@ export const useShunt = create<ShuntState>()(
       usdcBalance: null,
       usdcTrustline: false,
       bufferCredit: 0,
+      bufferTarget: 0,
+      autoEscalate: { enabled: false, stepPct: 1, capPct: 50, everyNSplits: 3 },
+      splitsSinceEscalation: 0,
       activity: [],
       toast: null,
 
@@ -199,6 +224,38 @@ export const useShunt = create<ShuntState>()(
       },
       markRulesSaved: () => set({ rulesSavedOnChain: true }),
       setLockSecs: (lockSecs) => set({ lockSecs }),
+      setBufferTarget: (bufferTarget) => set({ bufferTarget }),
+      setAutoEscalate: (patch) => set({ autoEscalate: { ...get().autoEscalate, ...patch } }),
+      maybeEscalateSavings: () => {
+        const { autoEscalate, splitsSinceEscalation, buckets } = get();
+        if (!autoEscalate.enabled) return null;
+        const nextCount = splitsSinceEscalation + 1;
+        if (nextCount < autoEscalate.everyNSplits) {
+          set({ splitsSinceEscalation: nextCount });
+          return null;
+        }
+        const savingsTotal = buckets.filter((b) => b.kind === "savings").reduce((s, b) => s + b.pct, 0);
+        if (savingsTotal >= autoEscalate.capPct) {
+          set({ splitsSinceEscalation: 0 }); // cap reached — reset the counter, stop nudging every cycle
+          return null;
+        }
+        // Bump the first (primary) savings-kind bucket; pull the increase
+        // from Needs so the total stays 100% without touching Buffer/Invest.
+        const primarySavings = buckets.find((b) => b.kind === "savings");
+        const needsBucket = buckets.find((b) => b.id === "needs");
+        if (!primarySavings || !needsBucket) return null;
+        const step = Math.min(autoEscalate.stepPct, autoEscalate.capPct - savingsTotal, needsBucket.pct);
+        if (step <= 0) return null;
+        set({
+          buckets: buckets.map((b) => {
+            if (b.id === primarySavings.id) return { ...b, pct: b.pct + step };
+            if (b.id === needsBucket.id) return { ...b, pct: b.pct - step };
+            return b;
+          }),
+          splitsSinceEscalation: 0,
+        });
+        return savingsTotal + step;
+      },
       setInvestAsset: (investAsset) => set({ investAsset }),
       setXlmBalance: (xlmBalance) => set({ xlmBalance }),
 
@@ -483,6 +540,29 @@ export const useShunt = create<ShuntState>()(
         if (address) get().refreshWallet(address);
       },
 
+      recordSettle: (assetCode, usdcAmount, assetAmount, txHash) => {
+        const { activity, balances } = get();
+        const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+        set({
+          // Real USDC left the wallet to settle into a local-currency asset —
+          // credit it against Needs like any other outbound USDC spend.
+          balances: { ...balances, needs: Math.max(0, balances.needs - usdcAmount) },
+          activity: [
+            {
+              id: `${Date.now()}-settle`,
+              kind: "convert",
+              title: `Settled ${fmtUsdc(usdcAmount)} USDC → ${fmt(assetAmount)} ${assetCode}`,
+              amountUsdc: usdcAmount,
+              txHash,
+              at: new Date().toISOString(),
+            },
+            ...activity,
+          ],
+        });
+        const address = get().address;
+        if (address) get().refreshWallet(address);
+      },
+
       setGoalTarget: (goalId, target) =>
         set({
           goals: get().goals.map((g) => (g.id === goalId ? { ...g, target } : g)),
@@ -515,6 +595,7 @@ export const useShunt = create<ShuntState>()(
               label: g.label,
               amountUsdc: Number(g.amount) / 10_000_000,
               target: prevTargets.get(Number(g.id)),
+              unlockAt: Number(g.unlock_at),
             }));
 
             const nextState: Partial<ShuntState> = {
@@ -537,6 +618,7 @@ export const useShunt = create<ShuntState>()(
               const chainBufferPct = Number(onChainRules.buffer_bps) / 100;
 
               nextState.lockSecs = Number(onChainRules.lock_secs);
+              nextState.bufferTarget = Number(onChainRules.buffer_target) / 10_000_000;
 
               const pctKind = (kind: string) =>
                 state.buckets.filter((b) => b.kind === kind).reduce((sum, b) => sum + b.pct, 0);
@@ -617,7 +699,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 6,
+      version: 7,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -638,7 +720,7 @@ export const useShunt = create<ShuntState>()(
           }
         }
         if (version < 3 && persisted) {
-          // Savings goals — new on-chain contract (CB27...), populated on next syncFromChain.
+          // Savings goals — new on-chain contract field, populated on next syncFromChain.
           persisted.goals = persisted.goals ?? [];
           persisted.unallocatedSavings = persisted.unallocatedSavings ?? 0;
         }
@@ -655,6 +737,21 @@ export const useShunt = create<ShuntState>()(
         if (version < 6 && persisted) {
           // Invest-slice USDC still sitting in the wallet (simulated DCA).
           persisted.investWalletUsdc = persisted.investWalletUsdc ?? 0;
+        }
+        if (version < 7 && persisted) {
+          // Buffer threshold auto-refill target + Savings auto-escalation.
+          persisted.bufferTarget = persisted.bufferTarget ?? 0;
+          persisted.autoEscalate = persisted.autoEscalate ?? {
+            enabled: false, stepPct: 1, capPct: 50, everyNSplits: 3,
+          };
+          persisted.splitsSinceEscalation = persisted.splitsSinceEscalation ?? 0;
+          // The vault was redeployed (new contract ID) to ship laddered goal
+          // timelocks + buffer auto-refill — a stale "saved" flag would point
+          // at rules that only ever existed on the OLD contract. Force a
+          // fresh on-chain check instead of trusting it (same failure mode
+          // diagnosed 2026-07-16: rules genuinely saved, just on an
+          // abandoned instance).
+          persisted.rulesSavedOnChain = false;
         }
         return persisted;
       },

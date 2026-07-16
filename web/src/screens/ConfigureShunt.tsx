@@ -42,8 +42,13 @@ export function ConfigureShunt() {
     investAsset,
     setInvestAsset,
     rulesSavedOnChain,
+    bufferTarget: storedBufferTarget,
+    setBufferTarget: persistBufferTarget,
+    autoEscalate,
+    setAutoEscalate,
   } = useShunt();
   const [lockSecs, setLockSecs] = useState(storedLockSecs);
+  const [bufferTarget, setBufferTargetLocal] = useState(String(storedBufferTarget || ""));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -107,10 +112,19 @@ export function ConfigureShunt() {
         // wallet-side, so the contract receives their sum as the wallet-tier
         // share. The invest slice is then DCA-converted by a follow-up path
         // payment (F12) — the vault contract stays frozen (11 tests intact).
-        await vaultSetRules(address, pctKind("needs") + pctKind("invest"), pctKind("savings"), pctKind("buffer"), lockSecs);
+        await vaultSetRules(
+          address,
+          pctKind("needs") + pctKind("invest"),
+          pctKind("savings"),
+          pctKind("buffer"),
+          lockSecs,
+          [],
+          Number(bufferTarget) || 0,
+        );
       }
       markRulesSaved();
       persistLockSecs(lockSecs);
+      persistBufferTarget(Number(bufferTarget) || 0);
       setIsEditing(false);
       setSaved(true);
       showToast("Shunt rules saved on-chain");
@@ -139,7 +153,8 @@ export function ConfigureShunt() {
     setSimBusy(true);
     try {
       const fakeHash = randomTxHash();
-      const p = await manualTrigger(address, simAmount, fakeHash, true);
+      const shortfall = Math.max(0, storedBufferTarget - balances.buffer);
+      const p = await manualTrigger(address, simAmount, fakeHash, true, 3, shortfall > 0 ? shortfall.toFixed(7) : undefined);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
           const { reallyMissing, message } = await resolveRulesNotSet(address);
@@ -174,7 +189,8 @@ export function ConfigureShunt() {
     setReallocBusy(true);
     try {
       const fakeHash = randomTxHash();
-      const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash, true);
+      const shortfall = Math.max(0, storedBufferTarget - balances.buffer);
+      const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash, true, 3, shortfall > 0 ? shortfall.toFixed(7) : undefined);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
           const { reallyMissing, message } = await resolveRulesNotSet(address);
@@ -451,6 +467,49 @@ export function ConfigureShunt() {
                         ? "XAUm = 1g LBMA gold (Matrixdock, on Stellar) — a value-holding growth asset. Spot purchase, not a yield product. Testnet has no XAUm liquidity yet, so it records at a labeled reference rate."
                         : "Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product. Live DEX liquidity on testnet."}
                     </p>
+                  </div>
+                )}
+                {b.id === "buffer" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
+                    <label className="muted" style={{ fontSize: 12 }}>
+                      Threshold auto-refill target (USDC, 0 = off)
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={bufferTarget}
+                        onChange={(e) => setBufferTargetLocal(e.target.value)}
+                        disabled={!isEditing}
+                        placeholder="0"
+                        style={{ marginTop: 4 }}
+                        data-testid="buffer-target-input"
+                      />
+                    </label>
+                    <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                      {Number(bufferTarget) > 0
+                        ? `Each split tops up Buffer toward ${fmtUsdc(Number(bufferTarget))} USDC first, before the normal % split applies to the rest — enforced on-chain (Rules.buffer_target).`
+                        : "Off — Buffer only gets its fixed % share, same as every other lane."}
+                    </p>
+                  </div>
+                )}
+                {b.id === "savings" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: isEditing ? "pointer" : "default" }}>
+                      <input
+                        type="checkbox"
+                        checked={autoEscalate.enabled}
+                        disabled={!isEditing}
+                        onChange={(e) => setAutoEscalate({ enabled: e.target.checked })}
+                        data-testid="auto-escalate-toggle"
+                      />
+                      Auto-increase this % over time
+                    </label>
+                    {autoEscalate.enabled && (
+                      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                        +{autoEscalate.stepPct}% every {autoEscalate.everyNSplits} splits, capped at {autoEscalate.capPct}%
+                        — each bump is a real on-chain rules update, shown right after the split it triggers on.
+                      </p>
+                    )}
                   </div>
                 )}
               </motion.div>

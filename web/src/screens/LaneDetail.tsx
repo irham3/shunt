@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, Wallet, ArrowUpRight, SlidersHorizontal } from "lucide-react";
+import { Lock, Wallet, ArrowUpRight, SlidersHorizontal, Clock, X } from "lucide-react";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { fmtUsdc, useShunt } from "../store";
 import { vaultWithdrawBuffer } from "../lib/vault";
-import { formatError, convertUsdcToXlm, quoteConversion } from "../lib/stellar";
+import {
+  formatError, convertUsdcToXlm, quoteConversion, convertUsdcToAsset, quoteUsdcToAsset, DEMO_ASSETS,
+  createScheduledPayment, cancelScheduledPayment, fetchScheduledPayments, type ScheduledPayment,
+  USDC_CODE, USDC_ISSUER, hasTrustline, addTrustline,
+} from "../lib/stellar";
+import { Asset, StrKey } from "@stellar/stellar-sdk";
 import { getGoldUsdRate } from "../lib/rates";
+
+const TXAUM = DEMO_ASSETS.find((a) => a.code === "TXAUM");
 
 /**
  * Per-lane detail (`/lane/:id`). Full-page layout matching SavingsVault —
@@ -80,12 +87,33 @@ export function LaneDetail() {
     setBuying(true);
     try {
       if (investAsset === "GOLD") {
-        const { rate } = await getGoldUsdRate();
-        const goldAmt = amount / rate;
-        // Simulated purchase (no on-chain tx) — record without a tx hash so
-        // Activity doesn't link to a nonexistent explorer page.
-        manualInvestBuy(amount, goldAmt, undefined, true);
-        showToast(`Bought ${goldAmt.toFixed(4)} g XAUm for ${fmtUsdc(amount)} USDC`);
+        // Real testnet gold: if Shunt's own TXAUM demo asset has live
+        // orderbook liquidity (scripts/issue-demo-assets.mjs), execute a
+        // genuine path payment — same honesty pattern as XLM. Falls back to
+        // the labeled reference-rate simulation only if that liquidity is
+        // unavailable, never silently.
+        const txaumQuote = TXAUM ? await quoteUsdcToAsset(new Asset(TXAUM.code, TXAUM.issuer), amount.toFixed(7)) : null;
+        if (TXAUM && txaumQuote) {
+          const txaumAsset = new Asset(TXAUM.code, TXAUM.issuer);
+          // A path payment to self can't deliver an asset the account has
+          // never held before — Stellar requires the trustline to already
+          // exist. One extra signature, first time only (same two-step
+          // honesty pattern as everywhere else a new trustline is needed).
+          if (!(await hasTrustline(address, txaumAsset))) {
+            await addTrustline(address, txaumAsset);
+          }
+          const minGold = (txaumQuote.amount * 0.98).toFixed(7);
+          const hash = await convertUsdcToAsset(address, txaumAsset, amount.toFixed(7), minGold, txaumQuote.path);
+          manualInvestBuy(amount, txaumQuote.amount, hash, false);
+          showToast(`Bought ${txaumQuote.amount.toFixed(4)} TXAUM (testnet demo gold) for ${fmtUsdc(amount)} USDC`);
+        } else {
+          const { rate } = await getGoldUsdRate();
+          const goldAmt = amount / rate;
+          // Simulated purchase (no on-chain tx) — record without a tx hash so
+          // Activity doesn't link to a nonexistent explorer page.
+          manualInvestBuy(amount, goldAmt, undefined, true);
+          showToast(`Bought ${goldAmt.toFixed(4)} g XAUm for ${fmtUsdc(amount)} USDC`);
+        }
       } else {
         // Size the slippage floor from a LIVE DEX quote — the CoinGecko
         // display rate reflects mainnet and can sit far above the testnet
@@ -215,6 +243,19 @@ export function LaneDetail() {
                     this one's asset/% picker. A second button to the same
                     destination read as two unrelated actions. */}
               </div>
+
+              <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8, opacity: 0.75 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>Yield boost via Blend — not enabled</div>
+                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                  Blend Capital is a real lending protocol on Stellar (Soroban), and it's technically
+                  possible to lend part of this lane's holdings there for interest. We're deliberately
+                  <strong> not</strong> wiring it in: lending yield is interest (riba), which conflicts with
+                  Shunt's sharia-conscious positioning (service fees only, everywhere else in the app) —
+                  and it stacks smart-contract risk on top of an already-unaudited vault. If this ever
+                  ships, it would be an explicit opt-in here in Invest, with its own disclaimer, never
+                  silently blended into your default allocation, and never in Savings.
+                </p>
+              </div>
             </>
           )}
 
@@ -225,6 +266,17 @@ export function LaneDetail() {
                 <p className="muted" style={{ fontSize: 13, margin: 0 }}>
                   No lock, no penalty. It also collects the 10% penalty from any early Savings withdrawal as <strong>buffer credit</strong> held in the vault.
                 </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {/* Same off-ramp/convert as the Needs lane — Buffer is
+                    wallet-side USDC too, no separate custody — but framed for
+                    the "I need cash NOW" moment this lane exists for. */}
+                <Link to="/send?tab=usdc" className="btn-primary" style={{ flex: 1, minWidth: 150, display: "inline-flex", alignItems: "center", justifyContent: "center" }} data-testid="buffer-emergency-offramp">
+                  Emergency cash-out
+                </Link>
+                <Link to="/send?tab=convert" className="btn-secondary" style={{ flex: 1, minWidth: 150, display: "inline-flex", alignItems: "center", justifyContent: "center" }} data-testid="buffer-quick-convert">
+                  Quick-convert
+                </Link>
               </div>
             </div>
           )}
@@ -249,6 +301,8 @@ export function LaneDetail() {
               </div>
             </div>
           )}
+
+          {bucket.id === "needs" && address && <ScheduledBillPay address={address} showToast={showToast} />}
 
           {bucket.kind === "savings" && (
             <Link to="/savings" className="btn-primary" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
@@ -291,6 +345,165 @@ export function LaneDetail() {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Scheduled bill-pay — a native Stellar claimable balance with a future
+// unlock date, standing in for "rent due the 1st" / "cicilan due the 15th".
+// Honest framing: this still needs your signature right now (the funds leave
+// the wallet today, into escrow); nothing signs itself later. What's
+// scheduled is WHEN the recipient can claim, not an unattended payment.
+// ---------------------------------------------------------------------------
+
+function ScheduledBillPay({ address, showToast }: { address: string; showToast: (msg: string) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [recipient, setRecipient] = useState("");
+  const [asset, setAsset] = useState<"XLM" | "USDC">("USDC");
+  const [amount, setAmount] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [payments, setPayments] = useState<ScheduledPayment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  function refresh() {
+    fetchScheduledPayments(address).then((p) => {
+      setPayments(p);
+      setLoaded(true);
+    });
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
+  async function onCreate() {
+    setErr(null);
+    if (!StrKey.isValidEd25519PublicKey(recipient.trim())) {
+      setErr("Invalid destination address (must start with G…).");
+      return;
+    }
+    const amt = Number(amount);
+    if (!amt || amt <= 0) {
+      setErr("Enter a valid amount.");
+      return;
+    }
+    if (!dueDate) {
+      setErr("Pick a due date.");
+      return;
+    }
+    const unlockAt = Math.floor(new Date(dueDate).getTime() / 1000);
+    if (unlockAt <= Date.now() / 1000) {
+      setErr("Pick a date in the future.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const assetObj = asset === "XLM" ? Asset.native() : new Asset(USDC_CODE, USDC_ISSUER);
+      await createScheduledPayment(address, recipient.trim(), assetObj, amt.toFixed(7), unlockAt);
+      showToast(`Scheduled ${fmtUsdc(amt)} ${asset} for ${new Date(unlockAt * 1000).toLocaleDateString("en-US")}`);
+      setRecipient("");
+      setAmount("");
+      setDueDate("");
+      setShowForm(false);
+      refresh();
+    } catch (e) {
+      const f = formatError(e);
+      if (f) setErr(f);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onCancel(id: string) {
+    try {
+      await cancelScheduledPayment(address, id);
+      showToast("Scheduled payment cancelled — funds returned to your wallet");
+      refresh();
+    } catch (e) {
+      const f = formatError(e);
+      if (f) showToast(f);
+    }
+  }
+
+  const mine = payments.filter((p) => p.isSponsor);
+
+  return (
+    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }} data-testid="scheduled-bill-pay">
+      <div>
+        <div style={{ fontWeight: 600, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+          <Clock size={16} /> Schedule a payment
+        </div>
+        <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+          Rent, cicilan — set money aside now for a bill due later. This still signs today (a native
+          Stellar claimable balance, no custom contract): funds leave your wallet into escrow
+          immediately, and your recipient can claim them only once the due date arrives. You can
+          cancel and reclaim anytime before they do.
+        </p>
+      </div>
+
+      {mine.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {mine.map((p) => (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderTop: "1px solid #1f2732" }}>
+              <span style={{ fontSize: 13 }}>
+                <span className="numeric">{Number(p.amount).toLocaleString("en-US", { maximumFractionDigits: 2 })} {p.asset}</span>
+                {p.claimableAfter && (
+                  <span className="muted"> · claimable {new Date(p.claimableAfter * 1000).toLocaleDateString("en-US")}</span>
+                )}
+              </span>
+              <button className="chip" aria-label="Cancel scheduled payment" onClick={() => onCancel(p.id)} data-testid="cancel-scheduled-payment">
+                <X size={13} /> Cancel
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {loaded && mine.length === 0 && !showForm && (
+        <p className="muted" style={{ fontSize: 12, margin: 0 }}>No scheduled payments yet.</p>
+      )}
+
+      {!showForm ? (
+        <button className="btn-ghost" onClick={() => setShowForm(true)} data-testid="new-scheduled-payment">
+          + Schedule a payment
+        </button>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, border: "1px solid var(--color-accent-primary)", borderRadius: 12, padding: 12 }}>
+          <label className="muted" style={{ fontSize: 12 }}>
+            Recipient (G…)
+            <input type="text" placeholder="GABC…XYZ" value={recipient} onChange={(e) => setRecipient(e.target.value)} style={{ marginTop: 4 }} data-testid="schedule-recipient" />
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["USDC", "XLM"] as const).map((a) => (
+              <button key={a} className={`chip${asset === a ? " active" : ""}`} onClick={() => setAsset(a)} style={{ flex: 1, justifyContent: "center", display: "flex" }}>
+                {a}
+              </button>
+            ))}
+          </div>
+          <label className="muted" style={{ fontSize: 12 }}>
+            Amount ({asset})
+            <input type="number" min={0} step="any" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ marginTop: 4 }} data-testid="schedule-amount" />
+          </label>
+          <label className="muted" style={{ fontSize: 12 }}>
+            Due date
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ marginTop: 4 }} data-testid="schedule-date" />
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-secondary" onClick={() => { setShowForm(false); setErr(null); }}>Cancel</button>
+            <button className="btn-primary" disabled={busy} onClick={onCreate} data-testid="schedule-submit">
+              {busy ? "Signing & submitting…" : "Schedule"}
+            </button>
+          </div>
+        </div>
+      )}
+      {err && (
+        <p role="alert" className="muted" style={{ fontSize: 12, margin: 0 }}>
+          {err}
+        </p>
+      )}
     </div>
   );
 }

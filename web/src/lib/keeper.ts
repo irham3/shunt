@@ -39,24 +39,28 @@ export async function manualTrigger(
   amount: string,
   txHash: string,
   isSimulated = false,
-  retries = 3
+  retries = 3,
+  /** Threshold Buffer auto-refill, in USDC (e.g. "2.5") — computed by the
+   *  caller from a real wallet-balance read against the user's stored
+   *  buffer_target. Omit/undefined preserves the original split behavior. */
+  bufferTopup?: string,
 ): Promise<PendingSplit | null> {
   try {
     const res = await fetch(`${KEEPER_URL}/trigger`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ account, amount, txHash, isSimulated }),
+      body: JSON.stringify({ account, amount, txHash, isSimulated, bufferTopup }),
     });
     if (!res.ok) return null;
     const data = await res.json() as PendingSplit;
-    
-    // If we get RulesNotSet (#3) on a simulated run, it's highly likely to be 
+
+    // If we get RulesNotSet (#3) on a simulated run, it's highly likely to be
     // Soroban RPC lag immediately after the user saved rules. Retry.
     if (data.error && data.error.includes("#3") && isSimulated && retries > 0) {
       await new Promise(r => setTimeout(r, 2000));
-      return manualTrigger(account, amount, txHash, isSimulated, retries - 1);
+      return manualTrigger(account, amount, txHash, isSimulated, retries - 1, bufferTopup);
     }
-    
+
     return data;
   } catch {
     return null;

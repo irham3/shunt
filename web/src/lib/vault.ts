@@ -1,7 +1,10 @@
 /**
- * ShuntVault contract client — wraps the auto-generated bindings from
- * `contracts/shunt-vault/bindings` so the rest of the frontend speaks
- * typed methods instead of raw XDR.
+ * ShuntVault contract client — wraps the auto-generated bindings in
+ * `./vault-contract.ts` (regenerated via `stellar contract bindings
+ * typescript --contract-id <id> --network testnet`, one manual fix applied —
+ * see the comment at the top of that file) so the rest of the frontend
+ * speaks typed methods instead of raw XDR. The `contracts/shunt-vault/bindings`
+ * directory is an older, unused scaffold — not wired into the app.
  *
  * The bindings Client handles simulation, assembly, and XDR encoding.
  * We only need to plug in the wallet signer from StellarWalletsKit.
@@ -38,7 +41,8 @@ function getVaultClient(publicKey: string): Client {
 // Public helpers consumed by screens
 // ---------------------------------------------------------------------------
 
-/** set_rules on-chain (percentages → bps). */
+/** set_rules on-chain (percentages → bps). `bufferTargetUsdc` is the
+ *  threshold auto-refill target (0 = feature off). */
 export async function vaultSetRules(
   user: string,
   needsPct: number,
@@ -46,6 +50,7 @@ export async function vaultSetRules(
   bufferPct: number,
   lockSecs: number,
   anchors: string[] = [],
+  bufferTargetUsdc: number = 0,
 ): Promise<string> {
   const client = getVaultClient(user);
   const tx = await client.set_rules({
@@ -55,6 +60,7 @@ export async function vaultSetRules(
     buffer_bps: bufferPct * 100,
     lock_secs: BigInt(lockSecs),
     anchors,
+    buffer_target: BigInt(Math.round(bufferTargetUsdc * 10_000_000)),
   });
   const result = await tx.signAndSend();
   return (result as any).hash ?? "";
@@ -197,17 +203,21 @@ export async function vaultGetBufferCredit(user: string): Promise<bigint> {
 // to — the same on-chain Savings(user) total (contracts/shunt-vault/src/lib.rs).
 // ---------------------------------------------------------------------------
 
-/** Create a goal, allocating `usdc` from the unallocated Savings pool. */
+/** Create a goal, allocating `usdc` from the unallocated Savings pool.
+ *  `lockSecs` sets this goal's OWN unlock date (laddered, independent of the
+ *  aggregate lock) — 0 means unlocked immediately. */
 export async function vaultCreateGoal(
   user: string,
   label: string,
   usdc: number,
+  lockSecs: number = 0,
 ): Promise<{ hash: string; goalId: number }> {
   const client = getVaultClient(user);
   const tx = await client.create_savings_goal({
     user,
     label,
     initial_amount: BigInt(Math.round(usdc * 10_000_000)),
+    lock_secs: BigInt(lockSecs),
   });
   const result = await tx.signAndSend();
   return { hash: (result as any).hash ?? "", goalId: Number(result.result) };

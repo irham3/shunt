@@ -4,8 +4,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { markComplete, manualTrigger, type PendingSplit } from "../lib/keeper";
-import { convertUsdcToXlm, quoteConversion, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
-import { resolveRulesNotSet } from "../lib/vault";
+import { convertUsdcToXlm, quoteConversion, signAndSubmitXdr, EXPLORER_TX, formatError, convertUsdcToAsset, quoteUsdcToAsset, DEMO_ASSETS, hasTrustline, addTrustline } from "../lib/stellar";
+import { Asset } from "@stellar/stellar-sdk";
+
+const TXAUM = DEMO_ASSETS.find((a) => a.code === "TXAUM");
+import { resolveRulesNotSet, vaultSetRules } from "../lib/vault";
 import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
@@ -30,7 +33,8 @@ export function AutoSplitConfirm() {
     [allPending],
   );
 
-  const { address, buckets, usdcBalance, investAsset, refreshWallet, applySplit, applyInvestConversion, showToast } = useShunt();
+  const { address, buckets, usdcBalance, investAsset, lockSecs, bufferTarget, refreshWallet, applySplit, applyInvestConversion, showToast } = useShunt();
+  const [escalated, setEscalated] = useState<number | null>(null);
   const investLabel = investAsset === "GOLD" ? "Invest → Gold (XAUm)" : "Invest → XLM (DCA)";
 
   // Pull a fresh on-chain USDC balance so the insufficient-funds pre-flight is
@@ -87,6 +91,29 @@ export function AutoSplitConfirm() {
     if (thisInvestAmt <= 0) return;
 
     if (investAsset === "GOLD") {
+      // Real testnet gold via Shunt's own TXAUM demo asset (real liquidity —
+      // see scripts/issue-demo-assets.mjs), same honesty pattern as XLM.
+      // Falls back to the labeled reference-rate simulation only if that
+      // liquidity is unavailable this cycle.
+      if (splitWasOnChain && address && TXAUM) {
+        try {
+          const txaumAsset = new Asset(TXAUM.code, TXAUM.issuer);
+          const quote = await quoteUsdcToAsset(txaumAsset, thisInvestAmt.toFixed(7));
+          if (quote) {
+            // First-time trustline, same as the manual-buy path — a path
+            // payment to self can't deliver an asset never held before.
+            if (!(await hasTrustline(address, txaumAsset))) {
+              await addTrustline(address, txaumAsset);
+            }
+            const minGold = (quote.amount * 0.95).toFixed(7);
+            const hash = await convertUsdcToAsset(address, txaumAsset, thisInvestAmt.toFixed(7), minGold, quote.path);
+            applyInvestConversion(thisInvestAmt, quote.amount, hash, false);
+            return;
+          }
+        } catch {
+          // fall through to simulation
+        }
+      }
       const { rate } = await getGoldUsdRate();
       const grams = thisInvestAmt / rate;
       applyInvestConversion(thisInvestAmt, grams, undefined, true);
@@ -179,6 +206,34 @@ export function AutoSplitConfirm() {
           ? `All ${allPending.length} incomes split — ${fmtUsdc(totalAmount)} USDC routed`
           : "Income landed — auto-split complete",
       );
+
+      // Opt-in behavioral nudge: bump Savings % on the configured cadence.
+      // This is a REAL follow-up set_rules call, never silent — shown below.
+      if (address) {
+        const newPct = useShunt.getState().maybeEscalateSavings();
+        if (newPct !== null) {
+          try {
+            const nowBuckets = useShunt.getState().buckets;
+            const pctKind = (kind: string) => nowBuckets.filter((b) => b.kind === kind).reduce((s, b) => s + b.pct, 0);
+            await vaultSetRules(
+              address,
+              pctKind("needs") + pctKind("invest"),
+              pctKind("savings"),
+              pctKind("buffer"),
+              lockSecs,
+              [],
+              bufferTarget,
+            );
+            setEscalated(newPct);
+          } catch {
+            // Non-critical nudge — the split itself already succeeded. Roll
+            // the local bucket change back so it isn't shown as saved when
+            // it isn't, and try again next cycle instead of leaving a
+            // client/chain mismatch.
+            useShunt.getState().syncFromChain(address);
+          }
+        }
+      }
     } catch (e) {
       const formatted = formatError(e);
       if (formatted) setErr(formatted);
@@ -252,6 +307,12 @@ export function AutoSplitConfirm() {
           Your wallet holds {fmtUsdc(walletUsdc)} USDC, but this split needs to move{" "}
           {fmtUsdc(savingsToMove)} USDC into the savings vault. Split income you actually
           hold, or top up your wallet first.
+        </p>
+      )}
+
+      {escalated !== null && (
+        <p className="muted" style={{ fontSize: 13, margin: 0, color: "var(--color-accent-primary)" }} data-testid="auto-escalate-notice">
+          Auto-increase: Savings bumped to {escalated}% — saved on-chain for next time.
         </p>
       )}
 

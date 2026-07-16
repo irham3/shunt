@@ -363,7 +363,7 @@ export function Onboarding() {
             GitHub
           </a>
           <a
-            href="https://stellar.expert/explorer/testnet/contract/CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K"
+            href="https://stellar.expert/explorer/testnet/contract/CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW"
             target="_blank"
             rel="noreferrer"
             className="muted"

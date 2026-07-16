@@ -15,6 +15,7 @@ import {
   Operation,
   StrKey,
   Transaction,
+  Claimant,
 } from "@stellar/stellar-sdk";
 
 export const NETWORK = (import.meta.env.VITE_STELLAR_NETWORK ?? "testnet") as
@@ -40,6 +41,29 @@ export const USDC_ISSUER =
   import.meta.env.VITE_USDC_ISSUER ??
   // Circle's well-known testnet issuer
   "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
+/**
+ * Shunt-issued testnet DEMO assets (scripts/issue-demo-assets.mjs) with real
+ * seeded orderbook liquidity against USDC. NOT the real branded assets they
+ * echo (Settle Network's ARST/BRLT peso/real stablecoins, Matrixdock's real
+ * XAUm gold token) — those are mainnet-only, so testnet gets our own
+ * issuance, labeled as such everywhere it shows up in the UI. Empty issuer
+ * (unconfigured) degrades each demo asset to unavailable, not fake.
+ */
+export const DEMO_ASSET_ISSUER = import.meta.env.VITE_DEMO_ASSET_ISSUER ?? "";
+export interface DemoAsset {
+  code: string;
+  issuer: string;
+  /** What it stands in for, shown in the UI so nobody mistakes it for the real thing. */
+  label: string;
+}
+export const DEMO_ASSETS: DemoAsset[] = DEMO_ASSET_ISSUER
+  ? [
+      { code: "TXAUM", issuer: DEMO_ASSET_ISSUER, label: "Testnet demo gold (stands in for Matrixdock XAUm, mainnet-only)" },
+      { code: "TIDR", issuer: DEMO_ASSET_ISSUER, label: "Testnet demo Indonesian Rupiah proxy" },
+      { code: "TPHP", issuer: DEMO_ASSET_ISSUER, label: "Testnet demo Philippine Peso proxy" },
+    ]
+  : [];
 
 export const HORIZON_URL =
   NETWORK === "testnet"
@@ -386,6 +410,122 @@ async function pathPaymentSelf(
   }
 }
 
+/**
+ * Pay a DIFFERENT recipient an exact destination amount/asset — the payer
+ * spends USDC, the recipient receives exactly what they asked for (e.g. a
+ * merchant's SEP-7 request denominated in a local-currency asset), converted
+ * atomically via `pathPaymentStrictReceive`. `sendMax` is the payer's
+ * slippage-protected cap in USDC.
+ */
+export async function payRecipientViaPath(
+  sender: string,
+  destination: string,
+  destAsset: Asset,
+  destAmount: string,
+  sendMax: string,
+  path: Asset[] = [],
+): Promise<string> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Sender account not found on network.");
+  }
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      Operation.pathPaymentStrictReceive({
+        sendAsset: new Asset(USDC_CODE, USDC_ISSUER),
+        sendMax,
+        destination,
+        destAsset,
+        destAmount,
+        path,
+      }),
+    )
+    .setTimeout(300)
+    .build();
+
+  try {
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    return result.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
+/**
+ * Live quote for paying an EXACT destination amount to someone else, sourced
+ * from the payer's USDC — the counterpart to `quoteConversion` (which quotes
+ * a fixed source amount instead). Used by the "Pay a request" flow so the
+ * payer sees the USDC cost before signing.
+ */
+export async function quoteStrictReceive(
+  destAsset: Asset,
+  destAmount: string,
+): Promise<ConversionQuote | null> {
+  const destParam = destAsset.isNative()
+    ? "destination_asset_type=native"
+    : `destination_asset_type=credit_alphanum4&destination_asset_code=${destAsset.getCode()}&destination_asset_issuer=${destAsset.getIssuer()}`;
+  const params = `source_assets=${USDC_CODE}%3A${USDC_ISSUER}&destination_amount=${destAmount}&${destParam}`;
+  try {
+    const res = await fetch(`${HORIZON_URL}/paths/strict-receive?${params}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const records: any[] = data?._embedded?.records ?? [];
+    if (records.length === 0) return null;
+    const best = records.reduce((a, b) => (Number(b.source_amount) < Number(a.source_amount) ? b : a));
+    const path: Asset[] = (best.path ?? []).map((p: any) =>
+      p.asset_type === "native" ? Asset.native() : new Asset(p.asset_code, p.asset_issuer),
+    );
+    return { amount: Number(best.source_amount), path };
+  } catch {
+    return null;
+  }
+}
+
+/** Self-conversion into any Shunt demo asset (or any classic asset) —
+ *  generalizes convertUsdcToXlm for the gold DCA lane and the multi-currency
+ *  settle picker. */
+export async function convertUsdcToAsset(
+  sender: string,
+  destAsset: Asset,
+  usdcAmount: string,
+  destMin: string,
+  path: Asset[] = [],
+): Promise<string> {
+  return pathPaymentSelf(sender, new Asset(USDC_CODE, USDC_ISSUER), destAsset, usdcAmount, destMin, path);
+}
+
+/** Live quote for a USDC -> arbitrary-asset self-conversion (fixed source
+ *  amount) — generalizes quoteConversion's xlm-usdc pair to any classic asset. */
+export async function quoteUsdcToAsset(destAsset: Asset, usdcAmount: string): Promise<ConversionQuote | null> {
+  const destParam = destAsset.isNative()
+    ? "destination_assets=native"
+    : `destination_assets=${destAsset.getCode()}%3A${destAsset.getIssuer()}`;
+  const params = `source_asset_type=credit_alphanum4&source_asset_code=${USDC_CODE}&source_asset_issuer=${USDC_ISSUER}&source_amount=${usdcAmount}&${destParam}`;
+  try {
+    const res = await fetch(`${HORIZON_URL}/paths/strict-send?${params}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const records: any[] = data?._embedded?.records ?? [];
+    if (records.length === 0) return null;
+    const best = records.reduce((a, b) => (Number(b.destination_amount) > Number(a.destination_amount) ? b : a));
+    const path: Asset[] = (best.path ?? []).map((p: any) =>
+      p.asset_type === "native" ? Asset.native() : new Asset(p.asset_code, p.asset_issuer),
+    );
+    return { amount: Number(best.destination_amount), path };
+  } catch {
+    return null;
+  }
+}
+
 /** F12 Invest lane: USDC → XLM after the split (separate classic tx — a
  * Soroban tx is single-operation by protocol, honest two-tap UX, README). */
 export async function convertUsdcToXlm(
@@ -495,6 +635,176 @@ export async function addUsdcTrustline(sender: string): Promise<string> {
     return result.hash;
   } catch (e) {
     parseWalletError(e);
+  }
+}
+
+/** True if the account already trusts the given classic asset — generalizes
+ *  hasUsdcTrustline for the demo local-currency/gold assets. */
+export async function hasTrustline(address: string, asset: Asset): Promise<boolean> {
+  if (asset.isNative()) return true;
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (!res.ok) return false;
+  const data = await res.json();
+  return (data.balances ?? []).some(
+    (b: { asset_code?: string; asset_issuer?: string }) =>
+      b.asset_code === asset.getCode() && b.asset_issuer === asset.getIssuer(),
+  );
+}
+
+/** Add a trustline (changeTrust) for any classic asset — generalizes
+ *  addUsdcTrustline for the demo local-currency/gold assets, required once
+ *  before a path payment can deliver a never-before-held asset. */
+export async function addTrustline(sender: string, asset: Asset): Promise<string> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Account not funded yet — get XLM first (Friendbot).");
+  }
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(Operation.changeTrust({ asset }))
+    .setTimeout(300)
+    .build();
+
+  try {
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    return result.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
+/**
+ * Scheduled bill-pay (rent, cicilan) via a native Stellar `createClaimableBalance`
+ * — no custom contract, no "signs itself later" claim. The funds leave the
+ * wallet NOW (this still needs your signature, same one-tap-per-action
+ * honesty as everywhere else in Shunt); the recipient can only claim them
+ * once `unlockAt` arrives. The sender is ALSO a claimant with an
+ * unconditional predicate, so the payment can be cancelled/reclaimed anytime
+ * before the recipient actually claims it — reversible until it isn't.
+ */
+export async function createScheduledPayment(
+  sender: string,
+  recipient: string,
+  asset: Asset,
+  amount: string,
+  unlockAt: number,
+): Promise<{ hash: string; balanceId: string | null }> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Sender account not found on network.");
+  }
+
+  const claimants = [
+    // Recipient: claimable only once the due date arrives.
+    new Claimant(recipient, Claimant.predicateNot(Claimant.predicateBeforeAbsoluteTime(String(unlockAt)))),
+    // Sender: claimable anytime — the cancel/reclaim path.
+    new Claimant(sender, Claimant.predicateUnconditional()),
+  ];
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(Operation.createClaimableBalance({ asset, amount, claimants }))
+    .setTimeout(300)
+    .build();
+
+  try {
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    // The balance id comes back in the operation result, not the top-level
+    // response — best-effort extraction; the hash alone already proves the
+    // tx happened even if this parsing fails.
+    let balanceId: string | null = null;
+    try {
+      const txResult = xdr.TransactionResult.fromXDR(result.result_xdr, "base64");
+      const opResults = txResult.result().results();
+      const first = opResults?.[0]?.tr()?.createClaimableBalanceResult?.();
+      if (first) balanceId = first.balanceId().toXDR("hex");
+    } catch {
+      // Non-fatal.
+    }
+    return { hash: result.hash, balanceId };
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
+/** Cancel/reclaim a scheduled payment the recipient hasn't claimed yet — the
+ *  sender's own unconditional claimant predicate makes this always valid
+ *  until the recipient gets there first. */
+export async function cancelScheduledPayment(sender: string, balanceId: string): Promise<string> {
+  const horizon = new Horizon.Server(HORIZON_URL);
+  let source;
+  try {
+    source = await horizon.loadAccount(sender);
+  } catch {
+    throw new Error("Sender account not found on network.");
+  }
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(Operation.claimClaimableBalance({ balanceId }))
+    .setTimeout(300)
+    .build();
+  try {
+    const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
+    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await horizon.submitTransaction(sendTx as any) as any;
+    return result.hash;
+  } catch (e) {
+    parseWalletError(e);
+  }
+}
+
+export interface ScheduledPayment {
+  id: string;
+  asset: string;
+  amount: string;
+  claimableAfter: number | null;
+  isSponsor: boolean;
+}
+
+/** Scheduled payments this account created (sponsor) OR can eventually
+ *  claim (recipient) — merges both so Activity/UI can show the full picture. */
+export async function fetchScheduledPayments(address: string): Promise<ScheduledPayment[]> {
+  const parse = (records: any[], isSponsor: boolean): ScheduledPayment[] =>
+    records.map((r) => {
+      const notBefore = (r.claimants ?? [])
+        .map((c: any) => c.predicate?.not?.abs_before ?? null)
+        .find((v: string | null) => v !== null);
+      return {
+        id: r.id,
+        asset: r.asset === "native" ? "XLM" : r.asset.split(":")[0],
+        amount: r.amount,
+        claimableAfter: notBefore ? Math.floor(new Date(notBefore).getTime() / 1000) : null,
+        isSponsor,
+      };
+    });
+  try {
+    const [bySponsor, byClaimant] = await Promise.all([
+      fetch(`${HORIZON_URL}/claimable_balances?sponsor=${address}&limit=50`).then((r) => (r.ok ? r.json() : { _embedded: { records: [] } })),
+      fetch(`${HORIZON_URL}/claimable_balances?claimant=${address}&limit=50`).then((r) => (r.ok ? r.json() : { _embedded: { records: [] } })),
+    ]);
+    const sponsor = parse(bySponsor?._embedded?.records ?? [], true);
+    const sponsorIds = new Set(sponsor.map((s) => s.id));
+    const claimant = parse((byClaimant?._embedded?.records ?? []).filter((r: any) => !sponsorIds.has(r.id)), false);
+    return [...sponsor, ...claimant];
+  } catch {
+    return [];
   }
 }
 

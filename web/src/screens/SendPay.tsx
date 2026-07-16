@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDownUp } from "lucide-react";
 import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
@@ -10,17 +10,31 @@ import {
   fetchXlmBalance,
   convertXlmToUsdc,
   convertUsdcToXlm,
+  convertUsdcToAsset,
   quoteConversion,
+  quoteUsdcToAsset,
+  quoteStrictReceive,
+  payRecipientViaPath,
   addUsdcTrustline,
+  addTrustline,
+  hasTrustline,
+  DEMO_ASSETS,
+  USDC_CODE,
+  USDC_ISSUER,
   type ConversionQuote,
   type ConvertDirection,
   EXPLORER_TX,
   NETWORK,
   formatError,
 } from "../lib/stellar";
+import { parseSep7PayUri, type ParsedSep7Request } from "../lib/sep7";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { AnimatedNumber } from "../components/AnimatedNumber";
-import { StrKey } from "@stellar/stellar-sdk";
+import { StrKey, Asset } from "@stellar/stellar-sdk";
+
+/** Local-currency demo assets available to "settle" spending into (excludes
+ *  the gold demo asset — that belongs to the Invest lane, not Needs spend). */
+const SETTLE_ASSETS = DEMO_ASSETS.filter((a) => a.code !== "TXAUM");
 
 const FEE_PCT = 0.4; // off-ramp fee (PRD §7b: 0.3–0.5%)
 
@@ -30,7 +44,15 @@ const DESTS = [
   { id: "bill", label: "Bills", icon: "🧾" },
 ];
 
-type Tab = "usdc" | "xlm" | "convert";
+type Tab = "usdc" | "xlm" | "convert" | "payreq";
+
+/** Resolve a parsed SEP-7 request's destination asset — native or a known
+ *  classic asset by code+issuer. */
+function sep7DestAsset(req: ParsedSep7Request): Asset {
+  return req.isNative || !req.assetCode || !req.assetIssuer
+    ? Asset.native()
+    : new Asset(req.assetCode, req.assetIssuer);
+}
 
 /** Slippage floor for in-app conversions — quote minus 2%. */
 const SLIPPAGE_PCT = 2;
@@ -39,7 +61,7 @@ const SLIPPAGE_PCT = 2;
 export function SendPay() {
   const {
     address, balances, xlmBalance, usdcBalance, usdcTrustline, refreshWallet,
-    setXlmBalance, offramp, showToast, activity, recordXlmPayment, recordUsdcPayment, recordConversion,
+    setXlmBalance, offramp, showToast, activity, recordXlmPayment, recordUsdcPayment, recordConversion, recordSettle,
   } = useShunt();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab");
@@ -71,6 +93,29 @@ export function SendPay() {
   const [cvErr, setCvErr] = useState<string | null>(null);
   const [cvResult, setCvResult] = useState<{ hash: string; received: number } | null>(null);
   const [enablingUsdc, setEnablingUsdc] = useState(false);
+
+  // Multi-currency settle — spend USDC directly into a local-currency demo
+  // asset (Shunt's own testnet issuance, real seeded liquidity). One-way by
+  // design: this is "spend locally", not a swap you'd reverse.
+  const [settleAsset, setSettleAsset] = useState(SETTLE_ASSETS[0]?.code ?? "TIDR");
+  const [settleAmount, setSettleAmount] = useState("");
+  const [settleQuote, setSettleQuote] = useState<ConversionQuote | null>(null);
+  const [settleQuoting, setSettleQuoting] = useState(false);
+  const [settleBusy, setSettleBusy] = useState(false);
+  const [settleErr, setSettleErr] = useState<string | null>(null);
+  const [settleResult, setSettleResult] = useState<{ hash: string; received: number; asset: string } | null>(null);
+  const [settleHasTrustline, setSettleHasTrustline] = useState<boolean | null>(null);
+  const [settleEnabling, setSettleEnabling] = useState(false);
+
+  // Pay a request — paste someone else's SEP-7 web+stellar:pay URI (a
+  // merchant/friend's QR) and pay it from USDC even when they've asked for a
+  // different asset; the DEX conversion happens atomically in the same tx.
+  const [payReqUri, setPayReqUri] = useState("");
+  const [payReqQuote, setPayReqQuote] = useState<ConversionQuote | null>(null);
+  const [payReqQuoting, setPayReqQuoting] = useState(false);
+  const [payReqBusy, setPayReqBusy] = useState(false);
+  const [payReqErr, setPayReqErr] = useState<string | null>(null);
+  const [payReqResult, setPayReqResult] = useState<{ hash: string; asset: string; amount: string } | null>(null);
 
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
@@ -186,6 +231,126 @@ export function SendPay() {
     return () => clearTimeout(t);
   }, [cvAmount, cvDirection]);
 
+  // --- Settle: live USDC -> local-currency demo asset quote ---
+  const settleAssetDef = SETTLE_ASSETS.find((a) => a.code === settleAsset);
+
+  useEffect(() => {
+    if (!address || !settleAssetDef) return;
+    setSettleHasTrustline(null);
+    hasTrustline(address, new Asset(settleAssetDef.code, settleAssetDef.issuer)).then(setSettleHasTrustline);
+  }, [address, settleAssetDef]);
+
+  async function onEnableSettleAsset() {
+    if (!address || !settleAssetDef) return;
+    setSettleEnabling(true);
+    setSettleErr(null);
+    try {
+      await addTrustline(address, new Asset(settleAssetDef.code, settleAssetDef.issuer));
+      setSettleHasTrustline(true);
+      showToast(`${settleAssetDef.code} enabled — you can now settle into it`);
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setSettleErr(formatted);
+    } finally {
+      setSettleEnabling(false);
+    }
+  }
+
+  useEffect(() => {
+    const amt = Number(settleAmount);
+    if (!amt || amt <= 0 || !settleAssetDef) {
+      setSettleQuote(null);
+      return;
+    }
+    setSettleQuoting(true);
+    const t = setTimeout(async () => {
+      const q = await quoteUsdcToAsset(new Asset(settleAssetDef.code, settleAssetDef.issuer), amt.toFixed(7));
+      setSettleQuote(q);
+      setSettleQuoting(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [settleAmount, settleAssetDef]);
+
+  async function onSubmitSettle() {
+    setSettleErr(null);
+    if (!address) { setSettleErr("No wallet connected."); return; }
+    if (!settleAssetDef) { setSettleErr("Pick a local currency."); return; }
+    const amt = Number(settleAmount);
+    if (!amt || amt <= 0) { setSettleErr("Enter a valid amount."); return; }
+    if (amt > walletUsdc) { setSettleErr(`Exceeds your USDC balance.`); return; }
+    if (settleQuote === null) { setSettleErr("No conversion path available right now — try again shortly."); return; }
+
+    setSettleBusy(true);
+    try {
+      const destMin = (settleQuote.amount * (1 - SLIPPAGE_PCT / 100)).toFixed(7);
+      const asset = new Asset(settleAssetDef.code, settleAssetDef.issuer);
+      const hash = await convertUsdcToAsset(address, asset, amt.toFixed(7), destMin, settleQuote.path);
+      recordSettle(settleAssetDef.code, amt, settleQuote.amount, hash);
+      setSettleResult({ hash, received: settleQuote.amount, asset: settleAssetDef.code });
+      showToast(`Settled ${fmtUsdc(amt)} USDC → ${settleAssetDef.code}`);
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setSettleErr(formatted);
+    } finally {
+      setSettleBusy(false);
+    }
+  }
+
+  // --- Pay a request: parse the pasted SEP-7 URI + live strict-receive quote ---
+  const payReqParsed = parseSep7PayUri(payReqUri);
+  const payReqAsset = payReqParsed ? sep7DestAsset(payReqParsed) : null;
+  const payReqIsUsdcAlready =
+    payReqAsset !== null && !payReqAsset.isNative() && payReqAsset.getCode() === USDC_CODE && payReqAsset.getIssuer() === USDC_ISSUER;
+
+  useEffect(() => {
+    if (!payReqParsed || !payReqAsset || !payReqParsed.amount) {
+      setPayReqQuote(null);
+      return;
+    }
+    if (payReqIsUsdcAlready) {
+      // Paying in the same asset the payer already holds — no DEX hop needed.
+      setPayReqQuote({ amount: Number(payReqParsed.amount), path: [] });
+      return;
+    }
+    setPayReqQuoting(true);
+    const t = setTimeout(async () => {
+      const q = await quoteStrictReceive(payReqAsset, payReqParsed.amount!);
+      setPayReqQuote(q);
+      setPayReqQuoting(false);
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payReqUri]);
+
+  async function onSubmitPayRequest() {
+    setPayReqErr(null);
+    if (!address) { setPayReqErr("No wallet connected."); return; }
+    if (!payReqParsed || !payReqAsset) { setPayReqErr("Paste a valid web+stellar:pay link first."); return; }
+    if (!payReqParsed.amount) { setPayReqErr("This request has no fixed amount — ask the sender for one, or pay it directly in their wallet."); return; }
+    if (payReqQuote === null) { setPayReqErr("No conversion path available right now — try again shortly."); return; }
+    if (payReqQuote.amount > walletUsdc) { setPayReqErr(`This would cost ${fmtUsdc(payReqQuote.amount)} USDC, more than your ${fmtUsdc(walletUsdc)} USDC balance.`); return; }
+
+    setPayReqBusy(true);
+    try {
+      const destCode = payReqAsset.isNative() ? "XLM" : payReqAsset.getCode();
+      let hash: string;
+      if (payReqIsUsdcAlready) {
+        hash = await sendUsdcPayment(address, payReqParsed.destination, payReqParsed.amount);
+      } else {
+        const sendMax = (payReqQuote.amount * (1 + SLIPPAGE_PCT / 100)).toFixed(7);
+        hash = await payRecipientViaPath(address, payReqParsed.destination, payReqAsset, payReqParsed.amount, sendMax, payReqQuote.path);
+      }
+      recordUsdcPayment(payReqParsed.destination, payReqQuote.amount.toFixed(2), hash);
+      setPayReqResult({ hash, asset: destCode, amount: payReqParsed.amount });
+      showToast(`Paid the request — ${destCode} delivered`);
+    } catch (e) {
+      const formatted = formatError(e);
+      if (formatted) setPayReqErr(formatted);
+    } finally {
+      setPayReqBusy(false);
+    }
+  }
+
   async function onEnableUsdcForConvert() {
     if (!address) return;
     setEnablingUsdc(true);
@@ -262,6 +427,73 @@ export function SendPay() {
     );
   }
 
+  // --- Pay-a-request result ---
+  if (payReqResult) {
+    return (
+      <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
+        <div style={{ fontSize: 48 }}>✅</div>
+        <h2>Request paid</h2>
+        <p className="muted">
+          Delivered {payReqResult.amount} {payReqResult.asset} — converted and sent from your USDC in one
+          signature, atomically via the Stellar DEX.
+        </p>
+        <div className="card" style={{ textAlign: "left", wordBreak: "break-all" }}>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Transaction Hash</div>
+          <div className="numeric" style={{ fontSize: 13 }}>{payReqResult.hash}</div>
+        </div>
+        <a
+          href={EXPLORER_TX(payReqResult.hash)}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "var(--color-accent-secondary)" }}
+        >
+          View on Stellar Expert ↗
+        </a>
+        <button
+          className="btn-primary"
+          onClick={() => { setPayReqResult(null); setPayReqUri(""); setPayReqQuote(null); }}
+          data-testid="payreq-again"
+        >
+          Pay another
+        </button>
+      </div>
+    );
+  }
+
+  // --- Settle result ---
+  if (settleResult) {
+    return (
+      <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
+        <div style={{ fontSize: 48 }}>🏷️</div>
+        <h2>Settled locally</h2>
+        <p className="muted">
+          Spent {settleAmount} USDC → ≈{" "}
+          {settleResult.received.toLocaleString("en-US", { maximumFractionDigits: 2 })} {settleResult.asset} via the
+          Stellar DEX — a real testnet demo asset, not the real branded stablecoin it stands in for.
+        </p>
+        <div className="card" style={{ textAlign: "left", wordBreak: "break-all" }}>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Transaction Hash</div>
+          <div className="numeric" style={{ fontSize: 13 }}>{settleResult.hash}</div>
+        </div>
+        <a
+          href={EXPLORER_TX(settleResult.hash)}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "var(--color-accent-secondary)" }}
+        >
+          View on Stellar Expert ↗
+        </a>
+        <button
+          className="btn-primary"
+          onClick={() => { setSettleResult(null); setSettleAmount(""); setSettleQuote(null); }}
+          data-testid="settle-again"
+        >
+          Settle another
+        </button>
+      </div>
+    );
+  }
+
   // --- USDC off-ramp result ---
   if (submitted) {
     return (
@@ -333,6 +565,17 @@ export function SendPay() {
           Transfer
         </button>
         <button
+          onClick={() => setTab("payreq")}
+          data-testid="tab-payreq"
+          style={{
+            flex: 1, padding: "10px 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            background: tab === "payreq" ? "var(--color-accent-tertiary)" : "var(--color-bg-elevated)",
+            color: tab === "payreq" ? "var(--color-text-on-accent)" : "var(--color-text-secondary)",
+          }}
+        >
+          Pay request
+        </button>
+        <button
           onClick={() => setTab("convert")}
           data-testid="tab-convert"
           style={{
@@ -355,10 +598,14 @@ export function SendPay() {
         </button>
       </div>
 
-      <AnimatePresence mode="wait">
-      {/* ─── XLM Transfer Tab ─── */}
+      {/* Enter-only, no AnimatePresence exit-wait: mode="wait" blocks the next
+          tab from mounting until the previous one's exit finishes, and that
+          exit reliably never fires for a plain useState tab switch here —
+          same root cause as the route-level freeze fixed elsewhere this
+          session (App.tsx). Clicking a tab must never depend on animation
+          completing. */}
       {tab === "xlm" && (
-        <motion.div key="xlm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+        <motion.div key="xlm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
             Send to another Stellar wallet on {NETWORK}. Choose which asset to pay with.
           </p>
@@ -428,9 +675,87 @@ export function SendPay() {
         </motion.div>
       )}
 
+      {/* ─── Pay a Request Tab: SEP-7 URI, pay in any asset the recipient asked for ─── */}
+      {tab === "payreq" && (
+        <motion.div key="payreq" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+          <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
+            Paste a merchant or friend's payment link (a SEP-7 <code>web+stellar:pay</code> QR/URI, e.g.
+            Shunt's own Request screen generates one). If they asked to be paid in something other than
+            USDC, Shunt converts and delivers it in the same signature — you always spend from USDC.
+          </p>
+
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <label className="muted" style={{ fontSize: 13 }}>
+              Payment link
+              <input
+                type="text"
+                placeholder="web+stellar:pay?destination=G...&amount=...&asset_code=..."
+                value={payReqUri}
+                onChange={(e) => setPayReqUri(e.target.value)}
+                style={{ marginTop: 6 }}
+                data-testid="payreq-uri"
+              />
+            </label>
+
+            {payReqUri && !payReqParsed && (
+              <p role="alert" style={{ color: "#ffb4ab", fontSize: 13, margin: 0 }}>
+                That doesn't look like a valid web+stellar:pay link.
+              </p>
+            )}
+
+            {payReqParsed && payReqAsset && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span className="muted">Pay to</span>
+                  <span className="numeric">{payReqParsed.destination.slice(0, 6)}…{payReqParsed.destination.slice(-6)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span className="muted">They receive</span>
+                  <span className="numeric" data-testid="payreq-dest">
+                    {payReqParsed.amount ?? "?"} {payReqAsset.isNative() ? "XLM" : payReqAsset.getCode()}
+                  </span>
+                </div>
+                {payReqParsed.note && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                    <span className="muted">Note</span>
+                    <span>“{payReqParsed.note}”</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, borderTop: "1px solid #1f2732", paddingTop: 8 }}>
+                  <span>You pay (USDC)</span>
+                  <span className="numeric" data-testid="payreq-quote">
+                    {!payReqParsed.amount
+                      ? "no amount set"
+                      : payReqQuoting
+                        ? "Fetching quote…"
+                        : payReqQuote !== null
+                          ? `≈ ${fmtUsdc(payReqQuote.amount)} USDC`
+                          : "No path available"}
+                  </span>
+                </div>
+              </>
+            )}
+
+            <button
+              className="btn-primary"
+              disabled={payReqBusy || payReqQuoting || !payReqParsed || !payReqParsed.amount || payReqQuote === null}
+              onClick={onSubmitPayRequest}
+              data-testid="payreq-submit"
+            >
+              {payReqBusy ? "Signing & submitting…" : "Pay this request"}
+            </button>
+            {payReqErr && (
+              <p role="alert" style={{ color: "#ffb4ab", fontSize: 13, margin: 0 }}>
+                {payReqErr}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* ─── Convert Tab: XLM ⇄ USDC via the DEX, no third party ─── */}
       {tab === "convert" && (
-        <motion.div key="convert" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+        <motion.div key="convert" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
             Swap between XLM and USDC directly on the Stellar DEX — one signature, settled in
             seconds, sub-cent fee. No third party.
@@ -512,12 +837,89 @@ export function SendPay() {
               {cvErr}
             </p>
           )}
+
+          {SETTLE_ASSETS.length > 0 && (
+            <>
+              <h3 style={{ fontSize: 15, margin: "24px 0 4px" }}>Settle in a local currency</h3>
+              <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+                Spend USDC directly into a local-currency demo asset — Shunt's own testnet issuance with
+                real DEX liquidity, standing in for a regulated local stablecoin (not the real branded one).
+              </p>
+              <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", gap: 8 }} role="tablist" aria-label="Local currency">
+                  {SETTLE_ASSETS.map((a) => (
+                    <button
+                      key={a.code}
+                      className={`chip${settleAsset === a.code ? " active" : ""}`}
+                      style={{ flex: 1, justifyContent: "center", display: "flex" }}
+                      onClick={() => { setSettleAsset(a.code); setSettleQuote(null); }}
+                      data-testid={`settle-asset-${a.code.toLowerCase()}`}
+                      title={a.label}
+                    >
+                      {a.code}
+                    </button>
+                  ))}
+                </div>
+                <label className="muted" style={{ fontSize: 13 }}>
+                  You pay (USDC) — balance:{" "}
+                  <span className="numeric">{walletUsdc.toLocaleString("en-US", { maximumFractionDigits: 2 })} USDC</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    min={0}
+                    step="any"
+                    value={settleAmount}
+                    onChange={(e) => setSettleAmount(e.target.value)}
+                    style={{ marginTop: 6 }}
+                    aria-label="Amount in USDC to settle"
+                    data-testid="settle-amount"
+                  />
+                </label>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span className="muted">You receive (est.)</span>
+                  <span className="numeric" data-testid="settle-quote">
+                    {settleQuoting
+                      ? "Fetching quote…"
+                      : settleQuote !== null
+                        ? `≈ ${settleQuote.amount.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${settleAsset}`
+                        : Number(settleAmount) > 0
+                          ? "No path available"
+                          : "—"}
+                  </span>
+                </div>
+                {settleHasTrustline === false ? (
+                  <button
+                    className="btn-secondary"
+                    disabled={settleEnabling}
+                    onClick={onEnableSettleAsset}
+                    data-testid="settle-enable-trustline"
+                  >
+                    {settleEnabling ? "Confirm in wallet…" : `Enable ${settleAsset} first (add trustline)`}
+                  </button>
+                ) : (
+                  <button
+                    className="btn-primary"
+                    disabled={settleBusy || settleQuoting || !settleAmount || settleQuote === null || settleHasTrustline === null}
+                    onClick={onSubmitSettle}
+                    data-testid="settle-submit"
+                  >
+                    {settleBusy ? "Signing & submitting…" : `Settle in ${settleAsset}`}
+                  </button>
+                )}
+                {settleErr && (
+                  <p role="alert" style={{ color: "#ffb4ab", fontSize: 13, margin: 0 }}>
+                    {settleErr}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </motion.div>
       )}
 
       {/* ─── USDC Off-Ramp Tab ─── */}
       {tab === "usdc" && (
-        <motion.div key="usdc" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+        <motion.div key="usdc" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
             Cash out to your bank — wallet holds{" "}
             <AnimatedNumber value={walletUsdc} decimals={2} /> USDC on-chain
@@ -588,7 +990,6 @@ export function SendPay() {
           )}
         </motion.div>
       )}
-      </AnimatePresence>
     </div>
   );
 }

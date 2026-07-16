@@ -46,3 +46,43 @@ export function parsePayQuery(search: string): PaymentRequest | null {
     note: params.get("note") ?? undefined,
   };
 }
+
+/** A request parsed from ANY SEP-7 `web+stellar:pay` URI — including ones
+ *  from other merchants/wallets that ask to be paid in an asset other than
+ *  USDC. Used by the "Pay a request" flow: the requester picks the asset,
+ *  Shunt pays it while the user still spends from USDC via a path payment. */
+export interface ParsedSep7Request {
+  destination: string;
+  /** Requested destination amount, if the URI specifies one. */
+  amount?: string;
+  /** true = requested asset is native XLM. */
+  isNative: boolean;
+  assetCode?: string;
+  assetIssuer?: string;
+  memo?: string;
+  note?: string;
+}
+
+/** Parse an arbitrary `web+stellar:pay?...` SEP-7 URI (RFC: destination,
+ *  amount, asset_code, asset_issuer, memo, msg). Returns null if it isn't a
+ *  well-formed SEP-7 pay request. */
+export function parseSep7PayUri(uri: string): ParsedSep7Request | null {
+  const trimmed = uri.trim();
+  if (!trimmed.toLowerCase().startsWith("web+stellar:pay")) return null;
+  const qIndex = trimmed.indexOf("?");
+  if (qIndex === -1) return null;
+  const params = new URLSearchParams(trimmed.slice(qIndex + 1));
+  const destination = params.get("destination");
+  if (!destination) return null;
+  const assetCode = params.get("asset_code") ?? undefined;
+  const assetIssuer = params.get("asset_issuer") ?? undefined;
+  return {
+    destination,
+    amount: params.get("amount") ?? undefined,
+    isNative: !assetCode || assetCode.toLowerCase() === "native",
+    assetCode,
+    assetIssuer,
+    memo: params.get("memo") ?? undefined,
+    note: params.get("msg") ?? undefined,
+  };
+}

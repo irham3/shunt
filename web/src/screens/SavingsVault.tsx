@@ -10,6 +10,17 @@ import { ProgressRing } from "../components/ProgressRing";
 
 const PENALTY_PCT = 10; // must match PENALTY_BPS in the contract
 
+/** Quick-pick ladder rungs for a goal's own unlock date (independent of the
+ *  aggregate lock — DESIGN.md laddered-timelocks). "No lock" is genuinely
+ *  useful (a flexible sub-vault with zero penalty exposure), not a placeholder. */
+const GOAL_LOCK_OPTIONS = [
+  { label: "No lock", secs: 0 },
+  { label: "30 days", secs: 30 * 86400 },
+  { label: "90 days", secs: 90 * 86400 },
+  { label: "1 year", secs: 365 * 86400 },
+  { label: "2 years", secs: 2 * 365 * 86400 },
+];
+
 /** Desktop layout: balance + growth chart left, lock status + withdraw right. */
 export function SavingsVault() {
   const {
@@ -18,6 +29,7 @@ export function SavingsVault() {
     buckets,
     bufferCredit,
     lockUntil,
+    lockSecs,
     activity,
     withdrawSavings,
     withdrawBufferCredit,
@@ -149,7 +161,14 @@ export function SavingsVault() {
             </div>
             {ccy === "IDR" && (
               <div className="muted" style={{ fontSize: 12 }}>
-                Display rate {stale ? "(fallback, may be outdated)" : "real-time"} — funds stay in USDC.
+                Display rate {stale ? "(fallback, may be outdated)" : "real-time"} — funds stay in USDC, so
+                this number moves only because the rupiah does. That's the point: your savings don't erode
+                even as {fmtIdr(idr)}/USD keeps climbing.
+                {/* Honest gap, verified not assumed: checked Reflector's live testnet
+                    oracle (assets() call) directly — it carries crypto/CEX pairs
+                    only (BTC, ETH, XLM, EURC, …), no IDR/PHP feed exists there to
+                    wire in. This stays a REST forex rate until a real IDR oracle
+                    ships on Stellar. */}
               </div>
             )}
           </div>
@@ -158,7 +177,7 @@ export function SavingsVault() {
             address={address}
             goals={goals}
             unallocated={unallocatedSavings}
-            locked={locked}
+            aggregateLockSecs={lockSecs}
             onSetGoalTarget={setGoalTarget}
             onRefresh={() => address && syncFromChain(address)}
             onWithdrawn={withdrawSavings}
@@ -303,7 +322,7 @@ function SavingsGoals({
   address,
   goals,
   unallocated,
-  locked,
+  aggregateLockSecs,
   onSetGoalTarget,
   onRefresh,
   onWithdrawn,
@@ -312,7 +331,10 @@ function SavingsGoals({
   address: string | null;
   goals: SavingsGoal[];
   unallocated: number;
-  locked: boolean;
+  /** The shared aggregate lock duration (Configure Shunt's "Savings timelock")
+   *  — used as the default pick for a new goal's own ladder rung, so a goal
+   *  created without touching the picker behaves like it always did. */
+  aggregateLockSecs: number;
   onSetGoalTarget: (id: number, target: number | undefined) => void;
   onRefresh: () => void;
   /** Records a goal withdrawal in lane bookkeeping + activity (store.withdrawSavings). */
@@ -322,6 +344,7 @@ function SavingsGoals({
   const [showCreate, setShowCreate] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newAmount, setNewAmount] = useState("");
+  const [newLockSecs, setNewLockSecs] = useState(aggregateLockSecs);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -339,10 +362,11 @@ function SavingsGoals({
     setBusy(true);
     setErr(null);
     try {
-      await vaultCreateGoal(address, newLabel.trim(), usdc);
+      await vaultCreateGoal(address, newLabel.trim(), usdc, newLockSecs);
       showToast(`Goal "${newLabel.trim()}" created`);
       setNewLabel("");
       setNewAmount("");
+      setNewLockSecs(aggregateLockSecs);
       setShowCreate(false);
       onRefresh();
     } catch (e) {
@@ -373,7 +397,6 @@ function SavingsGoals({
             key={g.id}
             address={address}
             goal={g}
-            locked={locked}
             onSetTarget={(t) => onSetGoalTarget(g.id, t)}
             onRefresh={onRefresh}
             onWithdrawn={onWithdrawn}
@@ -409,6 +432,29 @@ function SavingsGoals({
             onChange={(e) => setNewAmount(e.target.value)}
             data-testid="goal-amount-input"
           />
+          <div>
+            <label className="muted" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+              Lock duration — laddered, independent of your other goals
+            </label>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {GOAL_LOCK_OPTIONS.map((o) => (
+                <button
+                  key={o.secs}
+                  type="button"
+                  className={`chip${newLockSecs === o.secs ? " active" : ""}`}
+                  onClick={() => setNewLockSecs(o.secs)}
+                  data-testid={`goal-lock-${o.secs}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <p className="muted" style={{ fontSize: 11, margin: "6px 0 0" }}>
+              {newLockSecs === 0
+                ? "No lock — withdraw this goal anytime, no penalty."
+                : `Early withdrawal from this goal costs ${PENALTY_PCT}% until its own unlock date — other goals aren't affected.`}
+            </p>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn-secondary" onClick={() => { setShowCreate(false); setErr(null); }}>
               Cancel
@@ -431,7 +477,6 @@ function SavingsGoals({
 function GoalRow({
   address,
   goal,
-  locked,
   onSetTarget,
   onRefresh,
   onWithdrawn,
@@ -439,7 +484,6 @@ function GoalRow({
 }: {
   address: string | null;
   goal: SavingsGoal;
-  locked: boolean;
   onSetTarget: (target: number | undefined) => void;
   onRefresh: () => void;
   onWithdrawn: (amount: number, penalty: number) => void;
@@ -453,6 +497,9 @@ function GoalRow({
   const [err, setErr] = useState<string | null>(null);
 
   const progress = goal.target && goal.target > 0 ? goal.amountUsdc / goal.target : undefined;
+  // This goal's OWN laddered lock — independent of the aggregate Savings
+  // lock, and of every sibling goal's lock.
+  const goalLocked = goal.unlockAt * 1000 > Date.now();
 
   async function onWithdraw() {
     if (!address) return;
@@ -467,8 +514,8 @@ function GoalRow({
       await vaultWithdrawFromGoal(address, goal.id, usdc);
       // Record it like any savings withdrawal: activity entry + the payout
       // credited to spendable bookkeeping (also re-syncs from chain).
-      onWithdrawn(usdc, locked ? (usdc * PENALTY_PCT) / 100 : 0);
-      showToast(locked ? `Withdrawn — ${PENALTY_PCT}% penalty → Buffer` : "Withdrawn from goal");
+      onWithdrawn(usdc, goalLocked ? (usdc * PENALTY_PCT) / 100 : 0);
+      showToast(goalLocked ? `Withdrawn — ${PENALTY_PCT}% penalty → Buffer` : "Withdrawn from goal");
       setMode("idle");
       setAmount("");
     } catch (e) {
@@ -564,6 +611,13 @@ function GoalRow({
           <div className="numeric muted" style={{ fontSize: 13 }}>
             <AnimatedNumber value={goal.amountUsdc} decimals={2} /> USDC
             {goal.target ? ` of ${fmtUsdc(goal.target)}` : ""}
+          </div>
+          {/* This goal's own laddered lock — may differ from every sibling
+              goal and from the aggregate Savings lock shown up top. */}
+          <div className="muted" style={{ fontSize: 11, marginTop: 2 }} data-testid={`goal-lock-status-${goal.id}`}>
+            {goalLocked
+              ? `🔒 locked until ${new Date(goal.unlockAt * 1000).toLocaleDateString("en-US")}`
+              : "🔓 unlocked — no penalty"}
           </div>
         </div>
 

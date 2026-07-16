@@ -36,6 +36,7 @@ export function Home() {
     usdcBalance,
     usdcTrustline,
     bufferCredit,
+    bufferTarget,
     goals,
     rulesSavedOnChain,
     refreshWallet,
@@ -182,7 +183,10 @@ export function Home() {
     setSplittingNow(true);
     try {
       const syntheticHash = randomTxHash();
-      const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash, true);
+      // Threshold auto-refill: prioritize whatever's short of the on-chain
+      // buffer_target before the normal % split applies to the rest.
+      const shortfall = Math.max(0, bufferTarget - balances.buffer);
+      const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash, true, 3, shortfall > 0 ? shortfall.toFixed(7) : undefined);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
           const { reallyMissing, message } = await resolveRulesNotSet(address);
