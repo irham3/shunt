@@ -36,6 +36,7 @@ export function ConfigureShunt() {
     removeBucket,
     markRulesSaved,
     refreshWallet,
+    syncFromChain,
     showToast,
     lockSecs: storedLockSecs,
     setLockSecs: persistLockSecs,
@@ -66,6 +67,24 @@ export function ConfigureShunt() {
   useEffect(() => {
     if (address) refreshWallet(address);
   }, [address, refreshWallet]);
+
+  // isEditing's initial value trusts whatever rulesSavedOnChain happened to
+  // be in the persisted store at mount — on a fresh session (or right after
+  // a reload) that's the pre-sync default, not a real on-chain fact. Unlike
+  // Home/SavingsVault/LaneDetail, this screen never independently confirmed
+  // it, so landing here directly (bookmark, reload) showed "Unsaved setup"
+  // even when rules genuinely were saved (2026-07-16, e2e test 35: reload
+  // straight onto /shunt never exited edit mode for exactly this reason).
+  // Only correct the one-time false negative — never force a user OUT of an
+  // edit they've since started on purpose.
+  const autoSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!address || autoSyncedRef.current) return;
+    autoSyncedRef.current = true;
+    syncFromChain(address).then(() => {
+      if (useShunt.getState().rulesSavedOnChain) setIsEditing(false);
+    });
+  }, [address, syncFromChain]);
 
   const getKindIcon = (kind: string, size = 16) => {
     switch (kind) {
@@ -425,7 +444,7 @@ export function ConfigureShunt() {
                 />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <span className="numeric muted" style={{ fontSize: 12 }} data-testid={`lane-nominal-${b.id}`}>
-                    ≈ {fmtUsdc(nominal)} USDC {b.kind === "savings" ? "→ vault" : b.kind === "invest" ? (investAsset === "GOLD" ? "→ Gold (XAUm)" : "→ XLM (DCA)") : "stays in wallet"}
+                    ≈ {fmtUsdc(nominal)} USDC {b.kind === "savings" ? "→ vault" : b.kind === "invest" ? (investAsset === "GOLD" ? "→ TXAUM (DCA)" : "→ XLM (DCA)") : "stays in wallet"}
                   </span>
                   <AnimatePresence>
                     {clampHint === b.id && (
@@ -459,13 +478,13 @@ export function ConfigureShunt() {
                         disabled={!isEditing}
                         data-testid="invest-asset-gold"
                       >
-                        Gold · XAUm
+                        Gold · TXAUM
                       </button>
                     </div>
                     <p className="muted" style={{ fontSize: 12, margin: 0 }}>
                       {investAsset === "GOLD"
-                        ? "XAUm = 1g LBMA gold (Matrixdock, on Stellar) — a value-holding growth asset. Spot purchase, not a yield product. Testnet has no XAUm liquidity yet, so it records at a labeled reference rate."
-                        : "Spot-converted to XLM (DCA) right after each split — an asset purchase, not a yield product. Live DEX liquidity on testnet."}
+                        ? "TXAUM is Shunt's own testnet demo gold token (stands in for Matrixdock XAUm, which only trades on mainnet) — an asset purchase, not a yield product. Real seeded DEX liquidity on testnet; falls back to a labeled reference rate only if that liquidity is thin."
+                        : "Spot-converted to XLM right after each split — an asset purchase, not a yield product. Live DEX liquidity on testnet."}
                     </p>
                   </div>
                 )}

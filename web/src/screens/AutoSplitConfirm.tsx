@@ -35,7 +35,7 @@ export function AutoSplitConfirm() {
 
   const { address, buckets, usdcBalance, investAsset, lockSecs, bufferTarget, refreshWallet, applySplit, applyInvestConversion, showToast } = useShunt();
   const [escalated, setEscalated] = useState<number | null>(null);
-  const investLabel = investAsset === "GOLD" ? "Invest → Gold (XAUm)" : "Invest → XLM (DCA)";
+  const investLabel = investAsset === "GOLD" ? "Invest → TXAUM (DCA)" : "Invest → XLM (DCA)";
 
   // Pull a fresh on-chain USDC balance so the insufficient-funds pre-flight is
   // accurate even when the user lands here directly (not via Home's polling).
@@ -298,7 +298,7 @@ export function AutoSplitConfirm() {
         {isBatch ? `${allPending.length} atomic splits · ` : "Atomic split in a single transaction · "}
         sub-cent network fee
         {investAmt > 0 && (investAsset === "GOLD"
-          ? " · invest slice earmarked for Gold (XAUm)"
+          ? " · invest slice earmarked for TXAUM"
           : " · invest slice converts via a follow-up path payment")}
       </p>
 

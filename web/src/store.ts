@@ -55,17 +55,24 @@ interface ShuntState {
   lockSecs: number; // timelock duration chosen in Configure Shunt
   /** wallet + vault balances in USDC (display); invest = DCA cost basis */
   balances: { needs: number; savings: number; buffer: number; invest: number };
-  /** Invest-asset units accumulated by the Invest lane's DCA conversions (F12).
-      Denominated in whatever `investAsset` is set to (XLM, or grams of XAUm). */
-  investXlm: number;
+  /** XLM units accumulated by the Invest lane's DCA conversions while the
+      Invest toggle was set to XLM at purchase time (F12). Tracked separately
+      from investGoldHeld so switching the toggle never mixes two different
+      units into one ambiguous number. */
+  investXlmHeld: number;
+  /** TXAUM (testnet demo gold) units accumulated the same way, while the
+      toggle was set to GOLD. */
+  investGoldHeld: number;
   /** USDC earmarked for Invest that never left the wallet (simulated/reference-
       rate conversions, e.g. GOLD on testnet). Subtracted from the "unsplit
       USDC" heuristic so a fresh split doesn't immediately re-flag its own
       invest slice as unsplit income. */
   investWalletUsdc: number;
-  /** Which Stellar asset the Invest lane buys. XLM = live testnet DEX liquidity;
-      GOLD = XAUm (Matrixdock, 1 token = 1g LBMA gold) — a value-holding growth
-      asset. Testnet has no XAUm liquidity, so GOLD records at a labeled rate. */
+  /** Which asset the Invest lane buys. XLM = live testnet DEX liquidity;
+      GOLD = TXAUM, Shunt's own testnet demo gold token (stands in for
+      Matrixdock XAUm, which only trades on mainnet) with real seeded DEX
+      liquidity (scripts/issue-demo-assets.mjs). Falls back to a labeled
+      reference-rate simulation only if that liquidity is thin. */
   investAsset: "XLM" | "GOLD";
   /** Named sub-allocations of the on-chain Savings balance, from syncFromChain. */
   goals: SavingsGoal[];
@@ -167,7 +174,8 @@ export const useShunt = create<ShuntState>()(
       lockUntil: 0,
       lockSecs: 30 * 86400,
       balances: { needs: 0, savings: 0, buffer: 0, invest: 0 },
-      investXlm: 0,
+      investXlmHeld: 0,
+      investGoldHeld: 0,
       investWalletUsdc: 0,
       investAsset: "XLM",
       goals: [],
@@ -401,10 +409,12 @@ export const useShunt = create<ShuntState>()(
       },
 
       applyInvestConversion: (usd, xlm, txHash, simulated) => {
-        const { investXlm, investWalletUsdc, activity, investAsset } = get();
-        const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
+        const { investXlmHeld, investGoldHeld, investWalletUsdc, activity, investAsset } = get();
+        const isGold = investAsset === "GOLD";
+        const unit = isGold ? "TXAUM" : "XLM";
         set({
-          investXlm: investXlm + xlm,
+          investXlmHeld: isGold ? investXlmHeld : investXlmHeld + xlm,
+          investGoldHeld: isGold ? investGoldHeld + xlm : investGoldHeld,
           // Simulated conversion → the USDC is still in the wallet; remember
           // that so Home doesn't offer to re-split it.
           investWalletUsdc: simulated ? investWalletUsdc + usd : investWalletUsdc,
@@ -424,15 +434,17 @@ export const useShunt = create<ShuntState>()(
       },
 
       manualInvestBuy: (usd, xlm, txHash, simulated) => {
-        const { investXlm, investWalletUsdc, activity, investAsset, balances } = get();
-        const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
+        const { investXlmHeld, investGoldHeld, investWalletUsdc, activity, investAsset, balances } = get();
+        const isGold = investAsset === "GOLD";
+        const unit = isGold ? "TXAUM" : "XLM";
         set({
           balances: {
             ...balances,
             needs: Math.max(0, balances.needs - usd),
             invest: balances.invest + usd,
           },
-          investXlm: investXlm + xlm,
+          investXlmHeld: isGold ? investXlmHeld : investXlmHeld + xlm,
+          investGoldHeld: isGold ? investGoldHeld + xlm : investGoldHeld,
           investWalletUsdc: simulated ? investWalletUsdc + usd : investWalletUsdc,
           activity: [
             {
@@ -574,9 +586,25 @@ export const useShunt = create<ShuntState>()(
 
       syncFromChain: async (address: string) => {
         try {
-          // Check if rules exist on-chain for this account
-          const onChainRules = await vaultGetRules(address).catch(() => null);
-          set({ rulesSavedOnChain: onChainRules !== null });
+          // Check if rules exist on-chain for this account. A THROWN error
+          // (RPC timeout, transient network hiccup) is not proof the rules
+          // are gone — only a clean, successful read that came back null
+          // means that. Treating both the same flips rulesSavedOnChain to
+          // false on a mere read failure, kicking the user back into edit
+          // mode over rules that are actually still saved (2026-07-16: hit
+          // by a page reload landing on a lagging RPC replica — the exact
+          // failure mode lib/vault.ts's resolveRulesNotSet() already guards
+          // against on the keeper-error path; this direct read needed the
+          // same discipline).
+          let onChainRules: Awaited<ReturnType<typeof vaultGetRules>> | undefined;
+          try {
+            onChainRules = await vaultGetRules(address);
+          } catch {
+            onChainRules = undefined;
+          }
+          if (onChainRules !== undefined) {
+            set({ rulesSavedOnChain: onChainRules !== null });
+          }
 
           const savingsBig = await vaultGetSavings(address);
           const bufferCreditBig = await vaultGetBufferCredit(address);
@@ -699,7 +727,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 7,
+      version: 8,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -752,6 +780,17 @@ export const useShunt = create<ShuntState>()(
           // diagnosed 2026-07-16: rules genuinely saved, just on an
           // abandoned instance).
           persisted.rulesSavedOnChain = false;
+        }
+        if (version < 8 && persisted) {
+          // investXlm used to be one field whose unit meaning silently
+          // changed with the investAsset toggle — buy XLM, flip to GOLD, buy
+          // gold, and the two got summed as if they were the same unit. Split
+          // into two real fields; the old number can only be attributed to
+          // whichever asset was active at the time it was last read.
+          const legacy = persisted.investXlm ?? 0;
+          persisted.investXlmHeld = persisted.investAsset === "GOLD" ? 0 : legacy;
+          persisted.investGoldHeld = persisted.investAsset === "GOLD" ? legacy : 0;
+          delete persisted.investXlm;
         }
         return persisted;
       },

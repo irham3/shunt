@@ -887,7 +887,18 @@ export function SendPay() {
                           : "—"}
                   </span>
                 </div>
-                {settleHasTrustline === false ? (
+                {settleHasTrustline === null ? (
+                  // Distinct from "no trustline" — the Horizon read is still
+                  // in flight. Rendering the submit button (merely disabled)
+                  // here made it indistinguishable from "ready to submit" at
+                  // a glance, including to a test asserting on which button
+                  // is present: it could observe this state, conclude the
+                  // trustline check was done, and skip the real Enable step
+                  // it still needed (2026-07-16, real failure).
+                  <button className="btn-secondary" disabled data-testid="settle-checking-trustline">
+                    Checking {settleAsset} trustline…
+                  </button>
+                ) : settleHasTrustline === false ? (
                   <button
                     className="btn-secondary"
                     disabled={settleEnabling}
@@ -899,7 +910,7 @@ export function SendPay() {
                 ) : (
                   <button
                     className="btn-primary"
-                    disabled={settleBusy || settleQuoting || !settleAmount || settleQuote === null || settleHasTrustline === null}
+                    disabled={settleBusy || settleQuoting || !settleAmount || settleQuote === null}
                     onClick={onSubmitSettle}
                     data-testid="settle-submit"
                   >

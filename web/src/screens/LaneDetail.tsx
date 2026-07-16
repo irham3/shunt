@@ -33,7 +33,7 @@ export function LaneDetail() {
   const { id = "" } = useParams();
   const nav = useNavigate();
   const {
-    address, buckets, balances, investXlm, investAsset, bufferCredit,
+    address, buckets, balances, investXlmHeld, investGoldHeld, investAsset, bufferCredit,
     usdcBalance, activity, showToast, syncFromChain, refreshWallet,
     manualInvestBuy, withdrawBufferCredit,
   } = useShunt();
@@ -112,7 +112,7 @@ export function LaneDetail() {
           // Simulated purchase (no on-chain tx) — record without a tx hash so
           // Activity doesn't link to a nonexistent explorer page.
           manualInvestBuy(amount, goldAmt, undefined, true);
-          showToast(`Bought ${goldAmt.toFixed(4)} g XAUm for ${fmtUsdc(amount)} USDC`);
+          showToast(`Bought ${goldAmt.toFixed(4)} TXAUM (reference rate) for ${fmtUsdc(amount)} USDC`);
         }
       } else {
         // Size the slippage floor from a LIVE DEX quote — the CoinGecko
@@ -143,7 +143,6 @@ export function LaneDetail() {
     );
   }
 
-  const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
   const icon =
     bucket.kind === "savings" ? <Lock size={22} />
     : bucket.kind === "invest" ? <ArrowUpRight size={22} />
@@ -173,10 +172,23 @@ export function LaneDetail() {
             <div className="numeric" style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1 }}>
               <AnimatedNumber value={balance} decimals={2} /> <span style={{ fontSize: 18, color: "var(--color-text-secondary)" }}>USDC</span>
             </div>
-            {bucket.kind === "invest" && investXlm > 0 && (
-              <div className="muted" style={{ fontSize: 14, marginTop: 8 }}>
-                ≈ <span className="numeric">{investXlm.toLocaleString("en-US", { maximumFractionDigits: 4 })}</span> {investAsset === "GOLD" ? "grams of gold (XAUm)" : "XLM"} held
-                {balance > 0 && <> · avg cost <span className="numeric">{fmtUsdc(balance / investXlm)}</span> USDC/{investAsset === "GOLD" ? "g" : "XLM"}</>}
+            {bucket.kind === "invest" && (investXlmHeld > 0 || investGoldHeld > 0) && (
+              <div className="muted" style={{ fontSize: 14, marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
+                {/* Two separate holdings, not one summed number — a user who
+                    DCA'd into XLM, then later switched the toggle to Gold,
+                    genuinely holds both, in their own units. */}
+                {investXlmHeld > 0 && (
+                  <div>
+                    ≈ <span className="numeric">{investXlmHeld.toLocaleString("en-US", { maximumFractionDigits: 4 })}</span> XLM held
+                    {investAsset === "XLM" && <span> · auto-DCA target</span>}
+                  </div>
+                )}
+                {investGoldHeld > 0 && (
+                  <div>
+                    ≈ <span className="numeric">{investGoldHeld.toLocaleString("en-US", { maximumFractionDigits: 4 })}</span> TXAUM held
+                    {investAsset === "GOLD" && <span> · auto-DCA target</span>}
+                  </div>
+                )}
               </div>
             )}
             {bucket.kind === "buffer" && bufferCredit > 0 && (
@@ -197,9 +209,9 @@ export function LaneDetail() {
             <>
               <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Buy {investAsset === "GOLD" ? "Gold (XAUm)" : "XLM"} Manually</div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Buy {investAsset === "GOLD" ? "TXAUM (testnet demo gold)" : "XLM"} Manually</div>
                   <p className="muted" style={{ fontSize: 13, margin: "0 0 12px" }}>
-                    Spend your wallet USDC ({fmtUsdc(walletUsdc)} available) to buy more {investAsset === "GOLD" ? "gold" : "XLM"} right now.
+                    Spend your wallet USDC ({fmtUsdc(walletUsdc)} available) to buy more {investAsset === "GOLD" ? "TXAUM" : "XLM"} right now.
                   </p>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                     <div style={{ flex: 1 }}>
@@ -232,8 +244,8 @@ export function LaneDetail() {
                 <div>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>Your growth slice (Auto-DCA)</div>
                   <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-                    {investXlm > 0
-                      ? `Spot-purchased into ${investAsset === "GOLD" ? "gold (XAUm — 1 token = 1g LBMA gold)" : "XLM"} after each split. This is an asset purchase, not a yield product — and it's separate from your value-preserving Savings.`
+                    {investXlmHeld > 0 || investGoldHeld > 0
+                      ? `Spot-purchased into ${investAsset === "GOLD" ? "TXAUM (testnet demo gold)" : "XLM"} after each split. This is an asset purchase, separate from your value-preserving Savings.`
                       : "Nothing invested yet. Turn on the Invest lane (set a %) in your rules and pick XLM or gold — the slice buys in automatically after each split."}
                   </p>
                 </div>
@@ -242,19 +254,6 @@ export function LaneDetail() {
                     page already goes to /shunt for every lane, including
                     this one's asset/% picker. A second button to the same
                     destination read as two unrelated actions. */}
-              </div>
-
-              <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8, opacity: 0.75 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>Yield boost via Blend — not enabled</div>
-                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                  Blend Capital is a real lending protocol on Stellar (Soroban), and it's technically
-                  possible to lend part of this lane's holdings there for interest. We're deliberately
-                  <strong> not</strong> wiring it in: lending yield is interest (riba), which conflicts with
-                  Shunt's sharia-conscious positioning (service fees only, everywhere else in the app) —
-                  and it stacks smart-contract risk on top of an already-unaudited vault. If this ever
-                  ships, it would be an explicit opt-in here in Invest, with its own disclaimer, never
-                  silently blended into your default allocation, and never in Savings.
-                </p>
               </div>
             </>
           )}

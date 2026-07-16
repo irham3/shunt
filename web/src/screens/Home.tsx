@@ -28,9 +28,9 @@ export function Home() {
     address,
     buckets,
     balances,
-    investXlm,
+    investXlmHeld,
+    investGoldHeld,
     investWalletUsdc,
-    investAsset,
     activity,
     xlmBalance,
     usdcBalance,
@@ -471,9 +471,12 @@ export function Home() {
                   <span className="numeric" style={{ fontWeight: 600, fontSize: 20, marginTop: "auto" }}>
                     <AnimatedNumber value={bucketBalance(b.id)} decimals={2} />{" "}
                     <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>USDC</span>
-                    {b.id === "invest" && investXlm > 0 && (
+                    {b.id === "invest" && (investXlmHeld > 0 || investGoldHeld > 0) && (
                       <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
-                        {investXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} {investAsset === "GOLD" ? "g XAUm" : "XLM"} held
+                        {[
+                          investXlmHeld > 0 && `${investXlmHeld.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`,
+                          investGoldHeld > 0 && `${investGoldHeld.toLocaleString("en-US", { maximumFractionDigits: 4 })} TXAUM`,
+                        ].filter(Boolean).join(" + ")} held
                       </span>
                     )}
                     {b.id === "savings" && goals.length > 0 && (

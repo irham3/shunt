@@ -608,7 +608,7 @@ function GoalRow({
           <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {goal.label}
           </div>
-          <div className="numeric muted" style={{ fontSize: 13 }}>
+          <div className="numeric muted" style={{ fontSize: 13 }} aria-label={`${goal.label} balance`}>
             <AnimatedNumber value={goal.amountUsdc} decimals={2} /> USDC
             {goal.target ? ` of ${fmtUsdc(goal.target)}` : ""}
           </div>
