@@ -12,6 +12,7 @@ import {
   convertUsdcToXlm,
   quoteConversion,
   addUsdcTrustline,
+  type ConversionQuote,
   type ConvertDirection,
   EXPLORER_TX,
   NETWORK,
@@ -64,7 +65,7 @@ export function SendPay() {
   // Convert (XLM ⇄ USDC) state
   const [cvDirection, setCvDirection] = useState<ConvertDirection>("xlm-usdc");
   const [cvAmount, setCvAmount] = useState("");
-  const [cvQuote, setCvQuote] = useState<number | null>(null);
+  const [cvQuote, setCvQuote] = useState<ConversionQuote | null>(null);
   const [cvQuoting, setCvQuoting] = useState(false);
   const [cvBusy, setCvBusy] = useState(false);
   const [cvErr, setCvErr] = useState<string | null>(null);
@@ -211,13 +212,13 @@ export function SendPay() {
 
     setCvBusy(true);
     try {
-      const destMin = (cvQuote * (1 - SLIPPAGE_PCT / 100)).toFixed(7);
+      const destMin = (cvQuote.amount * (1 - SLIPPAGE_PCT / 100)).toFixed(7);
       const hash =
         cvDirection === "xlm-usdc"
-          ? await convertXlmToUsdc(address, amt.toFixed(7), destMin)
-          : await convertUsdcToXlm(address, amt.toFixed(7), destMin);
-      recordConversion(cvFrom, amt, cvTo, cvQuote, hash);
-      setCvResult({ hash, received: cvQuote });
+          ? await convertXlmToUsdc(address, amt.toFixed(7), destMin, cvQuote.path)
+          : await convertUsdcToXlm(address, amt.toFixed(7), destMin, cvQuote.path);
+      recordConversion(cvFrom, amt, cvTo, cvQuote.amount, hash);
+      setCvResult({ hash, received: cvQuote.amount });
       showToast(`Converted ${cvFrom} → ${cvTo} on the DEX`);
     } catch (e) {
       const formatted = formatError(e);
@@ -470,7 +471,7 @@ export function SendPay() {
                 {cvQuoting
                   ? "Fetching quote…"
                   : cvQuote !== null
-                    ? `≈ ${cvQuote.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${cvTo}`
+                    ? `≈ ${cvQuote.amount.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${cvTo}`
                     : Number(cvAmount) > 0
                       ? "No path available"
                       : "—"}
@@ -480,8 +481,8 @@ export function SendPay() {
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <span className="muted">Rate · min. received ({SLIPPAGE_PCT}% slippage)</span>
                 <span className="numeric">
-                  1 {cvFrom} ≈ {(cvQuote / Number(cvAmount)).toLocaleString("en-US", { maximumFractionDigits: 4 })} {cvTo} ·{" "}
-                  {(cvQuote * (1 - SLIPPAGE_PCT / 100)).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                  1 {cvFrom} ≈ {(cvQuote.amount / Number(cvAmount)).toLocaleString("en-US", { maximumFractionDigits: 4 })} {cvTo} ·{" "}
+                  {(cvQuote.amount * (1 - SLIPPAGE_PCT / 100)).toLocaleString("en-US", { maximumFractionDigits: 4 })}
                 </span>
               </div>
             )}

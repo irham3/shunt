@@ -1,6 +1,19 @@
 /** Client for the Shunt keeper API (detection + prepared distribute XDRs). */
 const KEEPER_URL = import.meta.env.VITE_KEEPER_URL ?? "http://localhost:8787";
 
+/**
+ * Synthetic inflow key for simulated/manual splits. Must be exactly 32 bytes
+ * of hex — the keeper decodes it with Buffer.from(hash, "hex") and the
+ * contract stores it as BytesN<32>, so a "sim-" style prefix breaks the
+ * build with "inflow tx hash must be 32 bytes, got 0". Simulated entries are
+ * kept out of the pending list by the isSimulated flag instead.
+ */
+export function randomTxHash(): string {
+  return [...crypto.getRandomValues(new Uint8Array(32))]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export interface PendingSplit {
   account: string;
   amount: string;

@@ -5,7 +5,7 @@ import { Lock, Wallet, ArrowUpRight, Plus, CheckCircle2, Wand2, Zap } from "luci
 import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { vaultSetRules } from "../lib/vault";
-import { manualTrigger } from "../lib/keeper";
+import { manualTrigger, randomTxHash } from "../lib/keeper";
 import { formatError } from "../lib/stellar";
 import { CORE_BUCKET_IDS, fmtUsdc, totalPct, useShunt } from "../store";
 
@@ -138,11 +138,7 @@ export function ConfigureShunt() {
     const simAmount = Math.min(walletUsdc, 500).toFixed(7);
     setSimBusy(true);
     try {
-      const fakeHash =
-        "sim-" +
-        [...crypto.getRandomValues(new Uint8Array(28))]
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
+      const fakeHash = randomTxHash();
       const p = await manualTrigger(address, simAmount, fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
@@ -174,11 +170,7 @@ export function ConfigureShunt() {
     }
     setReallocBusy(true);
     try {
-      const fakeHash =
-        "sim-" +
-        [...crypto.getRandomValues(new Uint8Array(28))]
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
+      const fakeHash = randomTxHash();
       const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
@@ -540,19 +532,8 @@ export function ConfigureShunt() {
                   <li>Shunt detects it within seconds and shows the exact breakdown.</li>
                   <li>You approve with one tap — savings lock in the vault, the rest stays liquid.</li>
                 </ol>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: "10px" }}>
-                  {Number(usdcBalance ?? 0) >= 0.01 && (
-                    <button
-                      className="btn-primary"
-                      style={{ flex: 1, minWidth: 180 }}
-                      disabled={reallocBusy}
-                      onClick={onReallocate}
-                      data-testid="reallocate-balance"
-                    >
-                      {reallocBusy ? "Preparing…" : `Reallocate ${fmtUsdc(Number(usdcBalance ?? 0))} USDC with new rules`}
-                    </button>
-                  )}
-                </div>
+                {/* The "Test your rules" card above already offers Simulate +
+                    Reallocate — don't render a second copy of those actions here. */}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Link to="/topup" className="btn-secondary" style={{ flex: 1, minWidth: 120, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                     Top Up

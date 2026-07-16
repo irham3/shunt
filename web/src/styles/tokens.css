@@ -112,14 +112,33 @@ button {
   min-height: var(--tap-target);
 }
 
+/* Buttons are used on <button>, <a> and <Link> alike. Anchors don't get the
+   button element's min-height, so without these shared rules link-buttons
+   collapsed to bare text height (cramped, uncentered). Keep every .btn-* the
+   same 44px pill regardless of the underlying element. */
+.btn-primary,
+.btn-secondary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-target);
+  padding: 10px 24px;
+  border-radius: var(--radius-pill);
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  text-decoration: none;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
 .btn-primary {
   background: var(--color-accent-primary);
   color: var(--color-text-on-accent);
   font-weight: 600;
   font-size: 16px;
-  border-radius: var(--radius-pill);
-  padding: 0 24px;
-  width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -133,18 +152,12 @@ button {
   color: var(--color-text-primary);
   border: 1px solid #2a3340;
   font-weight: 600;
-  border-radius: var(--radius-pill);
-  padding: 0 24px;
-  width: 100%;
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--color-text-secondary);
   border: 1px dashed #2a3340;
-  border-radius: var(--radius-pill);
-  padding: 0 24px;
-  width: 100%;
 }
 
 .card {

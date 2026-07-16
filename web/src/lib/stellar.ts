@@ -67,6 +67,9 @@ export function formatError(e: unknown): string {
       /Error\(Contract, #10\)/.test(msg)) {
     return "Not enough USDC in your wallet to move the savings portion into the vault. You can only split income you actually hold — top up your wallet or split a smaller amount.";
   }
+  if (/op_under_dest_min|op_too_few_offers|op_over_source_max/.test(msg)) {
+    return "The DEX couldn't fill this swap at the protected minimum rate — liquidity moved. Try again for a fresh quote.";
+  }
   // Fix snake_case errors from Soroban / Stellar
   return msg.replace(/_/g, " ");
 }
@@ -82,6 +85,21 @@ StellarWalletsKit.init({
 });
 
 function extractErrorString(e: unknown): string {
+  // Horizon submit errors carry the useful part in extras.result_codes —
+  // surface those instead of the generic "Request failed with status code 400".
+  // NOTE: this string must never contain "reject"/"decline"/"cancel" — those
+  // substrings are what parseWalletError() below uses to detect the user
+  // dismissing their wallet's signing prompt. A real on-chain failure whose
+  // message happened to say "rejected" (e.g. "Transaction rejected: op_no_trust")
+  // was silently swallowed as USER_REJECTED (formatError returns "" for that
+  // case), so a failed send just reset the form with zero feedback — caught
+  // by e2e/10-full-coverage.spec.ts's no-trustline-recipient test.
+  const codes = (e as any)?.response?.data?.extras?.result_codes;
+  if (codes) {
+    const ops = Array.isArray(codes.operations) ? codes.operations.filter((c: string) => c !== "op_success") : [];
+    const parts = [...ops, ...(ops.length === 0 && codes.transaction ? [codes.transaction] : [])];
+    if (parts.length > 0) return `On-chain error: ${parts.join(", ")}`;
+  }
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
   if (e && typeof e === "object") {
@@ -328,6 +346,7 @@ async function pathPaymentSelf(
   destAsset: Asset,
   sendAmount: string,
   destMin: string,
+  path: Asset[] = [],
 ): Promise<string> {
   const horizon = new Horizon.Server(HORIZON_URL);
   let source;
@@ -348,6 +367,10 @@ async function pathPaymentSelf(
         destination: sender,
         destAsset,
         destMin,
+        // The quoted rate may route through intermediate assets; without
+        // passing that path the network only tries the direct orderbook and
+        // fails op_under_dest_min whenever the best route is multi-hop.
+        path,
       }),
     )
     .setTimeout(300)
@@ -369,8 +392,9 @@ export async function convertUsdcToXlm(
   sender: string,
   usdcAmount: string,
   minXlm: string,
+  path: Asset[] = [],
 ): Promise<string> {
-  return pathPaymentSelf(sender, new Asset(USDC_CODE, USDC_ISSUER), Asset.native(), usdcAmount, minXlm);
+  return pathPaymentSelf(sender, new Asset(USDC_CODE, USDC_ISSUER), Asset.native(), usdcAmount, minXlm, path);
 }
 
 /** Convert tab: XLM → USDC, e.g. turning testnet XLM into split-able income. */
@@ -378,21 +402,30 @@ export async function convertXlmToUsdc(
   sender: string,
   xlmAmount: string,
   minUsdc: string,
+  path: Asset[] = [],
 ): Promise<string> {
-  return pathPaymentSelf(sender, Asset.native(), new Asset(USDC_CODE, USDC_ISSUER), xlmAmount, minUsdc);
+  return pathPaymentSelf(sender, Asset.native(), new Asset(USDC_CODE, USDC_ISSUER), xlmAmount, minUsdc, path);
 }
 
 export type ConvertDirection = "xlm-usdc" | "usdc-xlm";
 
+export interface ConversionQuote {
+  /** Estimated destination amount for the best route. */
+  amount: number;
+  /** Intermediate assets of that route — MUST be passed to the path payment,
+      or execution only tries the direct orderbook and can miss the quote. */
+  path: Asset[];
+}
+
 /**
  * Live quote for a self-conversion via Horizon's strict-send pathfinding —
  * the same engine the DEX uses, so the preview matches what would execute.
- * Returns the estimated destination amount, or null when no path exists.
+ * Returns the estimated destination amount + route, or null when no path exists.
  */
 export async function quoteConversion(
   direction: ConvertDirection,
   amount: string,
-): Promise<number | null> {
+): Promise<ConversionQuote | null> {
   const params =
     direction === "xlm-usdc"
       ? `source_asset_type=native&source_amount=${amount}&destination_assets=${USDC_CODE}%3A${USDC_ISSUER}`
@@ -403,8 +436,14 @@ export async function quoteConversion(
     const data = await res.json();
     const records: any[] = data?._embedded?.records ?? [];
     if (records.length === 0) return null;
-    // Records are candidate paths; take the best (highest) destination amount.
-    return Math.max(...records.map((r) => Number(r.destination_amount)));
+    // Records are candidate routes; take the best (highest) destination amount.
+    const best = records.reduce((a, b) =>
+      Number(b.destination_amount) > Number(a.destination_amount) ? b : a,
+    );
+    const path: Asset[] = (best.path ?? []).map((p: any) =>
+      p.asset_type === "native" ? Asset.native() : new Asset(p.asset_code, p.asset_issuer),
+    );
+    return { amount: Number(best.destination_amount), path };
   } catch {
     return null;
   }
@@ -659,7 +698,11 @@ export async function fetchLatestSplitEvent(cursor: string = ""): Promise<{ curs
     if (cursor) {
       request.cursor = cursor;
     } else {
-      request.startLedger = 0; // or any valid starting ledger
+      // RPC rejects startLedger 0 ("must be within the ledger range"), which
+      // made every first poll fail silently. Anchor the first poll to the
+      // recent past instead; later polls page forward from the cursor.
+      const { sequence } = await server.getLatestLedger();
+      request.startLedger = Math.max(1, sequence - 120); // ~10 min of ledgers
     }
 
     const res = await server.getEvents(request);

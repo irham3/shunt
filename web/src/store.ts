@@ -55,6 +55,11 @@ interface ShuntState {
   /** Invest-asset units accumulated by the Invest lane's DCA conversions (F12).
       Denominated in whatever `investAsset` is set to (XLM, or grams of XAUm). */
   investXlm: number;
+  /** USDC earmarked for Invest that never left the wallet (simulated/reference-
+      rate conversions, e.g. GOLD on testnet). Subtracted from the "unsplit
+      USDC" heuristic so a fresh split doesn't immediately re-flag its own
+      invest slice as unsplit income. */
+  investWalletUsdc: number;
   /** Which Stellar asset the Invest lane buys. XLM = live testnet DEX liquidity;
       GOLD = XAUm (Matrixdock, 1 token = 1g LBMA gold) — a value-holding growth
       asset. Testnet has no XAUm liquidity, so GOLD records at a labeled rate. */
@@ -88,6 +93,8 @@ interface ShuntState {
   refreshWallet: (address: string) => Promise<void>;
   applySplit: (amount: number, txHash?: string) => void;
   withdrawSavings: (amount: number, penalty: number) => void;
+  /** Record a Buffer-credit withdrawal (vault → wallet) in lane bookkeeping + activity. */
+  withdrawBufferCredit: (amount: number) => void;
   offramp: (amount: number) => void;
   /** F11: record a Top Up request sent to the anchor (funds land later as a normal inflow). */
   recordTopUp: (amount: number) => void;
@@ -139,6 +146,7 @@ export const useShunt = create<ShuntState>()(
       lockSecs: 30 * 86400,
       balances: { needs: 0, savings: 0, buffer: 0, invest: 0 },
       investXlm: 0,
+      investWalletUsdc: 0,
       investAsset: "XLM",
       goals: [],
       unallocatedSavings: 0,
@@ -252,6 +260,10 @@ export const useShunt = create<ShuntState>()(
       withdrawSavings: (amount, penalty) => {
         const { balances, activity } = get();
         set({
+          // The payout lands in the wallet as spendable USDC — credit the
+          // Needs bookkeeping so the lane totals keep matching the wallet
+          // (the penalty part stays in the vault as Buffer credit).
+          balances: { ...balances, needs: balances.needs + (amount - penalty) },
           activity: [
             {
               id: `${Date.now()}`,
@@ -267,15 +279,56 @@ export const useShunt = create<ShuntState>()(
             ...activity,
           ],
         });
-        // Pull true updated savings/buffer from contract
+        // Pull true updated savings/buffer from contract. Delayed like
+        // applySplit: an immediate query often hits a Soroban RPC node that
+        // lags a ledger and returns stale (pre-tx) state.
         const address = get().address;
-        if (address) get().syncFromChain(address);
+        if (address) {
+          setTimeout(() => {
+            get().syncFromChain(address);
+            get().refreshWallet(address);
+          }, 4000);
+        }
+      },
+
+      withdrawBufferCredit: (amount) => {
+        const { balances, activity } = get();
+        set({
+          // Buffer credit leaves the vault into the wallet — it stays "buffer
+          // money", so credit the Buffer lane's bookkeeping.
+          balances: { ...balances, buffer: balances.buffer + amount },
+          activity: [
+            {
+              id: `${Date.now()}-bufw`,
+              kind: "withdraw",
+              title: "Buffer credit withdrawn to wallet",
+              amountUsdc: amount,
+              at: new Date().toISOString(),
+              bucket: "buffer",
+            },
+            ...activity,
+          ],
+        });
+        const address = get().address;
+        if (address) {
+          setTimeout(() => {
+            get().syncFromChain(address);
+            get().refreshWallet(address);
+          }, 4000);
+        }
       },
 
       offramp: (amount) => {
-        const { balances, activity } = get();
+        const { activity } = get();
+        // No balance change here: clicking "Continue" only opens the
+        // anchor's hosted SEP-24 flow (or records a sketched request if the
+        // anchor call itself failed) — the actual USDC transfer happens
+        // later, inside that hosted flow, whenever the user completes it (or
+        // never does). Decrementing Needs immediately (as this used to)
+        // desynced the lane bookkeeping from the real on-chain wallet
+        // balance the moment a user closed the tab without finishing.
+        // Mirrors recordTopUp, which is activity-only for the same reason.
         set({
-          balances: { ...balances, needs: balances.needs - amount },
           activity: [
             {
               id: `${Date.now()}`,
@@ -291,10 +344,13 @@ export const useShunt = create<ShuntState>()(
       },
 
       applyInvestConversion: (usd, xlm, txHash, simulated) => {
-        const { investXlm, activity, investAsset } = get();
+        const { investXlm, investWalletUsdc, activity, investAsset } = get();
         const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
         set({
           investXlm: investXlm + xlm,
+          // Simulated conversion → the USDC is still in the wallet; remember
+          // that so Home doesn't offer to re-split it.
+          investWalletUsdc: simulated ? investWalletUsdc + usd : investWalletUsdc,
           activity: [
             {
               id: `${Date.now()}-inv`,
@@ -311,7 +367,7 @@ export const useShunt = create<ShuntState>()(
       },
 
       manualInvestBuy: (usd, xlm, txHash, simulated) => {
-        const { investXlm, activity, investAsset, balances } = get();
+        const { investXlm, investWalletUsdc, activity, investAsset, balances } = get();
         const unit = investAsset === "GOLD" ? "g XAUm" : "XLM";
         set({
           balances: {
@@ -320,6 +376,7 @@ export const useShunt = create<ShuntState>()(
             invest: balances.invest + usd,
           },
           investXlm: investXlm + xlm,
+          investWalletUsdc: simulated ? investWalletUsdc + usd : investWalletUsdc,
           activity: [
             {
               id: `${Date.now()}-inv-manual`,
@@ -372,15 +429,22 @@ export const useShunt = create<ShuntState>()(
       },
 
       recordUsdcPayment: (destination, amountUsdc, txHash) => {
-        const { activity } = get();
+        // Called only after the real Horizon payment already succeeded (see
+        // SendPay.tsx) — the USDC has genuinely left the wallet, so credit
+        // the spend against Needs bookkeeping now. Without this the Needs
+        // lane card kept showing pre-send money forever, drifting away from
+        // the real on-chain wallet balance shown elsewhere on Home.
+        const { activity, balances } = get();
+        const amt = Number(amountUsdc);
         const short = `${destination.slice(0, 4)}…${destination.slice(-4)}`;
         set({
+          balances: { ...balances, needs: Math.max(0, balances.needs - amt) },
           activity: [
             {
               id: `${Date.now()}`,
               kind: "payment",
               title: `Sent USDC to ${short}`,
-              amountUsdc: Number(amountUsdc),
+              amountUsdc: amt,
               txHash,
               at: new Date().toISOString(),
               bucket: "needs",
@@ -391,9 +455,16 @@ export const useShunt = create<ShuntState>()(
       },
 
       recordConversion: (from, fromAmount, to, toAmount, txHash) => {
-        const { activity } = get();
+        const { activity, balances } = get();
         const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
         set({
+          // USDC → XLM spends real wallet USDC outside the split mechanism —
+          // credit it against Needs bookkeeping like any other outbound USDC
+          // payment (recordUsdcPayment), or the lane card keeps showing money
+          // that already left. The reverse direction (XLM → USDC) brings NEW
+          // USDC in; deliberately left uncategorized so it surfaces via the
+          // "unsplit USDC" banner instead of being silently pre-assigned.
+          ...(from === "USDC" ? { balances: { ...balances, needs: Math.max(0, balances.needs - fromAmount) } } : {}),
           activity: [
             {
               id: `${Date.now()}-cvt`,
@@ -510,6 +581,17 @@ export const useShunt = create<ShuntState>()(
                   return { ...b, pct: Math.round(chainTotal * ratio) };
                 });
 
+                // Per-bucket rounding can leave the total a point or two off
+                // 100% (which blocks the save button) — fold the remainder
+                // into the largest bucket.
+                const scaledTotal = scaledBuckets.reduce((s, b) => s + b.pct, 0);
+                const chainTotal = chainNeedsInvestPct + chainSavingsPct + chainBufferPct;
+                const drift = chainTotal - scaledTotal;
+                if (drift !== 0 && scaledBuckets.length > 0) {
+                  const largest = scaledBuckets.reduce((a, b) => (b.pct > a.pct ? b : a));
+                  largest.pct = Math.max(0, largest.pct + drift);
+                }
+
                 // If no existing buckets (fresh state), fall back to defaults
                 if (scaledBuckets.length === 0) {
                   const defaultInvest = Math.min(10, chainNeedsInvestPct);
@@ -535,7 +617,7 @@ export const useShunt = create<ShuntState>()(
     }),
     {
       name: "shunt-store",
-      version: 5,
+      version: 6,
       migrate: (persisted: any, version) => {
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
@@ -569,6 +651,10 @@ export const useShunt = create<ShuntState>()(
         if (version < 5 && persisted) {
           // Invest-asset picker (XLM default; GOLD = XAUm).
           persisted.investAsset = persisted.investAsset ?? "XLM";
+        }
+        if (version < 6 && persisted) {
+          // Invest-slice USDC still sitting in the wallet (simulated DCA).
+          persisted.investWalletUsdc = persisted.investWalletUsdc ?? 0;
         }
         return persisted;
       },

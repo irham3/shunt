@@ -20,6 +20,7 @@ export function SavingsVault() {
     lockUntil,
     activity,
     withdrawSavings,
+    withdrawBufferCredit,
     showToast,
     goals,
     unallocatedSavings,
@@ -77,8 +78,19 @@ export function SavingsVault() {
 
   async function onWithdraw() {
     const usdc = Number(amount);
-    if (!usdc || usdc <= 0 || usdc > balance) {
-      setErr("Invalid amount or exceeds balance.");
+    // Cap at UNALLOCATED, not the total vault balance: `withdraw_savings`
+    // on-chain only checks against the aggregate, not against what's
+    // earmarked in goals — so a withdrawal here could otherwise silently
+    // drain funds a goal is counting on, leaving get_unallocated_savings
+    // negative and a later withdraw_from_goal failing with
+    // InsufficientSavings out of nowhere. Move earmarked money via each
+    // goal's own Withdraw instead.
+    if (!usdc || usdc <= 0 || usdc > unallocatedSavings) {
+      setErr(
+        unallocatedSavings < balance
+          ? `Invalid amount or exceeds unallocated (${fmtUsdc(unallocatedSavings)} USDC) — the rest is earmarked in goals below.`
+          : "Invalid amount or exceeds balance.",
+      );
       return;
     }
     setBusy(true);
@@ -114,8 +126,13 @@ export function SavingsVault() {
                 {c}
               </button>
             ))}
-            <button className="chip" disabled title="Gold lane coming later (P2)" style={{ opacity: 0.4 }}>
-              Gold 🔜
+            {/* This toggle would show the Savings balance re-denominated in
+                grams of gold (a display conversion, like USD/IDR above) — it
+                is NOT the same feature as the Invest lane's XLM/Gold picker
+                (Configure Shunt), which is already live. Worded to avoid
+                implying gold itself is unavailable in Shunt. */}
+            <button className="chip" disabled title="Gold-denominated display coming later — invest into gold today via the Invest lane (Configure Shunt)" style={{ opacity: 0.4 }}>
+              Gold display 🔜
             </button>
           </div>
 
@@ -144,6 +161,7 @@ export function SavingsVault() {
             locked={locked}
             onSetGoalTarget={setGoalTarget}
             onRefresh={() => address && syncFromChain(address)}
+            onWithdrawn={withdrawSavings}
             showToast={showToast}
           />
 
@@ -179,13 +197,19 @@ export function SavingsVault() {
           <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input
               type="number"
-              placeholder="Amount in USDC"
+              placeholder={`Amount in USDC (up to ${fmtUsdc(unallocatedSavings)} unallocated)`}
               value={amount}
               min={0}
+              max={unallocatedSavings}
               onChange={(e) => setAmount(e.target.value)}
               aria-label="Withdrawal amount"
             />
-            <button className="btn-secondary" disabled={busy || balance <= 0} onClick={onWithdraw}>
+            {unallocatedSavings < balance && (
+              <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                {fmtUsdc(balance - unallocatedSavings)} USDC is earmarked in goals below — withdraw that from the goal itself.
+              </p>
+            )}
+            <button className="btn-secondary" disabled={busy || unallocatedSavings <= 0} onClick={onWithdraw}>
               {busy ? "Processing…" : "Withdraw"}
             </button>
           </div>
@@ -199,7 +223,7 @@ export function SavingsVault() {
             <BufferCreditCard
               address={address}
               credit={bufferCredit}
-              onRefresh={() => address && syncFromChain(address)}
+              onWithdrawn={withdrawBufferCredit}
               showToast={showToast}
             />
           )}
@@ -216,12 +240,13 @@ export function SavingsVault() {
 function BufferCreditCard({
   address,
   credit,
-  onRefresh,
+  onWithdrawn,
   showToast,
 }: {
   address: string | null;
   credit: number;
-  onRefresh: () => void;
+  /** Records the payout in lane bookkeeping + activity and re-syncs from chain. */
+  onWithdrawn: (amount: number) => void;
   showToast: (msg: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -233,8 +258,8 @@ function BufferCreditCard({
     setErr(null);
     try {
       await vaultWithdrawBuffer(address, credit);
+      onWithdrawn(credit);
       showToast("Buffer credit withdrawn to your wallet");
-      onRefresh();
     } catch (e) {
       const formatted = formatError(e);
       if (formatted) setErr(`On-chain call failed (${formatted})`);
@@ -258,7 +283,7 @@ function BufferCreditCard({
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
         Early-withdrawal penalties land here — yours, in the vault, never locked.
       </p>
-      <button className="btn-secondary" disabled={busy} onClick={onWithdrawCredit}>
+      <button className="btn-secondary" disabled={busy} onClick={onWithdrawCredit} data-testid="withdraw-buffer-credit">
         {busy ? "Processing…" : "Withdraw to wallet"}
       </button>
       {err && (
@@ -281,6 +306,7 @@ function SavingsGoals({
   locked,
   onSetGoalTarget,
   onRefresh,
+  onWithdrawn,
   showToast,
 }: {
   address: string | null;
@@ -289,6 +315,8 @@ function SavingsGoals({
   locked: boolean;
   onSetGoalTarget: (id: number, target: number | undefined) => void;
   onRefresh: () => void;
+  /** Records a goal withdrawal in lane bookkeeping + activity (store.withdrawSavings). */
+  onWithdrawn: (amount: number, penalty: number) => void;
   showToast: (msg: string) => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
@@ -348,6 +376,7 @@ function SavingsGoals({
             locked={locked}
             onSetTarget={(t) => onSetGoalTarget(g.id, t)}
             onRefresh={onRefresh}
+            onWithdrawn={onWithdrawn}
             showToast={showToast}
           />
         ))}
@@ -405,6 +434,7 @@ function GoalRow({
   locked,
   onSetTarget,
   onRefresh,
+  onWithdrawn,
   showToast,
 }: {
   address: string | null;
@@ -412,6 +442,7 @@ function GoalRow({
   locked: boolean;
   onSetTarget: (target: number | undefined) => void;
   onRefresh: () => void;
+  onWithdrawn: (amount: number, penalty: number) => void;
   showToast: (msg: string) => void;
 }) {
   const [mode, setMode] = useState<"idle" | "withdraw" | "rename" | "target">("idle");
@@ -434,10 +465,12 @@ function GoalRow({
     setErr(null);
     try {
       await vaultWithdrawFromGoal(address, goal.id, usdc);
+      // Record it like any savings withdrawal: activity entry + the payout
+      // credited to spendable bookkeeping (also re-syncs from chain).
+      onWithdrawn(usdc, locked ? (usdc * PENALTY_PCT) / 100 : 0);
       showToast(locked ? `Withdrawn — ${PENALTY_PCT}% penalty → Buffer` : "Withdrawn from goal");
       setMode("idle");
       setAmount("");
-      onRefresh();
     } catch (e) {
       const formatted = formatError(e);
       if (formatted) setErr(`On-chain call failed (${formatted})`);
@@ -534,7 +567,7 @@ function GoalRow({
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button className="chip" aria-label={`Rename ${goal.label}`} onClick={() => setMode(mode === "rename" ? "idle" : "rename")}>
             <Pencil size={14} />
           </button>

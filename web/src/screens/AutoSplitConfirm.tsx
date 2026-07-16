@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { markComplete, manualTrigger, type PendingSplit } from "../lib/keeper";
-import { convertUsdcToXlm, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
+import { convertUsdcToXlm, quoteConversion, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
 import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
@@ -92,19 +92,24 @@ export function AutoSplitConfirm() {
       return;
     }
 
-    const { rate, stale } = await getXlmUsdRate();
-    const estXlm = thisInvestAmt / rate;
     if (splitWasOnChain && address) {
       try {
-        const minXlm = (estXlm * 0.95).toFixed(7);
-        const hash = await convertUsdcToXlm(address, thisInvestAmt.toFixed(7), minXlm);
-        applyInvestConversion(thisInvestAmt, estXlm, hash, false);
-        return;
+        // Live DEX quote sizes both the expected amount and the slippage
+        // floor — the CoinGecko rate tracks mainnet and made testnet path
+        // payments fail with op_under_dest_min every time.
+        const quote = await quoteConversion("usdc-xlm", thisInvestAmt.toFixed(7));
+        if (quote) {
+          const minXlm = (quote.amount * 0.95).toFixed(7);
+          const hash = await convertUsdcToXlm(address, thisInvestAmt.toFixed(7), minXlm, quote.path);
+          applyInvestConversion(thisInvestAmt, quote.amount, hash, false);
+          return;
+        }
       } catch {
         // fall through to simulation
       }
     }
-    applyInvestConversion(thisInvestAmt, estXlm, undefined, true);
+    const { rate } = await getXlmUsdRate();
+    applyInvestConversion(thisInvestAmt, thisInvestAmt / rate, undefined, true);
   }
 
   async function onApprove() {

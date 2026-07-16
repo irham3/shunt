@@ -5,8 +5,8 @@ import { Lock, Wallet, ArrowUpRight, SlidersHorizontal } from "lucide-react";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { fmtUsdc, useShunt } from "../store";
 import { vaultWithdrawBuffer } from "../lib/vault";
-import { formatError, convertUsdcToXlm } from "../lib/stellar";
-import { getGoldUsdRate, getXlmUsdRate } from "../lib/rates";
+import { formatError, convertUsdcToXlm, quoteConversion } from "../lib/stellar";
+import { getGoldUsdRate } from "../lib/rates";
 
 /**
  * Per-lane detail (`/lane/:id`). Full-page layout matching SavingsVault —
@@ -27,7 +27,8 @@ export function LaneDetail() {
   const nav = useNavigate();
   const {
     address, buckets, balances, investXlm, investAsset, bufferCredit,
-    activity, showToast, syncFromChain, refreshWallet, manualInvestBuy
+    usdcBalance, activity, showToast, syncFromChain, refreshWallet,
+    manualInvestBuy, withdrawBufferCredit,
   } = useShunt();
   const [busy, setBusy] = useState(false);
   const [buyAmount, setBuyAmount] = useState("");
@@ -57,7 +58,8 @@ export function LaneDetail() {
     setBusy(true);
     try {
       await vaultWithdrawBuffer(address, bufferCredit);
-      await syncFromChain(address);
+      // Records activity, credits the Buffer lane bookkeeping, re-syncs.
+      withdrawBufferCredit(bufferCredit);
       showToast("Buffer credit withdrawn to your wallet");
     } catch (e) {
       const f = formatError(e);
@@ -67,23 +69,33 @@ export function LaneDetail() {
     }
   }
 
+  // The wallet is what actually pays — validate against the on-chain USDC
+  // balance, not the Needs-lane bookkeeping (stale/zero on a fresh device,
+  // which left the Buy button dead even with a funded wallet).
+  const walletUsdc = Number(usdcBalance ?? 0);
+
   async function onManualBuy() {
     const amount = Number(buyAmount);
-    if (!address || amount <= 0 || amount > balances.needs) return;
+    if (!address || amount <= 0 || amount > walletUsdc) return;
     setBuying(true);
     try {
       if (investAsset === "GOLD") {
         const { rate } = await getGoldUsdRate();
         const goldAmt = amount / rate;
-        manualInvestBuy(amount, goldAmt, "sim-manual-" + Date.now(), true);
+        // Simulated purchase (no on-chain tx) — record without a tx hash so
+        // Activity doesn't link to a nonexistent explorer page.
+        manualInvestBuy(amount, goldAmt, undefined, true);
         showToast(`Bought ${goldAmt.toFixed(4)} g XAUm for ${fmtUsdc(amount)} USDC`);
       } else {
-        const { rate } = await getXlmUsdRate();
-        const expectedXlm = amount / rate;
-        const minXlm = (expectedXlm * 0.98).toFixed(7);
-        const hash = await convertUsdcToXlm(address, amount.toFixed(7), minXlm);
-        manualInvestBuy(amount, expectedXlm, hash, false);
-        showToast(`Bought XLM for ${fmtUsdc(amount)} USDC`);
+        // Size the slippage floor from a LIVE DEX quote — the CoinGecko
+        // display rate reflects mainnet and can sit far above the testnet
+        // book, which made every real purchase fail with op_under_dest_min.
+        const quote = await quoteConversion("usdc-xlm", amount.toFixed(7));
+        if (!quote) throw new Error("No USDC → XLM path on the DEX right now — try again later.");
+        const minXlm = (quote.amount * 0.98).toFixed(7);
+        const hash = await convertUsdcToXlm(address, amount.toFixed(7), minXlm, quote.path);
+        manualInvestBuy(amount, quote.amount, hash, false);
+        showToast(`Bought ≈${quote.amount.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM for ${fmtUsdc(amount)} USDC`);
       }
       setBuyAmount("");
     } catch (e) {
@@ -159,7 +171,7 @@ export function LaneDetail() {
                 <div>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>Buy {investAsset === "GOLD" ? "Gold (XAUm)" : "XLM"} Manually</div>
                   <p className="muted" style={{ fontSize: 13, margin: "0 0 12px" }}>
-                    Spend your liquid wallet USDC ({fmtUsdc(balances.needs)} available) to buy more {investAsset === "GOLD" ? "gold" : "XLM"} right now.
+                    Spend your wallet USDC ({fmtUsdc(walletUsdc)} available) to buy more {investAsset === "GOLD" ? "gold" : "XLM"} right now.
                   </p>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                     <div style={{ flex: 1 }}>
@@ -168,16 +180,19 @@ export function LaneDetail() {
                         type="number"
                         min="0"
                         step="0.01"
-                        max={balances.needs}
+                        max={walletUsdc}
                         value={buyAmount}
                         onChange={(e) => setBuyAmount(e.target.value)}
                         placeholder="0.00"
+                        data-testid="lane-buy-amount"
                       />
                     </div>
                     <button
                       className="btn-primary"
-                      disabled={buying || !buyAmount || Number(buyAmount) <= 0 || Number(buyAmount) > balances.needs}
+                      style={{ width: "auto", flexShrink: 0 }}
+                      disabled={buying || !buyAmount || Number(buyAmount) <= 0 || Number(buyAmount) > walletUsdc || usdcBalance === null}
                       onClick={onManualBuy}
+                      data-testid="lane-buy-submit"
                     >
                       {buying ? "Processing…" : "Buy"}
                     </button>
@@ -221,7 +236,9 @@ export function LaneDetail() {
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Link to="/send" className="btn-primary" style={{ flex: 1, minWidth: 130, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                {/* Deep-link straight to the Off-Ramp tab — plain /send lands
+                    on the Transfer tab, which is not what this button promises. */}
+                <Link to="/send?tab=usdc" className="btn-primary" style={{ flex: 1, minWidth: 130, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                   Cash out to fiat
                 </Link>
                 <Link to="/send?tab=convert" className="btn-secondary" style={{ flex: 1, minWidth: 130, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>

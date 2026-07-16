@@ -160,12 +160,7 @@ export function Settings() {
 
       <div className="card" style={{ display: "flex", justifyContent: "space-between" }}>
         <span>Security</span>
-        <span className="muted" style={{ fontSize: 13 }}>Keys live in Freighter</span>
-      </div>
-
-      <div className="card" style={{ display: "flex", justifyContent: "space-between" }}>
-        <span>Display currency</span>
-        <span className="muted" style={{ fontSize: 13 }}>USD / IDR</span>
+        <span className="muted" style={{ fontSize: 13 }}>Keys live in your wallet</span>
       </div>
 
       <section

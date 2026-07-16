@@ -1,4 +1,3 @@
-import { AnimatePresence } from "framer-motion";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { TabBar } from "./components/TabBar";
 import { Toast } from "./components/Toast";
@@ -29,8 +28,11 @@ export default function App() {
   return (
     <div className={`app-shell ${!fullScreen && address ? "with-rail" : ""}${isLanding ? " landing-shell" : ""}`}>
       <Toast />
-      <AnimatePresence mode="wait" initial={false}>
-        <Routes location={location} key={pathname}>
+      {/* Route transitions are enter-only (PageTransition). Never gate
+          navigation on an exit animation: AnimatePresence mode="wait" hangs
+          under React Router v7's startTransition-based navigation, leaving
+          the previous screen permanently stuck on screen. */}
+      <Routes location={location} key={pathname}>
           <Route path="/" element={address ? <Navigate to="/home" replace /> : t(<Onboarding />)} />
           <Route path="/connect" element={t(<ConnectWallet />)} />
           <Route path="/home" element={address ? t(<Home />) : <Navigate to="/" replace />} />
@@ -47,7 +49,6 @@ export default function App() {
           <Route path="/settings" element={address ? t(<Settings />) : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AnimatePresence>
       {!fullScreen && address && <TabBar />}
     </div>
   );

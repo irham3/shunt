@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { AllocationBar } from "../components/AllocationBar";
 import { getIdrRate, getXlmUsdRate } from "../lib/rates";
-import { fetchPending, manualTrigger, type PendingSplit } from "../lib/keeper";
+import { fetchPending, manualTrigger, randomTxHash, type PendingSplit } from "../lib/keeper";
 import {
   fundWithFriendbot,
   fetchLatestSplitEvent,
@@ -28,6 +28,7 @@ export function Home() {
     buckets,
     balances,
     investXlm,
+    investWalletUsdc,
     investAsset,
     activity,
     xlmBalance,
@@ -58,7 +59,10 @@ export function Home() {
   // USDC sitting in the wallet that no lane has claimed yet (e.g. a direct
   // transfer the keeper hasn't offered to split). Heuristic over the local
   // lane bookkeeping — shown with a one-tap "Split now" escape hatch.
-  const unsplitUsdc = Math.max(0, walletUsdc - balances.needs - balances.buffer);
+  // investWalletUsdc = invest slices recorded at a reference rate whose USDC
+  // never left the wallet; without it every simulated DCA immediately
+  // re-flags its own slice as "unsplit".
+  const unsplitUsdc = Math.max(0, walletUsdc - balances.needs - balances.buffer - investWalletUsdc);
 
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
@@ -148,15 +152,15 @@ export function Home() {
     setFundingUsdc(true);
     try {
       // Find out how much 1000 XLM yields in USDC on testnet
-      const estimatedUsdc = await quoteConversion("xlm-usdc", "1000");
-      if (!estimatedUsdc) {
+      const quote = await quoteConversion("xlm-usdc", "1000");
+      if (!quote) {
         throw new Error("No DEX liquidity to swap XLM for USDC on testnet right now.");
       }
-      
-      const hash = await convertXlmToUsdc(address, "1000", (estimatedUsdc * 0.95).toFixed(7));
+
+      const hash = await convertXlmToUsdc(address, "1000", (quote.amount * 0.95).toFixed(7), quote.path);
       if (hash) {
         await refreshWallet(address);
-        showToast(`Swapped 1000 XLM for ~${estimatedUsdc.toFixed(2)} testnet USDC!`);
+        showToast(`Swapped 1000 XLM for ~${quote.amount.toFixed(2)} testnet USDC!`);
       }
     } catch (e) {
       const formatted = formatError(e);
@@ -176,11 +180,7 @@ export function Home() {
     }
     setSplittingNow(true);
     try {
-      const syntheticHash =
-        "sim-" +
-        [...crypto.getRandomValues(new Uint8Array(28))]
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
+      const syntheticHash = randomTxHash();
       const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
@@ -313,6 +313,7 @@ export function Home() {
             style={{ fontSize: 13, marginTop: 12 }}
             disabled={fundingUsdc}
             onClick={onFundUsdc}
+            data-testid="swap-xlm-usdc"
           >
             {fundingUsdc ? "Swapping..." : "Swap 1000 XLM for testnet USDC"}
           </button>
