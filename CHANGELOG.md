@@ -7,6 +7,33 @@ progression, not a padded timeline).
 
 ---
 
+## v0.10 — Live deployment pointed at the wrong contract (2026-07-16)
+
+**Root cause of "Rules expired on-chain" reports:** the live deployment's
+`VITE_VAULT_CONTRACT_ID` was baked at build time as
+`CA65BKKNEZEXOXK54G6BAVE3O4QMTCXGSA7YULHADELX5HOIOZPO7JUM` — an older,
+superseded vault instance — instead of the current
+`CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K` (goals feature).
+Confirmed by decoding a user's real `set_rules` transactions: all three
+succeeded on-chain (`txSuccess`) against CA65, while the keeper (correctly
+configured for CB27) simulated `distribute` against CB27 and legitimately
+found no rules there — hence `Error(Contract, #3)` on every Simulate/
+Reallocate attempt. Not a code bug; **Vercel's `VITE_VAULT_CONTRACT_ID` env
+var needs updating to CB27… and a redeploy** (Vite inlines env vars at build
+time, so changing the dashboard value alone doesn't take effect). Funds set
+aside under the old rules are still on CA65, untouched.
+- **Defense-in-depth added regardless:** a `#3` from the keeper no longer
+  triggers an immediate "rules expired" reset. `resolveRulesNotSet()` (new,
+  `lib/vault.ts`) does one direct `get_rules` read before deciding — if the
+  rules are genuinely there (the keeper hit a lagging RPC replica, a real
+  possibility independent of the misconfiguration above), the user now sees
+  "the network needs a moment, try again" and keeps their saved state instead
+  of being bounced into edit mode. Applied at all four sites that handle this
+  error (Configure Shunt's Simulate + Reallocate, Home's Split now,
+  AutoSplitConfirm's rebuild-on-approve). Verified live against both outcomes
+  on a fresh account (rules genuinely missing → correct reset + accurate
+  copy; rules present → no false positive).
+
 ## v0.9 — Cross-menu nominal audit + 32-spec real-testnet coverage (2026-07-16)
 
 Follow-up pass after v0.8, specifically hunting for money that goes out of
