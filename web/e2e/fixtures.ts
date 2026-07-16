@@ -22,13 +22,15 @@ export const test = base.extend<{ e2e: E2EState }>({
         (window as any).__SHUNT_E2E_SECRET__ = secret;
         const KEY = "shunt-store";
         if (!localStorage.getItem(KEY)) {
-          // rulesSavedOnChain is a local mirror of on-chain state; spec 02
-          // performs the real set_rules, later specs start from "saved".
+          // rulesSavedOnChain starts false — spec 02 exercises the editing UI
+          // and performs the real set_rules; later specs recover the "saved"
+          // state from the chain itself (Home's syncFromChain on mount reads
+          // get_rules and flips the local mirror back to true).
           localStorage.setItem(
             KEY,
             JSON.stringify({
-              state: { address, walletId: "e2e", rulesSavedOnChain: true },
-              version: 4,
+              state: { address, walletId: "e2e", rulesSavedOnChain: false },
+              version: 6,
             }),
           );
         }

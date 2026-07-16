@@ -40,10 +40,16 @@ test.describe("one-tap split", () => {
   test("demo fallback is honest when the keeper can't prepare a split", async ({ page, e2e }) => {
     test.skip(e2e.keeperUp && e2e.usdcAcquired, "covered by the real-split test above");
 
-    // Manual trigger from Configure Shunt's post-save panel
+    // The simulate section only renders once rules are saved on-chain — do
+    // the real set_rules first (works without the keeper), then simulate.
     await page.goto("/shunt");
-    await page.getByTestId("try-with-simulated-income").click();
-    await expect(page).toHaveURL(/\/confirm/, { timeout: 30_000 });
+    const save = page.getByTestId("save-rules-button");
+    if (await save.isVisible().catch(() => false)) {
+      await save.click();
+      await expect(page.getByTestId("simulate-section")).toBeVisible({ timeout: 90_000 });
+    }
+    await page.getByTestId("simulate-income-button").click();
+    await expect(page).toHaveURL(/\/confirm/, { timeout: 60_000 });
     await expect(page.getByText("Income landed")).toBeVisible();
   });
 });
