@@ -23,7 +23,13 @@ export async function buildDistributeTx(
   const source = await server.getAccount(userAccount);
   const contract = new Contract(env.VAULT_CONTRACT_ID);
 
-  const inflowKey = Buffer.from(inflowTxHash, "hex");
+  // Real inflows send the 64-hex Horizon tx hash. Anything else (older app
+  // builds prefixed simulated hashes with "sim-", which Buffer.from(…, "hex")
+  // silently truncates to 0 bytes) is digested to a deterministic 32-byte key
+  // instead of failing the build.
+  const inflowKey = /^[0-9a-fA-F]{64}$/.test(inflowTxHash)
+    ? Buffer.from(inflowTxHash, "hex")
+    : Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(inflowTxHash)));
   if (inflowKey.length !== 32) {
     throw new Error(`inflow tx hash must be 32 bytes, got ${inflowKey.length}`);
   }

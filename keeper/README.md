@@ -1,10 +1,11 @@
-# Shunt keeper — Cloudflare Workers edition
+# Shunt keeper — Cloudflare Worker
 
-Same job as `../keeper` (detect USDC inflows, prepare an unsigned `distribute`
-XDR for the user's one-tap Freighter approval) but running as a Cloudflare
-Worker instead of an always-on Node process. Cloudflare's free plan needs no
-credit card, has no sleep/idle timeout, and Cron Triggers don't disappear
-after an hour the way some free static-hosting tunnels do.
+Detects USDC inflows and prepares an unsigned `distribute` XDR for the user's
+one-tap wallet approval. It runs as a Cloudflare Worker rather than an
+always-on Node process: Cloudflare's free plan needs no credit card, has no
+sleep/idle timeout, and Cron Triggers don't disappear after an hour the way
+some free static-hosting tunnels do. (An earlier Node/SSE keeper was replaced
+by this Worker — this directory is the only keeper now.)
 
 The one behavior change: instead of a live Horizon SSE stream, a Cron
 Trigger polls for new payments once a minute. State (processed tx hashes,
@@ -14,7 +15,7 @@ local JSON file, since a Worker has no persistent disk between invocations.
 ## One-time setup
 
 ```bash
-cd keeper-worker
+cd keeper
 npm install
 npx wrangler login                     # opens a browser, no credit card needed
 npx wrangler kv namespace create KEEPER_KV
