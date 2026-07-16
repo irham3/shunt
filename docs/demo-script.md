@@ -7,11 +7,11 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 > Setup before recording: Freighter on testnet with a funded account + USDC
 > trustline; `web` running (`npm run dev`, port 5199) or the live URL; keeper URL
 > set; have the Stellar Expert explorer open in a second tab for the proof hash.
-> If real income isn't already sitting in the wallet, use the **"Try it
-> (simulated income)"** button in Configure Shunt's post-save panel (or
-> Settings → Demo fallback → "Simulate incoming income") — it builds a real
-> `distribute` XDR against the wallet's actual USDC balance via the keeper, so
-> the split that follows is a genuine on-chain transaction, not a mock.
+> If real income isn't already sitting in the wallet, use the **"Simulate
+> incoming income"** button in Configure Shunt's "Test your rules" card (it
+> appears once rules are saved) — it builds a real `distribute` XDR against
+> the wallet's actual USDC balance via the keeper, so the split that follows
+> is a genuine on-chain transaction, not a mock.
 > *(Need USDC? Tap "Swap 1000 XLM for testnet USDC" on the Home screen to instantly fund it via the testnet DEX).*
 
 ---
@@ -41,7 +41,7 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 - **On screen:** Home shows detected un-split USDC → tap Split → review exact
   breakdown (showing all lanes including custom ones with clear destination
   labels) → Freighter signs `distribute` → lanes update. (No inflow queued
-  yet? Tap "Try it (simulated income)" on Configure Shunt instead — same
+  yet? Tap "Simulate incoming income" on Configure Shunt instead — same
   keeper-prepared XDR, same on-chain split, just triggered manually so the
   demo isn't blocked on waiting for a real transfer.)
 - **Say:** "Income lands. The app detects it from Horizon, I review the exact

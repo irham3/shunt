@@ -178,7 +178,7 @@ Three deliberate design principles:
 | `withdraw_from_goal(user, goal_id, amount)`                               | user | Same penalty/timelock as `withdraw_savings`, scoped to one goal.                                  |
 | `rename_savings_goal(user, goal_id, new_label)`                           | user | Cosmetic — no balance change.                                                                      |
 | `delete_savings_goal(user, goal_id)`                                      | user | Removes the goal; its principal simply becomes unallocated again.                                 |
-| `get_rules / get_savings / get_buffer_credit / get_lock`                  | —   | Read-only views.                                                                                  |
+| `get_rules / get_savings / get_buffer_credit / get_lock_until`            | —   | Read-only views.                                                                                  |
 | `get_savings_goals / get_unallocated_savings`                             | —   | Read-only views for the goals feature.                                                            |
 
 Errors are explicit (`NotInitialized`=1 … `LabelTooLong`=12); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. Nineteen unit tests (the original eleven, untouched, plus eight new ones) cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, and the full goals lifecycle. **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a classic path payment. The savings-goals functions were added additively: they only read/write a new `Goals(Address)` key and never touch the existing `Savings`/`LockUntil`/`BufferCredit` logic those eleven original tests exercise, so the contract's core split-and-lock guarantees are unchanged even though it's no longer literally frozen.
@@ -255,7 +255,7 @@ npm run test:e2e                # funds a throwaway account via Friendbot, buys 
                                 # rules → split → vault & goals → anchor in/out → send
 ```
 
-No contract configured? The app runs in **local demo mode** — the full flow (connect → rules → simulated income → one-tap split → vault → cash-out) works with local state, so you can feel the product before touching a faucet. The "Simulate incoming income" button lives in Settings.
+No contract configured? The app runs in **local demo mode** — the full flow (connect → rules → simulated income → one-tap split → vault → cash-out) works with local state, so you can feel the product before touching a faucet. The "Simulate incoming income" button lives on the **Configure Shunt** page, in the "Test your rules" card that appears once rules are saved.
 
 ## Repository layout
 

@@ -12,7 +12,7 @@ Status as of 2026-07-14. Tick the ⬜ items before you submit.
 | Keeper (hardened) | ✅ deployed live | https://shunt-keeper.irhamtria.workers.dev (`/health` ok) |
 | On-chain proof (hashes) | ✅ clickable, testnet | README → *Live on testnet* |
 | Contract tests | ✅ 19 unit | `cd contracts/shunt-vault && cargo test` |
-| e2e (real testnet) | ✅ 23 specs (infra-flaky; run with port 5173 free) | `npm run test:e2e` |
+| e2e (real testnet) | ✅ 23 specs — 22 passed + 1 conditional skip on 2026-07-16 (needs port 5199 free) | `npm run test:e2e` |
 | Written submission | ✅ complete | `SUBMISSION.md` (local — gitignored) |
 | Pitch deck (content) | ✅ MD | `docs/pitch-deck.md` |
 | Demo video **script** | ✅ ready | `docs/demo-script.md` + `docs/local-economy-narration.md` |

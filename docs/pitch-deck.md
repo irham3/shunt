@@ -67,7 +67,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 > Screen-share the app (testnet). Beats: connect → set rules (show the "Active
 > on-chain" badge) → optionally add a custom lane like "Holiday" → income lands
-> (or tap "Try it — simulated income" for a keeper-prepared split against the
+> (or tap "Simulate incoming income" for a keeper-prepared split against the
 > wallet's real balance, no waiting on a transfer; easily fund testnet USDC from the Home screen) → one-tap split (confirm page
 > shows every lane including custom ones) → show the explorer hash + `split` event
 > → edit rules & **Reallocate** existing balance with new percentages
