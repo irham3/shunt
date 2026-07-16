@@ -9,8 +9,9 @@
  *  - USDC transfer: friendly error for a recipient without a trustline,
  *    then a real successful USDC payment
  *  - Convert USDC → XLM executes (reverse direction of spec 09)
- *  - Invest lane manual buy — XLM (real DEX) and Gold/XAUm (labeled
- *    reference-rate simulation, no fake explorer link)
+ *  - Invest lane manual buy — XLM (real DEX) and Gold/TXAUM (real DEX
+ *    against Shunt's seeded liquidity; labeled reference-rate fallback
+ *    only if that liquidity is thin, no fake explorer link)
  *  - Configure Shunt "Reallocate" prepares a real split and lands on /confirm
  *  - cross-menu consistency: the vault balance shown on Home equals the
  *    Savings Vault page (both are independent contract reads)
