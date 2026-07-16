@@ -79,6 +79,9 @@
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
                     }
                   ]
+                },
+                {
+                  "i128": "0"
                 }
               ]
             }
@@ -243,6 +246,14 @@
                     },
                     "val": {
                       "u32": 1500
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "buffer_target"
+                    },
+                    "val": {
+                      "i128": "0"
                     }
                   },
                   {

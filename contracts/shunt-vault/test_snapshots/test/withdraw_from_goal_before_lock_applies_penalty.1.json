@@ -71,10 +71,13 @@
                   "u32": 1500
                 },
                 {
-                  "u64": "86400"
+                  "u64": "1"
                 },
                 {
                   "vec": []
+                },
+                {
+                  "i128": "0"
                 }
               ]
             }
@@ -100,6 +103,9 @@
                 },
                 {
                   "bytes": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c"
+                },
+                {
+                  "i128": "0"
                 }
               ]
             }
@@ -146,6 +152,9 @@
                 },
                 {
                   "i128": "500000000"
+                },
+                {
+                  "u64": "86400"
                 }
               ]
             }
@@ -186,7 +195,7 @@
   "ledger": {
     "protocol_version": 26,
     "sequence_number": 0,
-    "timestamp": 0,
+    "timestamp": 10,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
     "base_reserve": 0,
     "min_persistent_entry_ttl": 4096,
@@ -316,7 +325,7 @@
                           "symbol": "created_at"
                         },
                         "val": {
-                          "u64": "0"
+                          "u64": "10"
                         }
                       },
                       {
@@ -333,6 +342,14 @@
                         },
                         "val": {
                           "string": "Wedding"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "unlock_at"
+                        },
+                        "val": {
+                          "u64": "86410"
                         }
                       }
                     ]
@@ -364,7 +381,7 @@
               },
               "durability": "persistent",
               "val": {
-                "u64": "86400"
+                "u64": "1"
               }
             }
           },
@@ -437,10 +454,18 @@
                   },
                   {
                     "key": {
+                      "symbol": "buffer_target"
+                    },
+                    "val": {
+                      "i128": "0"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "lock_secs"
                     },
                     "val": {
-                      "u64": "86400"
+                      "u64": "1"
                     }
                   },
                   {

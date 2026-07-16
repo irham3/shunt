@@ -89,6 +89,15 @@ pub struct Rules {
     /// Allowlisted anchor addresses permitted to receive off-ramp USDC
     /// (PRD §12: we lock the anchor address, not the bank account).
     pub anchors: Vec<Address>,
+    /// Target wallet-side Buffer balance (7-decimal USDC). 0 = feature off.
+    /// The contract can't read the caller's wallet-side Buffer balance on its
+    /// own — Needs and Buffer are the same fungible USDC in the same wallet,
+    /// split only in bookkeeping, never in custody. So `distribute`'s
+    /// `buffer_topup` param carries the client-computed shortfall (from a
+    /// real Horizon wallet-balance read) each call; this field is only the
+    /// user's stored target, read back for that computation and shown in the
+    /// UI. The *priority-then-split* arithmetic itself is enforced on-chain.
+    pub buffer_target: i128,
 }
 
 /// A user-labeled sub-allocation of their aggregate Savings balance.
@@ -103,6 +112,11 @@ pub struct Goal {
     pub label: String,
     pub amount: i128,
     pub created_at: u64,
+    /// This goal's own unlock timestamp — independent of the aggregate
+    /// `LockUntil(user)`, so goals can be laddered (e.g. a 1-month emergency
+    /// fund and a 2-year Hajj fund coexist with different unlock dates).
+    /// Unallocated savings still use the shared aggregate lock.
+    pub unlock_at: u64,
 }
 
 #[contracttype]
@@ -157,12 +171,16 @@ impl ShuntVault {
         buffer_bps: u32,
         lock_secs: u64,
         anchors: Vec<Address>,
+        buffer_target: i128,
     ) {
         user.require_auth();
         if needs_bps + savings_bps + buffer_bps != BPS_DENOM as u32 {
             panic_with_error!(&env, Error::InvalidRules);
         }
-        let rules = Rules { needs_bps, savings_bps, buffer_bps, lock_secs, anchors };
+        if buffer_target < 0 {
+            panic_with_error!(&env, Error::InvalidRules);
+        }
+        let rules = Rules { needs_bps, savings_bps, buffer_bps, lock_secs, anchors, buffer_target };
         let key = DataKey::Rules(user);
         env.storage().persistent().set(&key, &rules);
         env.storage().persistent().extend_ttl(&key, BUMP_THRESHOLD, BUMP_AMOUNT);
@@ -183,10 +201,20 @@ impl ShuntVault {
         user: Address,
         amount: i128,
         inflow_key: BytesN<32>,
+        // Threshold auto-refill: the caller-computed Buffer shortfall this
+        // cycle (from a real wallet-balance read against rules.buffer_target
+        // — the contract itself can't see wallet-side Buffer balance, see
+        // Rules.buffer_target doc). 0 when the feature is off or the target
+        // is already met. Clamped to `amount`; prioritized ahead of the
+        // normal bps split, which then applies to whatever's left.
+        buffer_topup: i128,
     ) -> (i128, i128, i128) {
         user.require_auth();
         if amount <= 0 {
             panic_with_error!(&env, Error::AmountNotPositive);
+        }
+        if buffer_topup < 0 {
+            panic_with_error!(&env, Error::InvalidRules);
         }
         let processed_key = DataKey::Processed(inflow_key.clone());
         if env.storage().persistent().has(&processed_key) {
@@ -199,9 +227,16 @@ impl ShuntVault {
             .get(&DataKey::Rules(user.clone()))
             .unwrap_or_else(|| panic_with_error!(&env, Error::RulesNotSet));
 
+        // Threshold auto-refill takes priority off the top (capped at the
+        // inflow); the normal bps split then applies only to what's left, so
+        // Savings' share of THIS inflow shrinks accordingly — Buffer refill
+        // never reaches into Savings, only reshuffles the wallet-side lanes.
+        let buffer_priority = if buffer_topup > amount { amount } else { buffer_topup };
+        let remaining = amount - buffer_priority;
+
         // Integer split; remainder (dust) goes to Needs, the wallet lane.
-        let savings = amount * rules.savings_bps as i128 / BPS_DENOM;
-        let buffer = amount * rules.buffer_bps as i128 / BPS_DENOM;
+        let savings = remaining * rules.savings_bps as i128 / BPS_DENOM;
+        let buffer = buffer_priority + remaining * rules.buffer_bps as i128 / BPS_DENOM;
         let needs = amount - savings - buffer;
 
         if savings > 0 {
@@ -254,7 +289,12 @@ impl ShuntVault {
     /// Returns the amount actually sent to the wallet.
     pub fn withdraw_savings(env: Env, user: Address, amount: i128) -> i128 {
         user.require_auth();
-        let (payout, penalty) = Self::debit_savings(&env, &user, amount);
+        let lock_until: u64 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LockUntil(user.clone()))
+            .unwrap_or(0);
+        let (payout, penalty) = Self::debit_savings(&env, &user, amount, lock_until);
         WithdrawEvent {
             user,
             amount,
@@ -267,8 +307,16 @@ impl ShuntVault {
     /// Create a new named sub-allocation of the user's aggregate Savings
     /// balance. `initial_amount` is drawn from the unallocated pool
     /// (`get_unallocated_savings`) — no funds move, this is bookkeeping
-    /// only. Returns the new goal's id.
-    pub fn create_savings_goal(env: Env, user: Address, label: String, initial_amount: i128) -> u32 {
+    /// only. `lock_secs` sets this goal's OWN unlock date (laddered,
+    /// independent of the shared aggregate lock — 0 means unlocked
+    /// immediately). Returns the new goal's id.
+    pub fn create_savings_goal(
+        env: Env,
+        user: Address,
+        label: String,
+        initial_amount: i128,
+        lock_secs: u64,
+    ) -> u32 {
         user.require_auth();
         if initial_amount < 0 {
             panic_with_error!(&env, Error::AmountNotPositive);
@@ -298,6 +346,7 @@ impl ShuntVault {
             label,
             amount: initial_amount,
             created_at: env.ledger().timestamp(),
+            unlock_at: env.ledger().timestamp() + lock_secs,
         });
         env.storage().persistent().set(&goals_key, &goals);
         env.storage().persistent().extend_ttl(&goals_key, BUMP_THRESHOLD, BUMP_AMOUNT);
@@ -317,7 +366,9 @@ impl ShuntVault {
             panic_with_error!(&env, Error::InsufficientSavings);
         }
 
-        let (payout, penalty) = Self::debit_savings(&env, &user, amount);
+        // Goal-specific timelock (laddered) instead of the shared aggregate
+        // lock — this is the whole point of a goal having its own unlock_at.
+        let (payout, penalty) = Self::debit_savings(&env, &user, amount, goal.unlock_at);
 
         goal.amount -= amount;
         goals.set(idx, goal);
@@ -449,10 +500,11 @@ impl ShuntVault {
 
     /// Shared debit + penalty + payout for withdraw_savings and
     /// withdraw_from_goal — decrements the aggregate Savings(user) balance,
-    /// applies the early-withdrawal penalty to Buffer credit if still
-    /// locked, and pays out the net amount. Caller handles require_auth()
-    /// and any goal-specific bookkeeping.
-    fn debit_savings(env: &Env, user: &Address, amount: i128) -> (i128, i128) {
+    /// applies the early-withdrawal penalty to Buffer credit if still locked
+    /// as of `lock_until` (the caller's own aggregate lock, or a specific
+    /// goal's laddered `unlock_at`), and pays out the net amount. Caller
+    /// handles require_auth() and any goal-specific bookkeeping.
+    fn debit_savings(env: &Env, user: &Address, amount: i128, lock_until: u64) -> (i128, i128) {
         if amount <= 0 {
             panic_with_error!(env, Error::AmountNotPositive);
         }
@@ -462,13 +514,7 @@ impl ShuntVault {
             panic_with_error!(env, Error::InsufficientSavings);
         }
 
-        let lock_until: u64 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::LockUntil(user.clone()))
-            .unwrap_or(0);
         let now = env.ledger().timestamp();
-
         let penalty = if now < lock_until { amount * PENALTY_BPS / BPS_DENOM } else { 0 };
         let payout = amount - penalty;
 
