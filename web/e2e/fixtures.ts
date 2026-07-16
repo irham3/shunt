@@ -30,7 +30,7 @@ export const test = base.extend<{ e2e: E2EState }>({
             KEY,
             JSON.stringify({
               state: { address, walletId: "e2e", rulesSavedOnChain: false },
-              version: 6,
+              version: 7,
             }),
           );
         }
