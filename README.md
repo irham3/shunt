@@ -23,7 +23,7 @@ Shunt is a financial autopilot for people who earn from abroad. The moment USDC 
 
 ### Built real, not slideware
 
-- **19 Soroban unit tests** + a **real-testnet end-to-end suite** (Playwright, 23 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow — **no mocks**.
+- **26 Soroban unit tests** + a **real-testnet end-to-end suite** (Playwright, 41 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow — **no mocks**.
 - **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
 - **Double idempotency:** the keeper dedupes by tx hash *and* the contract rejects repeat `inflow_key`s — one income, one split, ever. Replay is rejected on-chain (Error #6).
 - **Verifiable on-chain:** every step of the split + savings-goals lifecycle is a clickable **testnet** hash ([Live on testnet](#live-on-testnet)). Network for this submission is **testnet only** — no mainnet claims.
@@ -110,7 +110,8 @@ Shunt's engine assumes USDC is already on Stellar — getting a non-crypto worke
 
 | Item                  | Value                                                                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Vault contract (USDC) | [`CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K`](https://stellar.expert/explorer/testnet/contract/CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K) |
+| Vault contract (USDC) | [`CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW`](https://stellar.expert/explorer/testnet/contract/CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW) (supersedes the earlier `CB27…` instance — additive redeploy for laddered goal timelocks + buffer threshold auto-refill) |
+| Demo assets (TXAUM/TIDR/TPHP) | issuer [`GD3Y3DQEC6XIZME2PKSBKJ263E2UREV2WVSDJRKC3MJKBDU2RRM3IHZF`](https://stellar.expert/explorer/testnet/account/GD3Y3DQEC6XIZME2PKSBKJ263E2UREV2WVSDJRKC3MJKBDU2RRM3IHZF) — Shunt's own testnet issuance with real seeded liquidity (`scripts/issue-demo-assets.mjs`) |
 | USDC SAC (testnet)    | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`                                                                                                             |
 | Keeper (Cloudflare Worker) | [`shunt-keeper.irhamtria.workers.dev`](https://shunt-keeper.irhamtria.workers.dev/health)                                                                        |
 
@@ -129,6 +130,19 @@ delete_savings_goal                                     ✓ 1.0 USDC principal r
 Proof transactions: [deploy](https://stellar.expert/explorer/testnet/tx/25122644dc58ce1b041d72aac91d2885b208bc56042fb43d2e04bbff19d31cc2) · [init](https://stellar.expert/explorer/testnet/tx/eae9a0f8959db28603a0f2662d0b5bb9b529eb467de6d414f531c21c2dd42e19) · [set_rules](https://stellar.expert/explorer/testnet/tx/2ef8083f38e14c379812b593f795253322c22f84f55e9062fbb483ad04f11068) · [distribute](https://stellar.expert/explorer/testnet/tx/ce3ce8010df371369f0350b42b3a3fb973fd66d2feac747b208933b2beae5a11) · [create_savings_goal](https://stellar.expert/explorer/testnet/tx/698b60e1f87ab16dbe817e4efc7f046fc86427aefc9940dc82ee5cd64116209f) · [withdraw_from_goal](https://stellar.expert/explorer/testnet/tx/910b71a337e7d9843f65e3923e6870ec11efb67fa05e21f3359f103f0c2ef898) · [rename_savings_goal](https://stellar.expert/explorer/testnet/tx/73aaf921551e8ff41cd4d83a807c0a7b5b745734779cb96df8b3afd3f9523abe) · [delete_savings_goal](https://stellar.expert/explorer/testnet/tx/0e5faa0d837a07e1dfb492fd86e9e70b4bb456e44e34c25158f01c6e7a069906)
 
 An earlier lifecycle proof (trustline, DEX purchase, basic split/withdraw) ran on the prior contract instance before the goals feature was added — same code path, same 7-decimal arithmetic, superseded by the deployment above.
+
+**New on the CC7E… instance (2026-07-16) — laddered timelocks + buffer threshold auto-refill:**
+
+```text
+set_rules  60/25/15, buffer_target 5 USDC                    ✓ stored on-chain
+distribute 5 USDC, buffer_topup 2 USDC                        ✓ needs 1.8 / savings 0.75 / buffer 2.45 — exact, priority honored
+create_savings_goal "Dana Darurat" 0.3 USDC, lock_secs=60      ✓ short ladder
+create_savings_goal "Dana Haji" 0.3 USDC, lock_secs=63072000   ✓ long ladder (~2yr), same moment
+withdraw_from_goal "Dana Darurat" after 70s real wait          ✓ paid in full, penalty=0 — its own lock had elapsed
+withdraw_from_goal "Dana Haji" same moment                     ✓ paid 90%, 10% penalty → Buffer — still locked, independently
+```
+
+Proof transactions: [deploy](https://stellar.expert/explorer/testnet/tx/8b47190b60301ab403e238b40a9609fe04bf09b7573fa86fb38036333b9f623f) · [init](https://stellar.expert/explorer/testnet/tx/7c9b06ba52de00cf6a06129e06b5470aeca58fb9dfec6051f85fa6d90b779247) · [set_rules](https://stellar.expert/explorer/testnet/tx/37bb55868a4e780788726a00319957c1a486640aa2d0ea223f35152f64977cd2) · [distribute w/ buffer_topup](https://stellar.expert/explorer/testnet/tx/f5e14f87118dee5f90b59c6847d0a01acd853a1d5aa55bbd54addc0bbd4819c6) · [create_savings_goal (short)](https://stellar.expert/explorer/testnet/tx/cf337d94f3fc60eaa79ea90ceba914f5cdc99dbaa1207a1ff9e9855a489ec3ca) · [create_savings_goal (long)](https://stellar.expert/explorer/testnet/tx/bedc839ab2ce9e860340e69fa40720b01d1c89e0e164e7456e3ed7c78b2684ec) · [withdraw short (unlocked)](https://stellar.expert/explorer/testnet/tx/cee0e86598c0c40f3b3c92a92b4c05d6be2f3cdaf081c04084878281603e090f) · [withdraw long (still locked)](https://stellar.expert/explorer/testnet/tx/1db4cea69cc251dd0469c68a01457a88980fd84682973a38ebee31c7620d227c)
 
 ## The app
 
@@ -228,14 +242,14 @@ Blended take-rate is ~0.29% of processed volume — **15–20× cheaper than the
 ```bash
 # 1. Contracts — test & build (Rust + stellar CLI)
 cd contracts/shunt-vault
-cargo test                      # 19 tests
+cargo test                      # 26 tests
 stellar contract build
 
 #    Deploy your own instance (or use the testnet one above)
 stellar contract deploy --wasm target/wasm32v1-none/release/shunt_vault.wasm \
   --source <IDENTITY> --network testnet
 stellar contract invoke --id <CONTRACT_ID> --source <IDENTITY> --network testnet \
-  -- init --token CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K
+  -- init --token CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA  # USDC SAC (testnet), not the vault's own id
 
 # 2. Keeper — inflow detection + tx preparation (Cloudflare Worker)
 cd keeper
@@ -273,7 +287,7 @@ design/                  Diagrams (animated SVG) + app screenshots
 - **The keeper watches an explicit account list** (`WATCH_ACCOUNTS`), not every user automatically — its cron poll is demo-scoped. Per-user auto-detection at scale runs client-side today; a subscription/index model for the keeper is roadmap.
 - **The keeper's `/trigger` endpoint is unauthenticated** by design — it only *builds an unsigned XDR* that is worthless without the owner's signature, so it is never a fund risk. It is now **rate-limited per IP** (`isRateLimited`, default 30/min) with an **optional origin allowlist** (`ALLOWED_ORIGINS`) so it can't be spammed into KV-write amplification (`keeper/src/env.ts`; set the env var and `wrangler deploy` to activate on the live worker).
 - **Anchor settlement is not instant** — KYC is involved, and the UI says so instead of hiding it.
-- **The vault is unaudited and not upgradeable.** `init` binds the token on first call; the **deployed instance ([CB27…](https://stellar.expert/explorer/testnet/contract/CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K)) is already initialized**, so the "first caller could bind a fake token" grief window is closed for the live contract. The clean source-level fix — a Soroban `__constructor` that binds the token atomically at deploy (no front-run window) plus an admin gate — is a pre-mainnet redeploy step, deliberately deferred so the current on-chain proof hashes stay valid. Keep real amounts trivial until an audit.
+- **The vault is unaudited and not upgradeable.** `init` binds the token on first call; the **deployed instance ([CC7E…](https://stellar.expert/explorer/testnet/contract/CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW)) is already initialized**, so the "first caller could bind a fake token" grief window is closed for the live contract. The clean source-level fix — a Soroban `__constructor` that binds the token atomically at deploy (no front-run window) plus an admin gate — is a pre-mainnet redeploy step, deliberately deferred so the current on-chain proof hashes stay valid. Keep real amounts trivial until an audit.
 - **Off-ramp destination control:** the shipped cash-out is the anchor's standard SEP-24 hosted withdraw; the contract's allowlisted `offramp()` path exists and is unit-tested but is not yet wired into that hosted flow.
 - **Mainnet:** all on-chain proof today is testnet (with real testnet USDC). A trivial mainnet split is a pre-launch step, not claimed as done.
 

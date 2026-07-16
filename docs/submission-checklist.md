@@ -8,7 +8,7 @@ Status as of 2026-07-14. Tick the ⬜ items before you submit.
 | --- | --- | --- |
 | Live app (testnet) | ✅ deployed & auto-updates on push | https://shunt-app.vercel.app |
 | Public repo | ✅ pushed | https://github.com/irham3/shunt (`main`) |
-| Smart contract on testnet | ✅ live + verified | vault `CB27…` (explorer-linked in README) |
+| Smart contract on testnet | ✅ live + verified | vault `CC7E…` (explorer-linked in README) |
 | Keeper (hardened) | ✅ deployed live | https://shunt-keeper.irhamtria.workers.dev (`/health` ok) |
 | On-chain proof (hashes) | ✅ clickable, testnet | README → *Live on testnet* |
 | Contract tests | ✅ 19 unit | `cd contracts/shunt-vault && cargo test` |

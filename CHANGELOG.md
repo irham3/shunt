@@ -7,21 +7,111 @@ progression, not a padded timeline).
 
 ---
 
-## v0.10 — Live deployment pointed at the wrong contract (2026-07-16)
+## v0.11 — Lane feature expansion: new contract, new demo assets, 8 features (2026-07-16)
+
+A full pass through the lane-by-lane feature backlog, scoped to what's
+genuinely buildable and verifiable on testnet today — every item below was
+executed as a real transaction and independently confirmed (balance change,
+explorer hash, or a second on-chain read), not just exercised through the UI.
+
+**Contract redeployed** — additive changes, same pattern as the goals
+feature: `CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW` supersedes
+CB27… (init'd against the same USDC SAC). 26 unit tests (19 original + 7 new).
+Two new capabilities:
+- **Laddered per-goal timelocks** — `Goal` gained its own `unlock_at`,
+  independent of the aggregate lock. `create_savings_goal` takes a
+  `lock_secs` param; `withdraw_from_goal` checks the goal's own unlock time,
+  not the shared one. Verified live: two goals created seconds apart (60s vs
+  ~2yr lock), withdrawn seconds apart — one paid out in full, the other ate
+  the 10% penalty, purely from their independently laddered dates.
+- **Buffer threshold auto-refill** — `Rules.buffer_target` (display/config
+  value) + a new `distribute(..., buffer_topup)` param: the caller-computed
+  shortfall (from a real wallet-balance read, since the contract can't see
+  wallet-side Buffer balance — Needs and Buffer are the same fungible USDC)
+  is prioritized ahead of the normal bps split. Verified live: 5 USDC split
+  with a 2 USDC topup → needs 1.8 / savings 0.75 / buffer 2.45, exact.
+
+**New Shunt-issued testnet demo assets** (`scripts/issue-demo-assets.mjs`) —
+TXAUM (stands in for Matrixdock's real XAUm gold), TIDR, TPHP (local-currency
+proxies) — with real seeded orderbook liquidity against USDC, not the
+randomly-regenerated Soroswap testnet tokens (checked: unusable for a stable
+demo) and not the real Settle Network ARST/BRLT (mainnet-only, same
+MoneyGram-style gap as the off-ramp). Labeled as demo assets everywhere they
+appear.
+
+**Needs**
+- SEP-7 "Pay a request" tab (Send & Pay) — paste any `web+stellar:pay` URI;
+  Shunt pays it from USDC via `pathPaymentStrictReceive` even when the
+  requester asked for a different asset (verified: paid a request for 10 XLM
+  from USDC, recipient's balance moved by exactly 10 XLM).
+- Multi-currency settle (Send & Pay → Convert) — spend USDC directly into
+  TIDR/TPHP with a live quote; first-use trustline gate, same pattern as USDC.
+- Scheduled bill-pay (Needs lane) — native `createClaimableBalance` with a
+  future-dated claim predicate for the recipient and an unconditional one for
+  the sender, so it's cancellable/reclaimable anytime before the recipient
+  claims. Honest framing: still signs today, nothing signs itself later.
+
+**Savings**
+- Laddered goal timelocks (UI): a lock-duration picker (No lock/30d/90d/1yr/2yr)
+  on goal creation, defaulting to the aggregate lock so existing behavior is
+  unchanged unless the picker is touched.
+- Auto-escalation: opt-in toggle bumps Savings % by 1 point every 3 splits
+  (capped at 50%) via a real follow-up `set_rules` call after the triggering
+  split, shown explicitly in the confirmation screen — never silent.
+- Reflector oracle checked directly (`assets()` call against the live
+  testnet contract) for an IDR/PHP feed — confirmed it carries crypto/CEX
+  pairs only (BTC, ETH, XLM, EURC, …), no fiat. IDR display stays a REST
+  forex rate; the gap is now a verified fact in the UI copy, not an assumption.
+
+**Buffer**
+- Emergency cash-out + quick-convert shortcuts on the Buffer lane page,
+  reusing the existing off-ramp/convert flows with Buffer-specific framing.
+
+**Invest**
+- Gold DCA (manual buy + auto-DCA after split) now executes for real against
+  TXAUM's seeded liquidity instead of always falling back to the labeled
+  reference-rate simulation. Found and fixed in the process: neither path
+  added the required trustline before the path payment, so every real gold
+  purchase failed `op_no_trust` on an account that had never held TXAUM —
+  both now check and add it first (one extra signature, first time only).
+- Blend Capital yield: researched (real SDK exists, no confirmed testnet pool
+  address, third-party API key required beyond this session's reach) —
+  shipped as an explicit, clearly-labeled non-integration disclosure in the
+  Invest lane instead of a fake/partial wire-up: what it is, why it's
+  deliberately not touching Savings (riba, stacks contract risk), and that it
+  would be Invest-only opt-in if it ever ships.
+- Soroswap aggregator basket DCA: researched — its testnet random-token pool
+  is stable in composition but the quote/pools API 404s without a
+  third-party API key. Reported honestly as infeasible this session rather
+  than forcing a fragile integration.
+
+**Bug found and fixed along the way:** `AnimatePresence mode="wait"` around
+Send & Pay's tab switcher hung on every live click (same root cause as the
+route-level freeze fixed in v0.8 — mode="wait" blocking on an exit animation
+that never resolves under this React 19 setup). All four tabs were
+unreachable by clicking; only reachable via the `?tab=` query param, which is
+how it went unnoticed. Same enter-only fix applied; a regression spec added.
+
+**e2e:** `e2e/11-new-features.spec.ts` (9 new specs) covers every item above
+against live testnet. Full suite: 41 specs.
 
 **Root cause of "Rules expired on-chain" reports:** the live deployment's
 `VITE_VAULT_CONTRACT_ID` was baked at build time as
-`CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K` — an older,
-superseded vault instance — instead of the current
-`CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K` (goals feature).
+`CA65…` — an older, superseded vault instance — instead of the
+then-current `CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K`.
 Confirmed by decoding a user's real `set_rules` transactions: all three
 succeeded on-chain (`txSuccess`) against CA65, while the keeper (correctly
 configured for CB27) simulated `distribute` against CB27 and legitimately
 found no rules there — hence `Error(Contract, #3)` on every Simulate/
-Reallocate attempt. Not a code bug; **Vercel's `VITE_VAULT_CONTRACT_ID` env
-var needs updating to CB27… and a redeploy** (Vite inlines env vars at build
+Reallocate attempt. Not a code bug; Vercel's `VITE_VAULT_CONTRACT_ID` env
+var needed updating to CB27… and a redeploy (Vite inlines env vars at build
 time, so changing the dashboard value alone doesn't take effect). Funds set
 aside under the old rules are still on CA65, untouched.
+**Update (this release):** CB27 itself is now superseded by
+`CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW` (see the
+contract-redeploy section above) — **Vercel's `VITE_VAULT_CONTRACT_ID` must be
+updated to CC7E… and redeployed**, or the live site will regress to this
+exact same "Rules expired on-chain" symptom against the new contract.
 - **Defense-in-depth added regardless:** a `#3` from the keeper no longer
   triggers an immediate "rules expired" reset. `resolveRulesNotSet()` (new,
   `lib/vault.ts`) does one direct `get_rules` read before deciding — if the
