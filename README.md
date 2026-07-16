@@ -235,7 +235,7 @@ stellar contract build
 stellar contract deploy --wasm target/wasm32v1-none/release/shunt_vault.wasm \
   --source <IDENTITY> --network testnet
 stellar contract invoke --id <CONTRACT_ID> --source <IDENTITY> --network testnet \
-  -- init --token CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+  -- init --token CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K
 
 # 2. Keeper — inflow detection + tx preparation (Cloudflare Worker)
 cd keeper

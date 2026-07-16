@@ -11,7 +11,7 @@ progression, not a padded timeline).
 
 **Root cause of "Rules expired on-chain" reports:** the live deployment's
 `VITE_VAULT_CONTRACT_ID` was baked at build time as
-`CA65BKKNEZEXOXK54G6BAVE3O4QMTCXGSA7YULHADELX5HOIOZPO7JUM` — an older,
+`CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K` — an older,
 superseded vault instance — instead of the current
 `CB27KRLQAJCQRW2GTH4ETXDSS2STMUU4K4QABIY5QEWGAGQQRJBKPW7K` (goals feature).
 Confirmed by decoding a user's real `set_rules` transactions: all three
