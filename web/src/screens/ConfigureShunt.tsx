@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Lock, Wallet, ArrowUpRight, Plus, CheckCircle2, Wand2, Zap } from "lucide-react";
 import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
-import { vaultSetRules } from "../lib/vault";
+import { vaultSetRules, resolveRulesNotSet } from "../lib/vault";
 import { manualTrigger, randomTxHash } from "../lib/keeper";
 import { formatError } from "../lib/stellar";
 import { CORE_BUCKET_IDS, fmtUsdc, totalPct, useShunt } from "../store";
@@ -142,9 +142,12 @@ export function ConfigureShunt() {
       const p = await manualTrigger(address, simAmount, fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          useShunt.setState({ rulesSavedOnChain: false });
-          setIsEditing(true);
-          showToast("Rules expired on-chain (testnet may have reset). Please save again.");
+          const { reallyMissing, message } = await resolveRulesNotSet(address);
+          if (reallyMissing) {
+            useShunt.setState({ rulesSavedOnChain: false });
+            setIsEditing(true);
+          }
+          showToast(message);
         } else {
           showToast(`Keeper error: ${p.error.slice(0, 120)}`);
         }
@@ -174,9 +177,12 @@ export function ConfigureShunt() {
       const p = await manualTrigger(address, walletUsdc.toFixed(7), fakeHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          useShunt.setState({ rulesSavedOnChain: false });
-          setIsEditing(true);
-          showToast("Rules expired on-chain (testnet may have reset). Please save again.");
+          const { reallyMissing, message } = await resolveRulesNotSet(address);
+          if (reallyMissing) {
+            useShunt.setState({ rulesSavedOnChain: false });
+            setIsEditing(true);
+          }
+          showToast(message);
         } else {
           showToast(`Keeper error: ${p.error.slice(0, 120)}`);
         }

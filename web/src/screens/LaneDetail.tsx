@@ -209,9 +209,11 @@ export function LaneDetail() {
                       : "Nothing invested yet. Turn on the Invest lane (set a %) in your rules and pick XLM or gold — the slice buys in automatically after each split."}
                   </p>
                 </div>
-                <Link to="/shunt" className="btn-secondary" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  Change auto-invest asset or %
-                </Link>
+                {/* No lane-local shortcut here on purpose — the single
+                    "Adjust allocation split" button at the bottom of this
+                    page already goes to /shunt for every lane, including
+                    this one's asset/% picker. A second button to the same
+                    destination read as two unrelated actions. */}
               </div>
             </>
           )}

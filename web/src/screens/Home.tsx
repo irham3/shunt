@@ -13,6 +13,7 @@ import {
   NETWORK,
   formatError,
 } from "../lib/stellar";
+import { resolveRulesNotSet } from "../lib/vault";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { BentoGrid, BentoCard } from "../components/BentoGrid";
 import { AnimatedNumber } from "../components/AnimatedNumber";
@@ -184,9 +185,12 @@ export function Home() {
       const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash, true);
       if (p && !p.xdr && p.error) {
         if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          useShunt.setState({ rulesSavedOnChain: false });
-          showToast("Rules expired on-chain (testnet may have reset). Please save your rules again.");
-          nav("/shunt");
+          const { reallyMissing, message } = await resolveRulesNotSet(address);
+          if (reallyMissing) {
+            useShunt.setState({ rulesSavedOnChain: false });
+            nav("/shunt");
+          }
+          showToast(message);
         } else {
           showToast(`Keeper error: ${p.error.slice(0, 120)}`);
         }

@@ -5,6 +5,7 @@ import { DonutChart } from "../components/DonutChart";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { markComplete, manualTrigger, type PendingSplit } from "../lib/keeper";
 import { convertUsdcToXlm, quoteConversion, signAndSubmitXdr, EXPLORER_TX, formatError } from "../lib/stellar";
+import { resolveRulesNotSet } from "../lib/vault";
 import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
@@ -149,11 +150,14 @@ export function AutoSplitConfirm() {
         }
 
         if (!xdr) {
-          // Error #3 = RulesNotSet on-chain — likely testnet reset or contract redeployed.
-          // Reset local state so the user is prompted to re-save their rules.
+          // Error #3 = RulesNotSet. Don't trust the keeper's simulation alone —
+          // it can transiently read a lagging RPC replica right after a fresh
+          // save. Confirm with a direct get_rules read before resetting local
+          // state and telling the user their rules are actually gone.
           if (buildError && (buildError.includes("#3") || buildError.includes("RulesNotSet"))) {
-            useShunt.setState({ rulesSavedOnChain: false });
-            throw new Error("Rules expired on-chain (testnet may have reset). Go to Configure Shunt and save your rules again.");
+            const { reallyMissing, message } = await resolveRulesNotSet(p.account);
+            if (reallyMissing) useShunt.setState({ rulesSavedOnChain: false });
+            throw new Error(reallyMissing ? `${message} Go to Configure Shunt and save your rules again.` : message);
           }
           const friendly = buildError ? formatError(buildError) : "";
           const reason = friendly

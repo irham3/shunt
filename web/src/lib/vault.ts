@@ -128,6 +128,51 @@ export async function vaultGetRules(user: string): Promise<Rules | null> {
   return tx.result ?? null;
 }
 
+/**
+ * A #3 (RulesNotSet) from the keeper's /trigger is NOT proof the rules are
+ * actually gone — the keeper simulates against the same public, load-balanced
+ * Soroban RPC pool from a different network path than the browser, and can
+ * transiently read a backend node that hasn't ingested the just-confirmed
+ * set_rules ledger yet (by the time the browser's own set_rules call resolves,
+ * that ledger IS closed — the lag is purely which replica each caller lands
+ * on). Treating that transient miss as "rules expired" and forcing the user
+ * back into edit mode was wrong ~always; this does one authoritative direct
+ * read before drawing that conclusion.
+ */
+export async function rulesActuallyMissing(user: string): Promise<boolean> {
+  try {
+    return (await vaultGetRules(user)) === null;
+  } catch {
+    // The direct read itself failed (e.g. its own transient RPC hiccup) —
+    // don't assume the worst and wipe a valid saved state over that.
+    return false;
+  }
+}
+
+export interface RulesNotSetOutcome {
+  /** true only when a direct get_rules read confirms the rules are gone —
+   *  safe to reset local state and prompt a re-save. false means the keeper's
+   *  #3 was transient (its RPC replica lagging); the rules are fine. */
+  reallyMissing: boolean;
+  message: string;
+}
+
+/** Shared decision + copy for every #3/RulesNotSet a keeper call can return
+ *  (Configure Shunt's Simulate/Reallocate, Home's Split now, AutoSplitConfirm's
+ *  rebuild-on-approve) — one place so the four call sites can't drift apart. */
+export async function resolveRulesNotSet(user: string): Promise<RulesNotSetOutcome> {
+  const reallyMissing = await rulesActuallyMissing(user);
+  return reallyMissing
+    ? {
+        reallyMissing: true,
+        message: "Your allocation rules aren't on-chain — please save them again.",
+      }
+    : {
+        reallyMissing: false,
+        message: "Rules are saved on-chain — the network needs a moment to catch up. Try again in a few seconds.",
+      };
+}
+
 export async function vaultGetSavings(user: string): Promise<bigint> {
   const client = getVaultClient(user);
   const tx = await client.get_savings({ user });
