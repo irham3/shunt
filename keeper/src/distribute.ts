@@ -18,6 +18,11 @@ export async function buildDistributeTx(
   userAccount: string,
   amountStroops: bigint,
   inflowTxHash: string,
+  /** Threshold Buffer auto-refill (7-decimal stroops), caller-computed from a
+   *  real wallet-balance read against the user's stored buffer_target — the
+   *  keeper has no per-lane bookkeeping of its own to derive this itself.
+   *  0 (default) preserves the original split behavior. */
+  bufferTopupStroops: bigint = 0n,
 ): Promise<string> {
   const server = new rpc.Server(env.SOROBAN_RPC_URL);
   const source = await server.getAccount(userAccount);
@@ -39,6 +44,7 @@ export async function buildDistributeTx(
     new Address(userAccount).toScVal(),
     nativeToScVal(amountStroops, { type: "i128" }),
     xdr.ScVal.scvBytes(inflowKey),
+    nativeToScVal(bufferTopupStroops, { type: "i128" }),
   );
 
   const tx = new TransactionBuilder(source, {

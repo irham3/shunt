@@ -23,7 +23,8 @@ async function handleInflow(
   account: string,
   amount: string,
   txHash: string,
-  isSimulated = false
+  isSimulated = false,
+  bufferTopup?: string,
 ): Promise<PendingSplit> {
   const processedKey = `processed:${txHash}`;
   const pendingKey = `pending:${txHash}`;
@@ -53,7 +54,13 @@ async function handleInflow(
   };
 
   try {
-    entry.xdr = await buildDistributeTx(env, account, amountToStroops(amount), txHash);
+    entry.xdr = await buildDistributeTx(
+      env,
+      account,
+      amountToStroops(amount),
+      txHash,
+      bufferTopup ? amountToStroops(bufferTopup) : 0n,
+    );
   } catch (e) {
     entry.error = String(e);
   }
@@ -161,11 +168,12 @@ export default {
         amount?: string;
         txHash?: string;
         isSimulated?: boolean;
+        bufferTopup?: string;
       };
       if (!body.account || !body.amount || !body.txHash) {
         return json({ error: "account, amount, txHash required" }, 400, cors);
       }
-      const entry = await handleInflow(env, body.account, body.amount, body.txHash, !!body.isSimulated);
+      const entry = await handleInflow(env, body.account, body.amount, body.txHash, !!body.isSimulated, body.bufferTopup);
       return json(entry, 200, cors);
     }
 
