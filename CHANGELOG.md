@@ -7,6 +7,51 @@ progression, not a padded timeline).
 
 ---
 
+## v0.12 — Invest lane cleanup, honest labeling, e2e hardening (2026-07-16)
+
+**Contract ID cleanup:** every remaining reference to the superseded CB27…
+vault instance (Onboarding footer link, keeper debug scripts, the unused
+bindings scaffold, a stale store.ts comment, submission-checklist.md) updated
+to the current CC7E… — README and SUBMISSION.md already had it right.
+
+**Invest lane holdings — real bug fix:** `investXlm` used to be a single
+number whose *unit* silently depended on whichever asset the toggle currently
+pointed at — DCA into XLM, flip the toggle to Gold, buy TXAUM, and the two
+got summed as if they were the same thing. Split into `investXlmHeld` /
+`investGoldHeld`, tracked independently regardless of the toggle, and shown
+together on the Invest lane page and Home ("12.35 XLM + 0.79 TXAUM held").
+Migration handles existing persisted state (v7→v8).
+
+**Honest labeling pass:** "Gold (XAUm)" / "g XAUm" throughout the app
+(Invest lane, Configure Shunt, split confirmation) renamed to what actually
+executes — TXAUM, Shunt's own testnet demo token — instead of implying the
+real Matrixdock asset. The now-pointless "Yield boost via Blend — not
+enabled" disclosure card was removed from the Invest lane (see v0.11 note).
+
+**Three real bugs found and fixed during a full e2e re-hardening pass**
+(the goal here was a genuinely green 41-spec run, not a rewritten test that
+merely stops complaining):
+- `ConfigureShunt.tsx` never called `syncFromChain` itself, unlike every
+  other screen — landing directly on `/shunt` (bookmark, reload) always
+  showed "Unsaved setup" even when rules were genuinely saved on-chain,
+  because nothing had checked. Now syncs once on mount and only ever
+  *corrects* a false "unsaved" reading, never forces a user out of an edit
+  they've already started.
+- The "Settle in a local currency" card rendered the (disabled) submit
+  button while the trustline check was still in flight, indistinguishable
+  from "ready to submit" — a fast click sequence could sail past the real
+  Enable-trustline step. Added an explicit "Checking … trustline" state.
+- A savings-goal balance badge is present in the DOM from the very first
+  render, before the on-chain read lands — "visible" isn't "correct value
+  loaded", and the create-goal form's own validation could reject a valid
+  amount against a stale pre-sync 0. Test fix: wait for the value to settle,
+  not just appear.
+
+**e2e:** full 41-spec suite green — 40 passed, 1 conditional skip (keeper-down
+fallback, by design).
+
+---
+
 ## v0.11 — Lane feature expansion: new contract, new demo assets, 8 features (2026-07-16)
 
 A full pass through the lane-by-lane feature backlog, scoped to what's
@@ -77,9 +122,10 @@ appear.
 - Blend Capital yield: researched (real SDK exists, no confirmed testnet pool
   address, third-party API key required beyond this session's reach) —
   shipped as an explicit, clearly-labeled non-integration disclosure in the
-  Invest lane instead of a fake/partial wire-up: what it is, why it's
-  deliberately not touching Savings (riba, stacks contract risk), and that it
-  would be Invest-only opt-in if it ever ships.
+  Invest lane instead of a fake/partial wire-up. Removed later the same day
+  (v0.12) once it was clear there was no near-term path to actually shipping
+  it — a disclosure card explaining a feature that doesn't exist read as
+  clutter, not honesty.
 - Soroswap aggregator basket DCA: researched — its testnet random-token pool
   is stable in composition but the quote/pools API 404s without a
   third-party API key. Reported honestly as infeasible this session rather

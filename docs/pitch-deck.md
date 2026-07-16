@@ -118,8 +118,8 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 | Custom lanes (sub-allocations of savings/needs/invest) | Passkey / smart-wallet onboarding |
 | Edit mode + instant reallocate with new rules | Session keys (hands-free), AMM 1-sig split+invest |
 | SEP-1/10/24 anchor stack + SEP-7 links | Audit → then mainnet |
-| Invest lane (XLM live; Gold/XAUm option) | |
-| 19 tests + real-testnet e2e | |
+| Invest lane (XLM or TXAUM, both live) | |
+| 26 tests + real-testnet e2e | |
 
 > No mainnet claims. Audit before any real funds.
 

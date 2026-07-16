@@ -7,7 +7,7 @@
   <img alt="Soroban" src="https://img.shields.io/badge/Soroban-Rust-F46623?style=flat-square&logo=rust&logoColor=white&labelColor=0B0F14">
   <img alt="React" src="https://img.shields.io/badge/React-TypeScript-38BDF8?style=flat-square&logo=react&logoColor=white&labelColor=0B0F14">
   <img alt="PWA" src="https://img.shields.io/badge/PWA-mobile--first-A78BFA?style=flat-square&labelColor=0B0F14">
-  <img alt="Tests" src="https://img.shields.io/badge/contract_tests-19_passing-BEF264?style=flat-square&labelColor=0B0F14">
+  <img alt="Tests" src="https://img.shields.io/badge/contract_tests-26_passing-BEF264?style=flat-square&labelColor=0B0F14">
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 | **In**        | **Payment request links (SEP-7)** — send a link or QR, get paid in USDC from anywhere; no "do you have crypto?" conversation. Card checkout for non-crypto payers lands with an on-ramp partner | ✅ shipped (card checkout 🔜) |
 | **In**        | **Top Up (SEP-24 deposit)** — IDR in through a licensed anchor's hosted flow, lands as USDC                                                                                                     | ✅ shipped (testnet anchor)   |
 | **Structure** | **One-tap split** into Needs / Savings / Buffer / Invest, atomic on-chain                                                                                                                        | ✅ shipped                    |
-| **Structure** | **Invest lane** *(optional)* — spot DCA into your choice of **XLM or gold (XAUm)** via path payment after each split                                                                            | ✅ shipped                    |
+| **Structure** | **Invest lane** *(optional)* — spot DCA into your choice of **XLM or TXAUM** (Shunt's own testnet demo gold, standing in for Matrixdock's mainnet-only XAUm) via path payment after each split | ✅ shipped                    |
 | **Structure** | **In-app Convert** — XLM ⇄ USDC swap on the Stellar DEX (live quote, slippage floor), no third party                                                                                            | ✅ shipped                    |
 | **Structure** | **Code-custody savings** with timelock + penalty-to-your-buffer                                                                                                                                  | ✅ shipped                    |
 | **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to IDR/PHP via a licensed anchor's hosted flow, rate & fee shown first                                                                              | ✅ shipped (testnet anchor)   |
@@ -79,7 +79,7 @@ Shunt never touches fiat and never holds your keys — licensed anchors do fiat,
 | 2 | **Set rules**    | Sliders for Needs / Savings / Buffer / Invest + a savings timelock. Saved on-chain via`set_rules` — the contract is the single source of truth.                                                                                                                    |
 | 3 | **Income lands** | Via your payment link, a Top Up, or any direct USDC transfer. The keeper streams Horizon and detects it within seconds.                                                                                                                                               |
 | 4 | **One tap**      | The keeper prepares an unsigned`distribute` transaction. You review the exact breakdown and sign. *Nothing moves without your signature.*                                                                                                                         |
-| 5 | **Auto-split**   | One atomic Soroban transaction: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is then spot-converted into your chosen asset (XLM or gold/XAUm) by a follow-up path payment you approve in the same flow. Sub-cent fees, settled in seconds. |
+| 5 | **Auto-split**   | One atomic Soroban transaction: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is then spot-converted into your chosen asset (XLM or TXAUM) by a follow-up path payment you approve in the same flow. Sub-cent fees, settled in seconds. |
 
 **Where each lane lives — and why:**
 
@@ -182,20 +182,20 @@ Three deliberate design principles:
 | Function                                                                    | Auth | Description                                                                                       |
 | --------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------- |
 | `init(token)`                                                             | —   | One-time: binds the USDC SAC address.                                                             |
-| `set_rules(user, needs_bps, savings_bps, buffer_bps, lock_secs, anchors)` | user | Split rules in basis points (must total 10,000) + off-ramp anchor allowlist.                      |
-| `distribute(user, amount, inflow_key)`                                    | user | Atomic 3-lane split. Dust from 7-decimal rounding lands in Needs. Replay-proof via`inflow_key`. |
+| `set_rules(user, needs_bps, savings_bps, buffer_bps, lock_secs, anchors, buffer_target)` | user | Split rules in basis points (must total 10,000) + off-ramp anchor allowlist + optional Buffer auto-refill target. |
+| `distribute(user, amount, inflow_key, buffer_topup)`                      | user | Atomic split. `buffer_topup` is prioritized ahead of the normal bps split; dust from 7-decimal rounding lands in Needs. Replay-proof via `inflow_key`. |
 | `deposit(user, amount)`                                                   | user | Voluntary top-up into the savings vault.                                                          |
 | `withdraw_savings(user, amount)`                                          | user | Free after the timelock; 10% penalty → Buffer credit before it.                                  |
 | `withdraw_buffer(user, amount)`                                           | user | Withdraw Buffer credit — never locked.                                                           |
 | `offramp(user, anchor, amount)`                                           | user | Sends USDC only to**allowlisted** anchor addresses.                                         |
-| `create_savings_goal(user, label, initial_amount)`                        | user | Names a sub-allocation, drawn from the unallocated Savings pool. No funds move — bookkeeping only. |
-| `withdraw_from_goal(user, goal_id, amount)`                               | user | Same penalty/timelock as `withdraw_savings`, scoped to one goal.                                  |
+| `create_savings_goal(user, label, initial_amount, lock_secs)`             | user | Names a sub-allocation, drawn from the unallocated Savings pool, with its own laddered unlock date independent of the aggregate lock. No funds move — bookkeeping only. |
+| `withdraw_from_goal(user, goal_id, amount)`                               | user | Same penalty/timelock as `withdraw_savings`, scoped to one goal's own `unlock_at`.                |
 | `rename_savings_goal(user, goal_id, new_label)`                           | user | Cosmetic — no balance change.                                                                      |
 | `delete_savings_goal(user, goal_id)`                                      | user | Removes the goal; its principal simply becomes unallocated again.                                 |
 | `get_rules / get_savings / get_buffer_credit / get_lock_until`            | —   | Read-only views.                                                                                  |
 | `get_savings_goals / get_unallocated_savings`                             | —   | Read-only views for the goals feature.                                                            |
 
-Errors are explicit (`NotInitialized`=1 … `LabelTooLong`=12); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. Nineteen unit tests (the original eleven, untouched, plus eight new ones) cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, and the full goals lifecycle. **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a classic path payment. The savings-goals functions were added additively: they only read/write a new `Goals(Address)` key and never touch the existing `Savings`/`LockUntil`/`BufferCredit` logic those eleven original tests exercise, so the contract's core split-and-lock guarantees are unchanged even though it's no longer literally frozen.
+Errors are explicit (`NotInitialized`=1 … `LabelTooLong`=12); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. 26 unit tests (the original 19 — eleven plus eight for the goals feature — untouched, plus 7 new ones) cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, the full goals lifecycle, threshold auto-refill priority, and independent per-goal unlock dates. **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a classic path payment. The buffer-topup and laddered-goals additions only read/write the existing `Rules`/`Goal` structs' new fields and never touch the core split-and-lock arithmetic the original 19 tests exercise, so those guarantees are unchanged even though the contract keeps growing.
 
 ## Money in, money out (the anchor stack)
 

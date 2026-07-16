@@ -70,7 +70,7 @@ to ~11 months."
 ## Q4. "The vault contract is unaudited — how do you justify holding real user funds?"
 
 **30-second answer:** "We don't, yet — the README says keep real amounts trivial
-until audit, by design. What we *do* have: 19 unit tests covering every
+until audit, by design. What we *do* have: 26 unit tests covering every
 money-critical path — exact split, dust (no stroop ever lost), replay rejection,
 timelock, the anchor allowlist, and the full goals lifecycle. The attack surface
 is deliberately small: the contract only holds the Savings lane, withdrawals are
@@ -99,9 +99,11 @@ it as the disciplined choice (unaudited → no mainnet funds).
 **30-second answer:** "The hold-value promise is **Savings — 100% USDC, code-locked**,
 never touched by volatility. **Invest is a separate, optional lane** (set it to 0% and
 nothing about the promise changes) for users who explicitly want a growth slice — a
-spot purchase, not yield or leverage. It's XLM *only* because that's the asset with real
-DEX liquidity on **testnet** to prove the path-payment mechanism; the intended growth
-asset is **allocated gold**. XLM is a testnet placeholder, not an investment recommendation."
+spot purchase, not yield or leverage. You pick XLM or gold: XLM converts on the real
+testnet DEX; gold converts against TXAUM, Shunt's own testnet-issued token standing in
+for Matrixdock's XAUm (mainnet-only, no testnet liquidity), with real seeded orderbook
+depth we funded ourselves. Neither is an investment recommendation — they prove the
+path-payment mechanism against real liquidity, not a specific asset call."
 
 **Don't** defend XLM as a good store of value. Separate the two lanes cleanly.
 
