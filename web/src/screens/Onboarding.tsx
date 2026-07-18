@@ -178,7 +178,7 @@ export function Onboarding() {
               style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
               onClick={() => nav("/connect")}
             >
-              Try the testnet <i className="ph ph-arrow-right" />
+              Get Started <i className="ph ph-arrow-right" />
             </button>
             <button
               className="btn-secondary"
