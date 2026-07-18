@@ -6,7 +6,8 @@ import { useShunt } from "../store";
 
 /**
  * F13 (payee side): create a payment request link from inside Shunt.
- * The client abroad gets a link — no "do you have crypto?" conversation.
+ * For crypto-capable clients, the SEP-7 link removes the manual wallet-address
+ * and asset coordination. Card checkout for non-crypto payers is on the roadmap.
  */
 export function RequestPay() {
   const { address, showToast } = useShunt();

@@ -94,7 +94,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 - 0.40% cash-out · 0.35% Top Up · 0.40% Invest conversion. **No lending, no yield, no cut of savings.**
 - 10% early-withdrawal penalty → goes to **your own** Buffer, never to us.
 - Blended take-rate **~0.29%** — *illustrative model* vs. 5–7% remittance cost (`docs/unit-economics.md`).
-- **Sharia-aligned by design** — all fees are ujrah; Invest is spot purchase (bay'), not riba.
+- **Designed without interest-based revenue** — service fees only, no lending or yield; Invest is a spot purchase. (A formal sharia-compliance claim would need external review.)
 
 > Say "illustrative" out loud — the corridor comparison is directional, not a live-measured number.
 
@@ -119,7 +119,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 | Edit mode + instant reallocate with new rules | Session keys (hands-free), AMM 1-sig split+invest |
 | SEP-1/10/24 anchor stack + SEP-7 links | Audit → then mainnet |
 | Invest lane (XLM or TXAUM, both live) | |
-| 37 tests + real-testnet e2e | |
+| 49 tests + real-testnet e2e | |
 
 > No mainnet claims. Audit before any real funds.
 

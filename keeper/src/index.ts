@@ -143,10 +143,13 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/health") {
+      const watching = watchAccounts(env);
       return json({
         ok: true,
         network: env.NETWORK_PASSPHRASE.includes("Test") ? "testnet" : "mainnet",
-        watching: watchAccounts(env),
+        contractId: env.VAULT_CONTRACT_ID,
+        watchingCount: watching.length,
+        watching,
       }, 200, cors);
     }
 

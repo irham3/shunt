@@ -71,7 +71,7 @@ to ~11 months."
 ## Q4. "The vault contract is unaudited — how do you justify holding real user funds?"
 
 **30-second answer:** "We don't, yet — the README says keep real amounts trivial
-until audit, by design. What we *do* have: 37 unit tests covering every
+until audit, by design. What we *do* have: 49 unit tests covering every
 money-critical path — exact split, dust (no stroop ever lost), replay rejection,
 timelock, the anchor allowlist, the full goals lifecycle, plus authorization
 boundaries, input validation, the goal-vs-aggregate timelock rule, and a

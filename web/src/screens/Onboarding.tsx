@@ -28,7 +28,7 @@ const STEPS = [
   { title: "Set rules", body: "Needs / Savings / Buffer / Invest, saved on-chain." },
   { title: "Income lands", body: "Payment link, Top Up, or transfer — detected in seconds." },
   { title: "One tap", body: "Review the breakdown, sign. Nothing moves without you." },
-  { title: "Auto-split", body: "One atomic transaction. Sub-cent fees." },
+  { title: "Auto-split", body: "Core allocation settles atomically; Invest converts separately." },
 ];
 
 // Figures verified against docs/unit-economics.md and the contract test suite.
@@ -37,7 +37,7 @@ const STEPS = [
 // "cheaper than remittance" here.
 const STATS = [
   { value: 0.29, decimals: 2, suffix: "%", label: "Shunt service fee (blended)" },
-  { value: 37, decimals: 0, suffix: "", label: "Contract unit tests" },
+  { value: 49, decimals: 0, suffix: "", label: "Contract unit tests" },
   { value: 10, decimals: 0, suffix: "%", label: "Early-exit penalty → Buffer" },
 ];
 
@@ -155,20 +155,20 @@ export function Onboarding() {
         style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "72px 24px 40px" }}
       >
         <Reveal variant="up">
-          <span className="chip lp-chip-live" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span className="chip lp-chip-live" style={{ display: "inline-flex", alignItems: "center", gap: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12 }}>
             <span className="lp-live-dot" /> Live on Stellar testnet
           </span>
         </Reveal>
         <Reveal variant="blur" delay={0.05}>
-          <h1 style={{ fontSize: "var(--text-display)", margin: 0, lineHeight: 1.05, maxWidth: 780, letterSpacing: "-0.02em" }}>
-            Set your split once.
+          <h1 className="hero-title">
+            Split income
             <br />
-            <span className="lp-gradient-text">Savings locks itself.</span>
+            Lock savings
           </h1>
         </Reveal>
         <Reveal variant="up" delay={0.12}>
-          <p className="muted" style={{ fontSize: "var(--text-body-lg)", maxWidth: 560, margin: 0 }}>
-            At payday, confirm once. Your Savings share moves into a Soroban vault, timelocked by code — the rest stays liquid. Non-custodial, on Stellar.
+          <p className="muted" style={{ fontSize: "clamp(16px, 1.6vw, 18px)", maxWidth: 620, margin: 0, lineHeight: 1.55 }}>
+            Set the rules once, confirm each payday, and keep Savings in a timelocked Soroban vault while the rest stays liquid
           </p>
         </Reveal>
         <Reveal variant="up" delay={0.18}>
@@ -178,7 +178,7 @@ export function Onboarding() {
               style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
               onClick={() => nav("/connect")}
             >
-              Get Started <i className="ph ph-arrow-right" />
+              Try the testnet <i className="ph ph-arrow-right" />
             </button>
             <button
               className="btn-secondary"
@@ -190,12 +190,8 @@ export function Onboarding() {
           </div>
         </Reveal>
         <Reveal variant="up" delay={0.24}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 2 }}>
-            {["Stellar", "USDC", "Non-custodial"].map((t) => (
-              <span key={t} className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                <span className="lp-dot" /> {t}
-              </span>
-            ))}
+          <div className="muted" style={{ fontSize: 13, letterSpacing: "0.01em", marginTop: 2 }}>
+            USDC · Non-custodial · Built on Stellar
           </div>
         </Reveal>
 
@@ -222,7 +218,7 @@ export function Onboarding() {
       <div style={{ overflow: "hidden", padding: "18px 0", borderTop: "1px solid var(--color-border-subtle)", borderBottom: "1px solid var(--color-border-subtle)" }}>
         <div className="lp-marquee-track">
           {[...Array(2)].flatMap((_, dup) =>
-            ["Stellar Testnet", "Soroban · Rust", "React + TypeScript", "PWA — Mobile First", "37 Contract Tests Passing", "SEP-1 · SEP-7 · SEP-10 · SEP-24"].map((t, i) => (
+            ["Stellar Testnet", "Soroban · Rust", "React + TypeScript", "PWA — Mobile First", "49 Contract Tests Passing", "SEP-1 · SEP-7 · SEP-10 · SEP-24"].map((t, i) => (
               <span key={`${dup}-${i}`} className="muted" style={{ fontSize: 13, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 5, height: 5, borderRadius: 3, background: "var(--color-accent-primary)", display: "inline-block" }} />
                 {t}
@@ -366,7 +362,7 @@ export function Onboarding() {
             GitHub
           </a>
           <a
-            href="https://stellar.expert/explorer/testnet/contract/CC7E2HL7SNQ34PFLV74WEQSW2OVBRBG3EUTLKWC3NYKIC4XPPABQWBMW"
+            href="https://stellar.expert/explorer/testnet/contract/CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B"
             target="_blank"
             rel="noreferrer"
             className="muted"

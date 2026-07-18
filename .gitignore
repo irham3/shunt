@@ -4,11 +4,7 @@ target/
 *.local
 .env
 keeper-state.json
-DESIGN.md
-PRD.md
-SUBMISSION.md
 .claude/
-docs/
 *.tsbuildinfo
 level1-objection.md
 

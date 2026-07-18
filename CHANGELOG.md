@@ -7,6 +7,48 @@ progression, not a padded timeline).
 
 ---
 
+## v0.14 — Contract hardening round 2 + security-hardened redeploy (2026-07-18)
+
+**New contract deployment (testnet):**
+`CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B` — current
+security-hardened deployment, supersedes `CC7E…` (which predated the source-level
+timelock fix; a deployed Soroban WASM doesn't update when source changes).
+Initialized against the USDC SAC testnet address. Keeper `wrangler.toml` and the
+frontend `.env.example` point here; every doc/config reference updated, `CC7E…`
+kept as labeled history.
+
+**Contract changes:**
+- **Unallocated-withdrawal guard** — generic `withdraw_savings` now only draws
+  from *unallocated* Savings (`Savings(user) − Σ goal.amount`). Goal principal is
+  reachable solely through `withdraw_from_goal`. A plain overdraw still reports
+  `InsufficientSavings`; the in-range goal-drain attempt reverts
+  `InsufficientUnallocated`. Verified on-chain.
+- **Zero-value goals rejected** — `create_savings_goal` now rejects
+  `initial_amount <= 0` (was `< 0`).
+- **Per-user goal cap** — `MAX_GOALS_PER_USER = 20`, new `TooManyGoals` (#13);
+  the 21st active goal reverts, deleting a goal frees a slot (goals are scanned
+  linearly, so the list is bounded).
+- **TTL** — added missing `extend_ttl` on state-writing paths (`rename`/`delete`
+  goal, `withdraw_buffer`, and the Savings decrement in `debit_savings`).
+
+**Tests 37 → 49** (all pass): the A2 guard (revert + valid-withdraw + solvency),
+zero/negative/positive goal amounts, the goal cap and slot-free-on-delete,
+additional authorization boundaries (buffer/goal-withdraw/rename/offramp), and a
+full-lifecycle invariant check (solvency + `Σ goal.amount ≤ Savings` after every
+op).
+
+**Copy/claims:** landing hero simplified (eyebrow + two-line H1 "Split income /
+Lock savings", trust line); atomicity narrowed to the three-lane split; payment
+links reframed for crypto-capable clients (card checkout = roadmap); sharia
+claims softened to "designed without interest-based revenue"; test counts synced
+to 49; `.gitignore` no longer ignores `docs/`, `SUBMISSION.md`, `PRD.md`,
+`DESIGN.md`.
+
+**Known limitation (documented, not fixed):** the `Processed(inflow_key)` replay
+guard carries a ~30-day TTL and isn't re-bumped, so an inflow key can eventually
+expire — see README "pre-production hardening". We do not claim permanent
+replay protection.
+
 ## v0.13 — Security hardening: goal-timelock fix, auth/invariant tests, claim sync (2026-07-17)
 
 **Timelock bypass fixed (contract):** a savings goal created with `lock_secs=0`

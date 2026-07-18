@@ -64,9 +64,10 @@ Assume **85% gross margin** to cover support/tooling overhead allocated per user
 
 ## 5. CAC, payback, LTV
 
-GTM leans on community + referral, with **sharia-compliant positioning** (all
-revenue is service fee / *ujrah*, no interest) as a distribution wedge in the
-target market — a structurally lower-CAC channel than paid acquisition.
+GTM leans on community + referral, with **interest-free positioning** (all
+revenue is service fee, no interest, no lending or yield) as a distribution
+wedge in the target market — a structurally lower-CAC channel than paid
+acquisition. A formal sharia-compliance claim would require external review.
 
 | Metric | Base | Note |
 | --- | --- | --- |

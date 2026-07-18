@@ -58,6 +58,11 @@ pub const PENALTY_BPS: i128 = 1_000;
 /// TTL bookkeeping: extend persistent entries roughly monthly.
 const BUMP_AMOUNT: u32 = 518_400; // ~30 days of ledgers
 const BUMP_THRESHOLD: u32 = 259_200;
+/// Cap on active goals per user. Goals live in a `Vec` that's scanned linearly
+/// on every create/withdraw, so an unbounded list would grow read/write cost.
+/// Deleting a goal frees a slot. 20 is comfortably above any realistic number
+/// of laddered savings goals.
+const MAX_GOALS_PER_USER: u32 = 20;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -75,6 +80,7 @@ pub enum Error {
     GoalNotFound = 10,
     InsufficientUnallocated = 11,
     LabelTooLong = 12,
+    TooManyGoals = 13,
 }
 
 #[contracttype]
@@ -291,6 +297,24 @@ impl ShuntVault {
     /// Returns the amount actually sent to the wallet.
     pub fn withdraw_savings(env: Env, user: Address, amount: i128) -> i128 {
         user.require_auth();
+
+        // Generic withdrawal may only draw from UNALLOCATED Savings. Funds
+        // assigned to a goal are reachable solely through `withdraw_from_goal`
+        // (which enforces that goal's own timelock), so a plain
+        // `withdraw_savings` must never silently drain a goal's principal.
+        // A pure overdraw (amount > total balance) still surfaces as
+        // `InsufficientSavings` via `debit_savings`; only the in-range case
+        // (amount <= balance but > unallocated) is the goal-drain attempt.
+        let balance: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Savings(user.clone()))
+            .unwrap_or(0);
+        let unallocated = balance - Self::allocated_savings(&env, &user);
+        if amount <= balance && amount > unallocated {
+            panic_with_error!(&env, Error::InsufficientUnallocated);
+        }
+
         let lock_until: u64 = env
             .storage()
             .persistent()
@@ -320,7 +344,10 @@ impl ShuntVault {
         lock_secs: u64,
     ) -> u32 {
         user.require_auth();
-        if initial_amount < 0 {
+        // A goal must hold a positive allocation. Zero-value goals are
+        // useless bookkeeping and there's no "top up a goal" path, so reject
+        // them up front (previously only negatives were rejected).
+        if initial_amount <= 0 {
             panic_with_error!(&env, Error::AmountNotPositive);
         }
         if label.len() > 64 {
@@ -329,6 +356,9 @@ impl ShuntVault {
 
         let goals_key = DataKey::Goals(user.clone());
         let mut goals: Vec<Goal> = env.storage().persistent().get(&goals_key).unwrap_or(Vec::new(&env));
+        if goals.len() >= MAX_GOALS_PER_USER {
+            panic_with_error!(&env, Error::TooManyGoals);
+        }
 
         let total: i128 = env.storage().persistent().get(&DataKey::Savings(user.clone())).unwrap_or(0);
         let mut allocated: i128 = 0;
@@ -411,6 +441,7 @@ impl ShuntVault {
         goal.label = new_label;
         goals.set(idx, goal);
         env.storage().persistent().set(&goals_key, &goals);
+        env.storage().persistent().extend_ttl(&goals_key, BUMP_THRESHOLD, BUMP_AMOUNT);
     }
 
     /// Delete a goal. Its principal isn't moved — it simply becomes
@@ -423,6 +454,7 @@ impl ShuntVault {
         let idx = Self::find_goal_index(&env, &goals, goal_id);
         goals.remove(idx);
         env.storage().persistent().set(&goals_key, &goals);
+        env.storage().persistent().extend_ttl(&goals_key, BUMP_THRESHOLD, BUMP_AMOUNT);
     }
 
     /// Withdraw in-vault Buffer credit (accrued penalties). No timelock.
@@ -437,6 +469,7 @@ impl ShuntVault {
             panic_with_error!(&env, Error::InsufficientBuffer);
         }
         env.storage().persistent().set(&key, &(credit - amount));
+        env.storage().persistent().extend_ttl(&key, BUMP_THRESHOLD, BUMP_AMOUNT);
         let token = Self::token(&env);
         token::Client::new(&env, &token).transfer(
             &env.current_contract_address(),
@@ -495,15 +528,28 @@ impl ShuntVault {
     /// Savings not currently assigned to any goal.
     pub fn get_unallocated_savings(env: Env, user: Address) -> i128 {
         let total: i128 = env.storage().persistent().get(&DataKey::Savings(user.clone())).unwrap_or(0);
-        let goals: Vec<Goal> = env.storage().persistent().get(&DataKey::Goals(user)).unwrap_or(Vec::new(&env));
+        total - Self::allocated_savings(&env, &user)
+    }
+
+    // ---- Internals ----
+
+    /// Sum of every goal's `amount` for this user — the portion of aggregate
+    /// Savings that is earmarked to a goal. The invariant
+    /// `allocated_savings(user) <= Savings(user)` is upheld by
+    /// `create_savings_goal` (never allocates past unallocated) and by
+    /// `withdraw_from_goal` (debits the goal and the aggregate together).
+    fn allocated_savings(env: &Env, user: &Address) -> i128 {
+        let goals: Vec<Goal> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Goals(user.clone()))
+            .unwrap_or(Vec::new(env));
         let mut allocated: i128 = 0;
         for g in goals.iter() {
             allocated += g.amount;
         }
-        total - allocated
+        allocated
     }
-
-    // ---- Internals ----
 
     fn token(env: &Env) -> Address {
         env.storage()
@@ -533,6 +579,7 @@ impl ShuntVault {
         let payout = amount - penalty;
 
         env.storage().persistent().set(&bal_key, &(balance - amount));
+        env.storage().persistent().extend_ttl(&bal_key, BUMP_THRESHOLD, BUMP_AMOUNT);
         if penalty > 0 {
             let credit_key = DataKey::BufferCredit(user.clone());
             let credit: i128 = env.storage().persistent().get(&credit_key).unwrap_or(0);

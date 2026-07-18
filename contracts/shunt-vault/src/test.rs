@@ -579,3 +579,242 @@ fn vault_stays_solvent_across_users() {
     // Concretely: 300 in − 36 out = 264; liabilities = 60 + 200 + 4 + 0 = 264.
     assert_eq!(vault_balance, 264_0000000);
 }
+
+/// Reusable invariant check: the vault's token balance must exactly cover the
+/// sum of every user's Savings + Buffer credit, and no user's goal allocations
+/// may exceed their aggregate Savings (unallocated >= 0).
+fn assert_invariants(env: &Env, client: &ShuntVaultClient<'_>, token: &Address, users: &[&Address]) {
+    let mut liabilities: i128 = 0;
+    for u in users {
+        assert!(
+            client.get_unallocated_savings(*u) >= 0,
+            "goal allocations must never exceed Savings"
+        );
+        liabilities += client.get_savings(*u) + client.get_buffer_credit(*u);
+    }
+    let vault = TokenClient::new(env, token).balance(&client.address);
+    assert!(vault >= liabilities, "vault must be solvent");
+    assert_eq!(vault, liabilities, "vault balance must equal total liabilities exactly");
+}
+
+// ---- A2: generic withdrawal cannot drain goal allocations ----
+
+#[test]
+#[should_panic(expected = "Error(Contract, #11)")]
+fn generic_withdraw_over_unallocated_reverts() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    // No aggregate lock, so this isolates the unallocated guard from the timelock.
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 40), &0); // savings = 100 USDC
+    client.create_savings_goal(&user, &String::from_str(&env, "Locked away"), &80_0000000, &0);
+    assert_eq!(client.get_unallocated_savings(&user), 20_0000000);
+
+    // 21 > unallocated(20) but <= balance(100): the goal-drain attempt.
+    client.withdraw_savings(&user, &21_0000000);
+}
+
+#[test]
+fn generic_withdraw_up_to_unallocated_succeeds() {
+    let env = Env::default();
+    let (client, user, token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 41), &0); // savings = 100 USDC
+    client.create_savings_goal(&user, &String::from_str(&env, "Locked away"), &80_0000000, &0);
+
+    // Exactly the unallocated 20 USDC withdraws cleanly.
+    let payout = client.withdraw_savings(&user, &20_0000000);
+    assert_eq!(payout, 20_0000000);
+
+    // Goal principal untouched; aggregate reduced only by the unallocated pull.
+    assert_eq!(client.get_savings_goals(&user).get(0).unwrap().amount, 80_0000000);
+    assert_eq!(client.get_savings(&user), 80_0000000);
+    assert_eq!(client.get_unallocated_savings(&user), 0);
+    assert_invariants(&env, &client, &token, &[&user]);
+}
+
+// ---- A3: zero-value goals are rejected ----
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn create_goal_rejects_zero_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 42), &0);
+    client.create_savings_goal(&user, &String::from_str(&env, "Empty"), &0, &0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn create_goal_rejects_negative_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 43), &0);
+    client.create_savings_goal(&user, &String::from_str(&env, "Negative"), &-1, &0);
+}
+
+#[test]
+fn create_goal_accepts_positive_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 44), &0);
+    let id = client.create_savings_goal(&user, &String::from_str(&env, "Real"), &1, &0);
+    assert_eq!(id, 0);
+    assert_eq!(client.get_savings_goals(&user).get(0).unwrap().amount, 1);
+}
+
+// ---- A4: per-user goal cap ----
+
+#[test]
+#[should_panic(expected = "Error(Contract, #13)")]
+fn goal_cap_rejects_twenty_first_goal() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 45), &0); // savings = 100 USDC
+
+    // 20 goals of 1 USDC each = 20 USDC, well within the 100 available.
+    for _ in 0..20u32 {
+        client.create_savings_goal(&user, &String::from_str(&env, "g"), &1_0000000, &0);
+    }
+    assert_eq!(client.get_savings_goals(&user).len(), 20);
+
+    // The 21st must revert.
+    client.create_savings_goal(&user, &String::from_str(&env, "overflow"), &1_0000000, &0);
+}
+
+#[test]
+fn deleting_a_goal_frees_a_cap_slot() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 46), &0);
+
+    let mut first_id = 0u32;
+    for i in 0..20u32 {
+        let id = client.create_savings_goal(&user, &String::from_str(&env, "g"), &1_0000000, &0);
+        if i == 0 {
+            first_id = id;
+        }
+    }
+    assert_eq!(client.get_savings_goals(&user).len(), 20);
+
+    // Free one slot, then a new goal fits again.
+    client.delete_savings_goal(&user, &first_id);
+    assert_eq!(client.get_savings_goals(&user).len(), 19);
+    client.create_savings_goal(&user, &String::from_str(&env, "refill"), &1_0000000, &0);
+    assert_eq!(client.get_savings_goals(&user).len(), 20);
+}
+
+// ---- A5: invariants hold across a full lifecycle ----
+
+#[test]
+fn invariants_hold_across_full_lifecycle() {
+    let env = Env::default();
+    let (client, user_a, token, admin) = setup(&env);
+    let user_b = Address::generate(&env);
+    admin.mint(&user_a, &1_000_0000000);
+    admin.mint(&user_b, &1_000_0000000);
+    let users = [&user_a, &user_b];
+
+    client.set_rules(&user_a, &6000, &2500, &1500, &86400, &vec![&env], &0);
+    client.set_rules(&user_b, &6000, &2500, &1500, &86400, &vec![&env], &0);
+    assert_invariants(&env, &client, &token, &users);
+
+    // distribute (both users)
+    client.distribute(&user_a, &400_0000000, &key(&env, 50), &0); // a savings = 100
+    client.distribute(&user_b, &800_0000000, &key(&env, 51), &0); // b savings = 200
+    assert_invariants(&env, &client, &token, &users);
+
+    // goal creation
+    let a_goal = client.create_savings_goal(&user_a, &String::from_str(&env, "A-goal"), &60_0000000, &0);
+    let b_goal = client.create_savings_goal(&user_b, &String::from_str(&env, "B-goal"), &150_0000000, &86400);
+    assert_invariants(&env, &client, &token, &users);
+
+    // aggregate (unallocated) withdrawal by A — a is still locked, so penalty applies
+    client.withdraw_savings(&user_a, &40_0000000); // a unallocated was 40
+    assert_invariants(&env, &client, &token, &users);
+
+    // early goal withdrawal by A (zero-lock goal, but aggregate lock active → penalty)
+    client.withdraw_from_goal(&user_a, &a_goal, &10_0000000);
+    assert_invariants(&env, &client, &token, &users);
+
+    // buffer-credit withdrawal by A (penalties accrued above)
+    let a_credit = client.get_buffer_credit(&user_a);
+    if a_credit > 0 {
+        client.withdraw_buffer(&user_a, &a_credit);
+    }
+    assert_invariants(&env, &client, &token, &users);
+
+    // goal deletion by B (principal returns to unallocated, aggregate unchanged)
+    client.delete_savings_goal(&user_b, &b_goal);
+    assert_invariants(&env, &client, &token, &users);
+}
+
+// ---- A6: additional authorization boundaries ----
+
+#[test]
+#[should_panic]
+fn cannot_withdraw_another_users_buffer_credit() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    client.set_rules(&victim, &6000, &2500, &1500, &86400, &vec![&env], &0);
+    client.distribute(&victim, &400_0000000, &key(&env, 52), &0);
+    client.withdraw_savings(&victim, &10_0000000); // accrue buffer credit (still locked)
+    assert!(client.get_buffer_credit(&victim) > 0);
+
+    env.mock_auths(&[]);
+    client.withdraw_buffer(&victim, &1_0000000);
+}
+
+#[test]
+#[should_panic]
+fn cannot_withdraw_from_another_users_goal() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    client.set_rules(&victim, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&victim, &400_0000000, &key(&env, 53), &0);
+    let id = client.create_savings_goal(&victim, &String::from_str(&env, "Hajj"), &50_0000000, &0);
+
+    env.mock_auths(&[]);
+    client.withdraw_from_goal(&victim, &id, &10_0000000);
+}
+
+#[test]
+#[should_panic]
+fn cannot_rename_another_users_goal() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    client.set_rules(&victim, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&victim, &400_0000000, &key(&env, 54), &0);
+    let id = client.create_savings_goal(&victim, &String::from_str(&env, "Hajj"), &50_0000000, &0);
+
+    env.mock_auths(&[]);
+    client.rename_savings_goal(&victim, &id, &String::from_str(&env, "Hacked"));
+}
+
+#[test]
+#[should_panic]
+fn cannot_offramp_as_another_user() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    let anchor = Address::generate(&env);
+    client.set_rules(&victim, &6000, &2500, &1500, &0, &vec![&env, anchor.clone()], &0);
+
+    env.mock_auths(&[]);
+    client.offramp(&victim, &anchor, &10_0000000);
+}
