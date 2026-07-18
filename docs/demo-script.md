@@ -46,8 +46,10 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
   demo isn't blocked on waiting for a real transfer.)
 - **Say:** "Income lands. The app detects it from Horizon, I review the exact
   breakdown — every lane, including custom ones like 'Holiday', shows exactly
-  where the funds go — and approve once. One atomic transaction: Needs and
-  Buffer stay in my wallet, Savings moves into the vault and the timelock starts."
+  where the funds go — and approve once. The core allocation settles in one
+  atomic transaction: Needs and Buffer stay in my wallet, Savings moves into the
+  vault and the timelock starts. Invest, if enabled, is a separate approved
+  conversion."
 - **On screen:** open the explorer tab, show the `distribute` tx + `split` event.
 - **Say:** "Real on-chain, real testnet USDC — here's the hash, and the split event."
 
@@ -71,7 +73,9 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
 - **Say:** "You can send either USDC or XLM. Cash-out to fiat runs on standard SEP-24 anchor rails. Demo uses SDF's test anchor — the production corridor is a licensed regional anchor like IDRX or Coins.ph; swapping is config, not a rewrite. Settlement is the anchor's, and we say so instead of faking 'instant'."
 
 ### [2:45–3:00] Honest close
-- **Say:** "What's real today: a 19-test contract, a real-testnet end-to-end suite,
+- **Say:** "What's real today: a 49-test contract — including authorization
+  boundaries, a solvency invariant, and the goal-timelock and
+  unallocated-withdrawal guards — a real-testnet end-to-end suite,
   double idempotency, zero-key keeper — all on **testnet**, no mainnet claims.
   What's next: a live regional anchor, passkey onboarding for non-crypto users, and
   an audit before any mainnet funds. Income in, structured by code, income out —

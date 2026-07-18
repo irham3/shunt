@@ -57,7 +57,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 | 🟢 **Savings** | **Vault contract** | Value-holding USDC, **locked by code** — a timelock in your own wallet would be fiction |
 | 🟢 *Custom savings lanes* | **Vault contract** | Named sub-allocations (e.g. "Holiday", "Education") — same vault, individual tracking |
 | 🟤 Buffer | Your wallet | Instant emergency fund, no lock |
-| 🟣 Invest *(optional)* | Your wallet | Opt-in growth slice — **XLM** (live) or **Gold / XAUm** (1g LBMA gold on Stellar) |
+| 🟣 Invest *(optional)* | Your wallet | Opt-in growth slice — **XLM** (live) or **TXAUM** (Shunt's testnet demo gold, standing in for mainnet-only XAUm) |
 
 > The value-preservation promise is **Savings (100% USDC)**. Invest is separate and optional — set it to 0% and the promise is unchanged.
 
@@ -81,8 +81,8 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 ## 7 — Why it's trustworthy (the technical moat)
 
 - **Non-custodial by construction** — keeper holds **zero keys**; Savings is code-custody, owner-only withdraw.
-- **Double idempotency** — dedupe by tx hash *and* contract rejects repeat `inflow_key`s. One income, one split, ever.
-- **19 Soroban unit tests** + **real-testnet e2e** (Playwright, no mocks): exact split, dust (no stroop lost), replay rejection, timelock, goals lifecycle.
+- **Double idempotency** — dedupe by tx hash *and* the contract rejects repeat `inflow_key`s; replay is rejected on-chain (Error #6).
+- **49 Soroban unit tests** + **real-testnet e2e** (Playwright, no mocked network/contract calls): exact split, dust (no stroop lost), replay rejection, timelock, goals lifecycle, plus the hardening set — goal-vs-aggregate timelock, the unallocated-withdrawal guard, authorization boundaries, and a solvency invariant.
 - **Verifiable** — every step is a clickable testnet hash.
 
 > This is the differentiator vs. slideware. Lead with it if judges are technical.
@@ -102,7 +102,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 ## 9 — Corridors & onboarding (honest)
 
-- **Live rail today:** cash-out to **PHP via MoneyGram** (real, on Stellar mainnet — `verify-anchor` proves it). Rupiah is our market, but the live corridor is Philippine peso → **go-to-market is PH-first, Indonesia-next** as the IDR corridor (IDRX / MoneyGram-ID) lands. We name this gap, not hide it.
+- **Production corridor candidate:** **PHP via MoneyGram** — live on Stellar *mainnet* and `verify-anchor` confirms its SEP-1 discovery + real SEP-24 endpoint (that's the first step our off-ramp takes, not an end-to-end settlement we've run). Our shipped demo cash-out runs against the **SDF test anchor** (testnet). Rupiah is our market, but the nearest real corridor is Philippine peso → **go-to-market is PH-first, Indonesia-next** as an IDR anchor (IDRX candidate) lands. We name this gap, not hide it.
 - **Getting in:** crypto-aware freelancers already hold USDC; payment link (SEP-7) turns "get paid in USD" into the funnel; SEP-24 Top Up for fiat-in.
 - **Named gaps:** no live IDR off-ramp yet, plus passkey/smart-wallet UX (Freighter is too heavy for first-timers) — **roadmap**.
 

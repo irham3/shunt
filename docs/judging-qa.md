@@ -138,7 +138,7 @@ the trail: `[PRD version dates, DESIGN.md, wireframes, mentoring notes, older br
 dated notes) so you can show it.
 
 **If the core build really was early July:** own it. "The engine was built intensively in
-early July — and here's the substance: a 19-test Soroban contract, a real-testnet e2e suite,
+early July — and here's the substance: a 49-test Soroban contract, a real-testnet e2e suite,
 double idempotency, a full on-chain lifecycle. Depth over a long timeline." Judges respect
 honest velocity over a polished fake history.
 
