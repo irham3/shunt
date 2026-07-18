@@ -7,6 +7,29 @@ progression, not a padded timeline).
 
 ---
 
+## v0.13 — Security hardening: goal-timelock fix, auth/invariant tests, claim sync (2026-07-17)
+
+**Timelock bypass fixed (contract):** a savings goal created with `lock_secs=0`
+used to be withdrawable with no penalty even while the aggregate Savings lock
+was still active — a self-service escape hatch around the vault's core promise.
+`withdraw_from_goal` now gates on `max(goal.unlock_at, LockUntil(user))`: a goal
+can lock funds *longer* than the aggregate lock (laddering) but never shorter.
+Regression tests cover the full drain-everything-through-a-zero-lock-goal attack.
+
+**Test suite 26 → 37:** added authorization-boundary tests (no account can
+withdraw another's Savings, rewrite its rules, or delete its goals),
+input-validation tests (zero/negative amounts), `init`-cannot-be-recalled, the
+goal-vs-aggregate timelock rule, and a solvency/conservation invariant (the
+vault's token balance always covers the sum of every user's Savings + Buffer
+credit). All 37 pass.
+
+**Claim/number sync:** landing page and docs updated so the test count (37),
+early-exit penalty (10%), and take-rate no longer render as `0` before scroll;
+removed the "15–20× cheaper" headline (it compared Shunt's own ~0.29% service
+fee to an incumbent's all-in cost — apples-to-oranges); "cash out to IDR
+anytime" reworded to "supported Stellar anchor" everywhere; "atomic" narrowed to
+the three-lane contract split (Invest is a separate approved path payment).
+
 ## v0.12 — Invest lane cleanup, honest labeling, e2e hardening (2026-07-16)
 
 **Contract ID cleanup:** every remaining reference to the superseded CB27…

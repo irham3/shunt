@@ -285,7 +285,7 @@ export function LaneDetail() {
               <div>
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>Spendable — in your wallet</div>
                 <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-                  Use it, or cash out to IDR/PHP through a licensed anchor when you choose. Rate and fee are shown before you confirm.
+                  Use it, or cash out to fiat through a supported Stellar anchor when you choose. Rate and fee are shown before you confirm.
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

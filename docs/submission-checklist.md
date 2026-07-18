@@ -11,7 +11,7 @@ Status as of 2026-07-16. Tick the ⬜ items before you submit.
 | Smart contract on testnet | ✅ live + verified | vault `CC7E…` (explorer-linked in README) |
 | Keeper (hardened) | ✅ deployed live | https://shunt-keeper.irhamtria.workers.dev (`/health` ok) |
 | On-chain proof (hashes) | ✅ clickable, testnet | README → *Live on testnet* |
-| Contract tests | ✅ 26 unit | `cd contracts/shunt-vault && cargo test` |
+| Contract tests | ✅ 37 unit | `cd contracts/shunt-vault && cargo test` |
 | e2e (real testnet) | ✅ 41 specs — 40 passed + 1 conditional skip on 2026-07-16 (only runs when the keeper is down) | `npm run test:e2e` |
 | Written submission | ✅ complete | `SUBMISSION.md` (local — gitignored) |
 | Pitch deck (content) | ✅ MD | `docs/pitch-deck.md` |

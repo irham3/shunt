@@ -2,7 +2,10 @@
 
 use super::*;
 use soroban_sdk::testutils::{Address as _, Ledger};
-use soroban_sdk::{token::StellarAssetClient, vec, Address, BytesN, Env, String};
+use soroban_sdk::{
+    token::{StellarAssetClient, TokenClient},
+    vec, Address, BytesN, Env, String,
+};
 
 fn setup(env: &Env) -> (ShuntVaultClient<'_>, Address, Address, StellarAssetClient<'_>) {
     env.mock_all_auths();
@@ -302,22 +305,62 @@ fn withdraw_from_goal_after_lock_no_penalty() {
 }
 
 #[test]
-fn goal_lock_secs_zero_is_withdrawable_immediately() {
+fn goal_lock_secs_zero_still_gated_by_aggregate_lock() {
     let env = Env::default();
     let (client, user, _token, admin) = setup(&env);
     admin.mint(&user, &1_000_0000000);
-    // Aggregate lock IS active (would apply a penalty via withdraw_savings)...
+    // Aggregate lock IS active (86400s out).
     client.set_rules(&user, &6000, &2500, &1500, &86400, &vec![&env], &0);
     client.distribute(&user, &400_0000000, &key(&env, 24), &0); // savings = 100 USDC
 
-    // ...but a goal created with lock_secs=0 is its own, separately unlocked
-    // sub-vault: no penalty, proving goal locks are independent of the
-    // aggregate one in both directions.
+    // A zero-lock goal must NOT be a liquidity escape hatch: while the
+    // aggregate Savings lock is active, withdrawing through a goal whose own
+    // lock is 0 still incurs the early-exit penalty. A goal can only lock
+    // longer than the aggregate, never shorter.
     let label = String::from_str(&env, "Flexible");
     let id = client.create_savings_goal(&user, &label, &30_0000000, &0);
     let payout = client.withdraw_from_goal(&user, &id, &30_0000000);
-    assert_eq!(payout, 30_0000000); // no penalty
+    assert_eq!(payout, 27_0000000); // 10% penalty applies via the aggregate lock
+    assert_eq!(client.get_buffer_credit(&user), 3_0000000);
+    assert_eq!(client.get_savings(&user), 70_0000000);
+}
+
+#[test]
+fn goal_withdraw_free_only_when_aggregate_also_unlocked() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    // Aggregate lock is short (1s); a zero-lock goal is genuinely liquid only
+    // because the aggregate lock has also passed.
+    client.set_rules(&user, &6000, &2500, &1500, &1, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 26), &0); // savings = 100 USDC
+    env.ledger().with_mut(|l| l.timestamp += 10); // aggregate lock now in the past
+
+    let label = String::from_str(&env, "Flexible");
+    let id = client.create_savings_goal(&user, &label, &30_0000000, &0);
+    let payout = client.withdraw_from_goal(&user, &id, &30_0000000);
+    assert_eq!(payout, 30_0000000); // no penalty: both locks passed
     assert_eq!(client.get_buffer_credit(&user), 0);
+}
+
+#[test]
+fn zero_lock_goal_cannot_bypass_aggregate_timelock() {
+    // Regression for the full attack: user with locked aggregate Savings tries
+    // to drain it penalty-free by funneling everything through a lock_secs=0
+    // goal and withdrawing immediately. The penalty must still apply.
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &86400, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 27), &0); // savings = 100 USDC, locked 1 day
+
+    // Route the ENTIRE unallocated balance into a zero-lock goal...
+    let id = client.create_savings_goal(&user, &String::from_str(&env, "Escape"), &100_0000000, &0);
+    // ...and try to pull it all out at once, still inside the aggregate lock.
+    let payout = client.withdraw_from_goal(&user, &id, &100_0000000);
+    assert_eq!(payout, 90_0000000); // 10% penalty enforced, not bypassed
+    assert_eq!(client.get_buffer_credit(&user), 10_0000000);
+    assert_eq!(client.get_savings(&user), 0);
 }
 
 #[test]
@@ -401,4 +444,138 @@ fn withdraw_from_goal_rejects_unknown_id() {
     client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
     client.distribute(&user, &400_0000000, &key(&env, 17), &0);
     client.withdraw_from_goal(&user, &999, &1_0000000); // no such goal
+}
+
+// ---- Authorization boundaries ----
+// The setup helper turns on mock_all_auths so state can be seeded. Each attack
+// test then switches to `mock_auths(&[])` — authorizing nobody — so the only
+// thing that can make the call panic is the owner's `require_auth()`. That is
+// the boundary: no signature other than the account owner's satisfies it.
+
+#[test]
+#[should_panic]
+fn cannot_withdraw_another_users_savings() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    client.set_rules(&victim, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&victim, &400_0000000, &key(&env, 30), &0); // savings = 100 USDC
+
+    let _attacker = Address::generate(&env); // has no authority over `victim`
+    env.mock_auths(&[]); // nobody is authorized
+    client.withdraw_savings(&victim, &100_0000000); // victim.require_auth() fails
+}
+
+#[test]
+#[should_panic]
+fn cannot_change_another_users_rules() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    client.set_rules(&victim, &6000, &2500, &1500, &86400, &vec![&env], &0);
+
+    env.mock_auths(&[]);
+    // Attempt to rewrite the victim's split (e.g. route everything to Needs).
+    client.set_rules(&victim, &10000, &0, &0, &0, &vec![&env], &0);
+}
+
+#[test]
+#[should_panic]
+fn cannot_delete_another_users_goal() {
+    let env = Env::default();
+    let (client, victim, _token, admin) = setup(&env);
+    admin.mint(&victim, &1_000_0000000);
+    client.set_rules(&victim, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&victim, &400_0000000, &key(&env, 31), &0);
+    let id = client.create_savings_goal(&victim, &String::from_str(&env, "Hajj"), &50_0000000, &0);
+
+    env.mock_auths(&[]);
+    client.delete_savings_goal(&victim, &id);
+}
+
+// ---- Initialization ----
+
+#[test]
+#[should_panic(expected = "Error(Contract, #2)")]
+fn init_cannot_be_reinitialized() {
+    let env = Env::default();
+    // setup() already calls init once with the real SAC.
+    let (client, _user, _token, _admin) = setup(&env);
+    let rogue_token = Address::generate(&env);
+    client.init(&rogue_token); // re-binding the token must revert
+}
+
+// ---- Input validation ----
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn distribute_rejects_zero_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &0, &key(&env, 32), &0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn distribute_rejects_negative_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &-100, &key(&env, 33), &0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn deposit_rejects_zero_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.deposit(&user, &0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn withdraw_savings_rejects_zero_amount() {
+    let env = Env::default();
+    let (client, user, _token, admin) = setup(&env);
+    admin.mint(&user, &1_000_0000000);
+    client.set_rules(&user, &6000, &2500, &1500, &0, &vec![&env], &0);
+    client.distribute(&user, &400_0000000, &key(&env, 34), &0);
+    client.withdraw_savings(&user, &0);
+}
+
+// ---- Solvency / conservation invariant ----
+// The vault pools many users' Savings. The invariant that must never break:
+//   token balance of contract  >=  sum(all users' Savings + all Buffer credits)
+// Because Needs/Buffer normal lanes never enter the vault, this should hold
+// with exact equality after any sequence of in-vault operations.
+
+#[test]
+fn vault_stays_solvent_across_users() {
+    let env = Env::default();
+    let (client, user_a, token, admin) = setup(&env);
+    let user_b = Address::generate(&env);
+    admin.mint(&user_a, &1_000_0000000);
+    admin.mint(&user_b, &1_000_0000000);
+    client.set_rules(&user_a, &6000, &2500, &1500, &86400, &vec![&env], &0);
+    client.set_rules(&user_b, &6000, &2500, &1500, &86400, &vec![&env], &0);
+    client.distribute(&user_a, &400_0000000, &key(&env, 35), &0); // a savings = 100
+    client.distribute(&user_b, &800_0000000, &key(&env, 36), &0); // b savings = 200
+
+    // A pulls out early: payout leaves the vault, penalty stays as buffer credit.
+    client.withdraw_savings(&user_a, &40_0000000); // payout 36, penalty 4 credited
+
+    let vault_balance = TokenClient::new(&env, &token).balance(&client.address);
+    let liabilities = client.get_savings(&user_a)
+        + client.get_savings(&user_b)
+        + client.get_buffer_credit(&user_a)
+        + client.get_buffer_credit(&user_b);
+    assert!(vault_balance >= liabilities, "vault must cover all liabilities");
+    assert_eq!(vault_balance, liabilities, "and with no unaccounted-for dust");
+    // Concretely: 300 in − 36 out = 264; liabilities = 60 + 200 + 4 + 0 = 264.
+    assert_eq!(vault_balance, 264_0000000);
 }

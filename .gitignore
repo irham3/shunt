@@ -8,8 +8,10 @@ DESIGN.md
 PRD.md
 SUBMISSION.md
 .claude/
+docs/
 *.tsbuildinfo
 level1-objection.md
+
 
 # Playwright E2E
 web/e2e/.state/

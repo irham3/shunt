@@ -53,7 +53,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 | Lane | Lives in | Why |
 | --- | --- | --- |
-| 🟡 Needs | Your wallet | Daily spend; cash out to IDR/PHP when you choose |
+| 🟡 Needs | Your wallet | Daily spend; cash out to fiat through a supported Stellar anchor when you choose |
 | 🟢 **Savings** | **Vault contract** | Value-holding USDC, **locked by code** — a timelock in your own wallet would be fiction |
 | 🟢 *Custom savings lanes* | **Vault contract** | Named sub-allocations (e.g. "Holiday", "Education") — same vault, individual tracking |
 | 🟤 Buffer | Your wallet | Instant emergency fund, no lock |
@@ -119,7 +119,7 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 | Edit mode + instant reallocate with new rules | Session keys (hands-free), AMM 1-sig split+invest |
 | SEP-1/10/24 anchor stack + SEP-7 links | Audit → then mainnet |
 | Invest lane (XLM or TXAUM, both live) | |
-| 26 tests + real-testnet e2e | |
+| 37 tests + real-testnet e2e | |
 
 > No mainnet claims. Audit before any real funds.
 

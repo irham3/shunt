@@ -40,10 +40,14 @@ post-lock withdrawals are free, forever.
 
 Blended take-rate on total processed volume ≈ **0.29%**.
 
-**Context that makes this defensible:** the incumbent the user is escaping —
-remittance / IDR bank conversion — costs **5–7%**. Shunt's ~0.3% blended is
-**15–20× cheaper for the user**, so the fee is nowhere near the adoption
-barrier. There is pricing headroom, not pricing risk.
+**Context that makes this defensible:** this ~0.29% is *Shunt's own* service
+fee, not the user's total landed cost. A fiat anchor charges its own fee on top,
+so the true end-to-end cost (on-ramp + spread + Shunt fee + anchor cash-out fee)
+depends on the selected anchor and corridor and would be benchmarked before
+launch. Against incumbents that cost users **5–7%**, Shunt's own fee is a small
+fraction of that — there is real pricing headroom — but we deliberately do **not**
+claim a headline "15–20× cheaper" multiple, because that compares Shunt's service
+fee alone to a competitor's all-in cost.
 
 ## 4. Contribution margin
 

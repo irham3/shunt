@@ -112,10 +112,12 @@ pub struct Goal {
     pub label: String,
     pub amount: i128,
     pub created_at: u64,
-    /// This goal's own unlock timestamp — independent of the aggregate
-    /// `LockUntil(user)`, so goals can be laddered (e.g. a 1-month emergency
-    /// fund and a 2-year Hajj fund coexist with different unlock dates).
-    /// Unallocated savings still use the shared aggregate lock.
+    /// This goal's own unlock timestamp, letting goals be laddered (e.g. a
+    /// 1-month emergency fund and a 2-year Hajj fund coexist with different
+    /// unlock dates). A goal can only lock funds LONGER than the shared
+    /// aggregate `LockUntil(user)`, never shorter: `withdraw_from_goal` gates
+    /// on `max(unlock_at, LockUntil(user))` so a goal can't be used to escape
+    /// the aggregate lock. Unallocated savings use the aggregate lock directly.
     pub unlock_at: u64,
 }
 
@@ -354,8 +356,8 @@ impl ShuntVault {
     }
 
     /// Withdraw from a specific goal — same penalty/timelock rules as
-    /// `withdraw_savings` (goals share the vault's one timelock), and also
-    /// decrements the goal's own tracked amount. Returns the payout.
+    /// `withdraw_savings`, and also decrements the goal's own tracked amount.
+    /// Returns the payout.
     pub fn withdraw_from_goal(env: Env, user: Address, goal_id: u32, amount: i128) -> i128 {
         user.require_auth();
         let goals_key = DataKey::Goals(user.clone());
@@ -366,9 +368,21 @@ impl ShuntVault {
             panic_with_error!(&env, Error::InsufficientSavings);
         }
 
-        // Goal-specific timelock (laddered) instead of the shared aggregate
-        // lock — this is the whole point of a goal having its own unlock_at.
-        let (payout, penalty) = Self::debit_savings(&env, &user, amount, goal.unlock_at);
+        // A goal's own unlock_at can lock funds LONGER than the aggregate
+        // Savings lock (laddering — e.g. a 2-year Hajj fund inside a wallet
+        // whose aggregate lock is only a month out), but it must never make
+        // them SHORTER. Otherwise a user could route locked Savings through a
+        // zero-lock goal and escape both the aggregate timelock and the
+        // early-exit penalty, defeating the vault's core promise. So the
+        // effective gate is the LATER of the two unlock times.
+        let aggregate_lock: u64 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LockUntil(user.clone()))
+            .unwrap_or(0);
+        let effective_lock =
+            if goal.unlock_at > aggregate_lock { goal.unlock_at } else { aggregate_lock };
+        let (payout, penalty) = Self::debit_savings(&env, &user, amount, effective_lock);
 
         goal.amount -= amount;
         goals.set(idx, goal);

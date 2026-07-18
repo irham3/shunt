@@ -17,7 +17,7 @@ const PROBLEM_OUTCOME = [
 ];
 
 const LANES = [
-  { ...DEFAULT_BUCKETS[0], desc: "In your wallet. Spend or cash out to IDR anytime." },
+  { ...DEFAULT_BUCKETS[0], desc: "In your wallet. Spend, or cash out through a supported Stellar anchor." },
   { ...DEFAULT_BUCKETS[1], desc: "In the vault contract, timelocked by code." },
   { ...DEFAULT_BUCKETS[2], desc: "Instant-access emergency fund, no penalty." },
   { ...DEFAULT_BUCKETS[3], desc: "Spot-DCA'd into XLM via a Stellar path payment." },
@@ -32,15 +32,17 @@ const STEPS = [
 ];
 
 // Figures verified against docs/unit-economics.md and the contract test suite.
+// Note: the take-rate below is Shunt's OWN service fee, not total end-to-end
+// cost — an anchor charges its own fee on top, so we don't claim a multiple
+// "cheaper than remittance" here.
 const STATS = [
-  { value: 0.29, decimals: 2, suffix: "%", label: "Blended take-rate" },
-  { value: 15, decimals: 0, suffix: "–20×", label: "Cheaper than remittance" },
-  { value: 19, decimals: 0, suffix: "", label: "Contract unit tests" },
+  { value: 0.29, decimals: 2, suffix: "%", label: "Shunt service fee (blended)" },
+  { value: 37, decimals: 0, suffix: "", label: "Contract unit tests" },
   { value: 10, decimals: 0, suffix: "%", label: "Early-exit penalty → Buffer" },
 ];
 
 const FEES = [
-  { label: "Cash-out → IDR", rate: "0.40%" },
+  { label: "Cash-out → fiat (anchor)", rate: "0.40%" },
   { label: "Top Up → USDC", rate: "0.35%" },
   { label: "Invest / Convert", rate: "0.40%" },
   { label: "Savings, in and out", rate: "Free" },
@@ -55,11 +57,14 @@ function Logo({ size = 30 }: { size?: number }) {
   );
 }
 
-function StatCard({ stat, inView }: { stat: (typeof STATS)[number]; inView: boolean }) {
+function StatCard({ stat }: { stat: (typeof STATS)[number] }) {
   return (
     <div className="lp-stat">
       <div className="lp-stat-value">
-        <AnimatedNumber value={inView ? stat.value : 0} decimals={stat.decimals} suffix={stat.suffix} />
+        {/* Render the real figure at rest — never count up from 0, so a
+            crawler, a no-JS load, or a screenshot taken before scroll never
+            shows a misleading "0". */}
+        <AnimatedNumber value={stat.value} decimals={stat.decimals} suffix={stat.suffix} />
       </div>
       <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
         {stat.label}
@@ -102,8 +107,6 @@ function resetTilt(e: React.MouseEvent<HTMLElement>) {
 
 export function Onboarding() {
   const nav = useNavigate();
-  const statsRef = useRef(null);
-  const statsInView = useInView(statsRef, { once: true, amount: 0.3 });
   const [scrolled, setScrolled] = useState(false);
   const reduceMotion = useReducedMotion();
 
@@ -158,14 +161,14 @@ export function Onboarding() {
         </Reveal>
         <Reveal variant="blur" delay={0.05}>
           <h1 style={{ fontSize: "var(--text-display)", margin: 0, lineHeight: 1.05, maxWidth: 780, letterSpacing: "-0.02em" }}>
-            Income lands
+            Set your split once.
             <br />
-            <span className="lp-gradient-text">Instantly split</span>
+            <span className="lp-gradient-text">Savings locks itself.</span>
           </h1>
         </Reveal>
         <Reveal variant="up" delay={0.12}>
           <p className="muted" style={{ fontSize: "var(--text-body-lg)", maxWidth: 560, margin: 0 }}>
-            One tap splits every USDC payday into Needs, Savings, Buffer, and Invest — non-custodial, on-chain.
+            At payday, confirm once. Your Savings share moves into a Soroban vault, timelocked by code — the rest stays liquid. Non-custodial, on Stellar.
           </p>
         </Reveal>
         <Reveal variant="up" delay={0.18}>
@@ -219,7 +222,7 @@ export function Onboarding() {
       <div style={{ overflow: "hidden", padding: "18px 0", borderTop: "1px solid var(--color-border-subtle)", borderBottom: "1px solid var(--color-border-subtle)" }}>
         <div className="lp-marquee-track">
           {[...Array(2)].flatMap((_, dup) =>
-            ["Stellar Testnet", "Soroban · Rust", "React + TypeScript", "PWA — Mobile First", "19 Contract Tests Passing", "SEP-1 · SEP-7 · SEP-10 · SEP-24"].map((t, i) => (
+            ["Stellar Testnet", "Soroban · Rust", "React + TypeScript", "PWA — Mobile First", "37 Contract Tests Passing", "SEP-1 · SEP-7 · SEP-10 · SEP-24"].map((t, i) => (
               <span key={`${dup}-${i}`} className="muted" style={{ fontSize: 13, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 5, height: 5, borderRadius: 3, background: "var(--color-accent-primary)", display: "inline-block" }} />
                 {t}
@@ -304,11 +307,11 @@ export function Onboarding() {
       </section>
 
       {/* 5. Proof / stats strip */}
-      <section id="proof" ref={statsRef} className="lp-section" style={{ padding: "48px 24px" }}>
+      <section id="proof" className="lp-section" style={{ padding: "48px 24px" }}>
         <Reveal variant="up" className="card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 20, padding: 32 }}>
           {STATS.map((s, i) => (
             <Reveal key={s.label} variant="scale" delay={i * 0.1}>
-              <StatCard stat={s} inView={statsInView} />
+              <StatCard stat={s} />
             </Reveal>
           ))}
         </Reveal>
@@ -339,7 +342,7 @@ export function Onboarding() {
       {/* 7. Bottom CTA */}
       <section className="lp-section" style={{ textAlign: "center", padding: "48px 24px 96px", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
         <Reveal variant="scale">
-          <h2 style={{ fontSize: "var(--text-h1)", margin: 0 }}>Put your income on autopilot.</h2>
+          <h2 style={{ fontSize: "var(--text-h1)", margin: 0 }}>Set it once. Confirm at payday.</h2>
         </Reveal>
         <Reveal variant="scale" delay={0.12}>
           <button

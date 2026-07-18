@@ -55,9 +55,10 @@ keeper's role further.
 **30-second answer:** "Blended take-rate is about 0.29% on processed volume —
 call it ~$5–7 revenue per active user per month at $2,000 income, ~85% margin
 because on-chain fees are sub-cent and infra is serverless-free. Against a ~$15
-community/referral CAC that's roughly a 3-month payback and ~5–6× LTV/CAC. The
-anchor we're displacing costs users 5–7%, so we're 15–20× cheaper — the fee is
-headroom, not a barrier. Full model with assumptions is in `docs/unit-economics.md`."
+community/referral CAC that's roughly a 3-month payback and ~5–6× LTV/CAC. That
+0.29% is *Shunt's own* service fee, not the total landed cost — a fiat anchor
+charges its own fee on top, so end-to-end cost depends on the corridor and would
+be benchmarked before launch. Full model with assumptions is in `docs/unit-economics.md`."
 
 **The one number to volunteer:** break-even ≈ ~410 active users.
 
@@ -70,9 +71,11 @@ to ~11 months."
 ## Q4. "The vault contract is unaudited — how do you justify holding real user funds?"
 
 **30-second answer:** "We don't, yet — the README says keep real amounts trivial
-until audit, by design. What we *do* have: 26 unit tests covering every
+until audit, by design. What we *do* have: 37 unit tests covering every
 money-critical path — exact split, dust (no stroop ever lost), replay rejection,
-timelock, the anchor allowlist, and the full goals lifecycle. The attack surface
+timelock, the anchor allowlist, the full goals lifecycle, plus authorization
+boundaries, input validation, the goal-vs-aggregate timelock rule, and a
+solvency/conservation invariant. The attack surface
 is deliberately small: the contract only holds the Savings lane, withdrawals are
 owner-only, and there are no external calls except the token contract. Audit
 before mainnet with real funds is on the roadmap."

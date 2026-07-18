@@ -23,7 +23,7 @@ Shunt is a financial autopilot for people who earn from abroad. The moment USDC 
 
 ### Built real, not slideware
 
-- **26 Soroban unit tests** + a **real-testnet end-to-end suite** (Playwright, 41 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow — **no mocks**.
+- **37 Soroban unit tests** (split exactness, rounding, replay, timelock, penalty, savings goals, **authorization boundaries**, and a **solvency/conservation invariant**) + a **real-testnet end-to-end suite** (Playwright, 41 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow — **no mocks**.
 - **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
 - **Double idempotency:** the keeper dedupes by tx hash *and* the contract rejects repeat `inflow_key`s — one income, one split, ever. Replay is rejected on-chain (Error #6).
 - **Verifiable on-chain:** every step of the split + savings-goals lifecycle is a clickable **testnet** hash ([Live on testnet](#live-on-testnet)). Network for this submission is **testnet only** — no mainnet claims.
@@ -61,7 +61,7 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 | **Structure** | **Invest lane** *(optional)* — spot DCA into your choice of **XLM or TXAUM** (Shunt's own testnet demo gold, standing in for Matrixdock's mainnet-only XAUm) via path payment after each split | ✅ shipped                    |
 | **Structure** | **In-app Convert** — XLM ⇄ USDC swap on the Stellar DEX (live quote, slippage floor), no third party                                                                                            | ✅ shipped                    |
 | **Structure** | **Code-custody savings** with timelock + penalty-to-your-buffer                                                                                                                                  | ✅ shipped                    |
-| **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to IDR/PHP via a licensed anchor's hosted flow, rate & fee shown first                                                                              | ✅ shipped (testnet anchor)   |
+| **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to fiat via a licensed anchor's hosted flow, rate & fee shown first                                                                              | ✅ shipped vs SDF test anchor; PHP (MoneyGram) is the production candidate, IDR the next corridor   |
 
 Shunt never touches fiat and never holds your keys — licensed anchors do fiat, your wallet and the vault contract do custody. That's what makes the loop possible without Shunt becoming a bank or a remittance company.
 
@@ -79,13 +79,13 @@ Shunt never touches fiat and never holds your keys — licensed anchors do fiat,
 | 2 | **Set rules**    | Sliders for Needs / Savings / Buffer / Invest + a savings timelock. Saved on-chain via`set_rules` — the contract is the single source of truth.                                                                                                                    |
 | 3 | **Income lands** | Via your payment link, a Top Up, or any direct USDC transfer. The keeper streams Horizon and detects it within seconds.                                                                                                                                               |
 | 4 | **One tap**      | The keeper prepares an unsigned`distribute` transaction. You review the exact breakdown and sign. *Nothing moves without your signature.*                                                                                                                         |
-| 5 | **Auto-split**   | One atomic Soroban transaction: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is then spot-converted into your chosen asset (XLM or TXAUM) by a follow-up path payment you approve in the same flow. Sub-cent fees, settled in seconds. |
+| 5 | **Auto-split**   | The three-lane allocation is **one atomic Soroban transaction**: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is spot-converted into your chosen asset (XLM or TXAUM) by a **separate path payment you approve afterward** — not part of the atomic split. Sub-cent fees, settled in seconds. |
 
 **Where each lane lives — and why:**
 
 | Lane                | Lives in           | Access             | Purpose                                                                                               |
 | ------------------- | ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------- |
-| 🟡**Needs**   | Your wallet        | Anytime            | Daily spending; cash out to IDR/PHP via anchor when*you* choose                                     |
+| 🟡**Needs**   | Your wallet        | Anytime            | Daily spending; cash out to fiat through a supported Stellar anchor when*you* choose                 |
 | 🟢**Savings** | The vault contract | After the timelock | Value-holding savings in USDC. Held by code — because a timelock in your own wallet would be fiction |
 | 🔵**Buffer**  | Your wallet        | Instantly          | Emergency fund — no lock, no penalty, no questions                                                   |
 | 🟣**Invest** *(optional)* | Your wallet | Anytime | Opt-in growth slice — spot DCA (an asset purchase, not a yield product). **Set it to 0% and Shunt's promise is unchanged.** |
@@ -195,7 +195,7 @@ Three deliberate design principles:
 | `get_rules / get_savings / get_buffer_credit / get_lock_until`            | —   | Read-only views.                                                                                  |
 | `get_savings_goals / get_unallocated_savings`                             | —   | Read-only views for the goals feature.                                                            |
 
-Errors are explicit (`NotInitialized`=1 … `LabelTooLong`=12); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. 26 unit tests (the original 19 — eleven plus eight for the goals feature — untouched, plus 7 new ones) cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, the full goals lifecycle, threshold auto-refill priority, and independent per-goal unlock dates. **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a classic path payment. The buffer-topup and laddered-goals additions only read/write the existing `Rules`/`Goal` structs' new fields and never touch the core split-and-lock arithmetic the original 19 tests exercise, so those guarantees are unchanged even though the contract keeps growing.
+Errors are explicit (`NotInitialized`=1 … `LabelTooLong`=12); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. 37 unit tests cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, the full goals lifecycle, threshold auto-refill priority, and independent per-goal unlock dates — plus a hardening set added after review: **authorization boundaries** (no account can withdraw another's Savings, rewrite its rules, or delete its goals), **input validation** (zero/negative amounts rejected), **init cannot be re-called**, the **goal-vs-aggregate timelock rule** (a goal can lock *longer* than the aggregate Savings lock but never shorter, so a zero-lock goal can't be an escape hatch around the timelock/penalty), and a **solvency/conservation invariant** (the vault's token balance always covers the sum of every user's Savings + Buffer credit). **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a separate classic path payment.
 
 ## Money in, money out (the anchor stack)
 
@@ -235,14 +235,14 @@ The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the cont
 
 Every revenue line is a transparent fee on a service the user *wants*: 0.4% on Needs-lane cash-out, a similar fee on Top Up and on Invest conversions. **No lending, no yield products, no cut of your savings** — by design, not by omission: interest-based yield would add unnecessary smart-contract risk. The 10% early-withdrawal penalty goes to *your own* buffer, not to us. Savings deposits and post-lock withdrawals are free, forever.
 
-Blended take-rate is ~0.29% of processed volume — **15–20× cheaper than the 5–7% remittance/bank conversion** it replaces, so the fee is headroom, not a barrier. A full illustrative model (ARPU, CAC, payback, LTV, break-even, and the assumptions that would break it) lives in [`docs/unit-economics.md`](docs/unit-economics.md).
+Shunt's own service fee is a blended **~0.29% of processed volume**. That is *Shunt's* take, not the total landed cost — a fiat anchor charges its own fee on top, so end-to-end cost depends on the selected anchor and corridor and would be benchmarked before launch. A full illustrative model (ARPU, CAC, payback, LTV, break-even, and the assumptions that would break it) lives in [`docs/unit-economics.md`](docs/unit-economics.md).
 
 ## Quickstart
 
 ```bash
 # 1. Contracts — test & build (Rust + stellar CLI)
 cd contracts/shunt-vault
-cargo test                      # 26 tests
+cargo test                      # 37 tests
 stellar contract build
 
 #    Deploy your own instance (or use the testnet one above)
