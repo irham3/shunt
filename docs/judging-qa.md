@@ -170,6 +170,32 @@ today," never as deep local-ecosystem integration.
 
 ---
 
+## Q — Grow lane (DeFi & Composability)
+
+**Is TXAUM real gold?** No. TXAUM is an **unbacked testnet stand-in** for Matrixdock's
+XAUm (mainnet-only, LBMA physical gold). We never call it real gold, backed, or halal —
+the card says so in muted text. It exists to prove the path-payment mechanism against
+real seeded liquidity; XAUm is the mainnet target.
+
+**Will Shunt offer yield?** Protected Savings — **never.** Savings stays 100% USDC, no
+lending, by design. Yield lives only in a **separate, clearly-labeled "Interest-based"
+tier** in Grow, opt-in and risk-disclosed. The Blend/DeFindex lending integration is
+pinned to the XLM-reserve path (Blend testnet uses its own USDC SAC, not our Circle
+USDC) and stays **Roadmap until a real wallet-signed supply→withdraw round-trip is
+verified on testnet** — we don't label it live before then.
+
+**Are there ETFs on Stellar?** Not yet. DTCC has targeted tokenized stocks/ETFs on
+Stellar for **H1 2027**. In Shunt that's a config entry, not architecture — when the
+asset exists, it's one adapter in the growth registry, not a rewrite.
+
+**Is any of the demo mocked?** No. Every demoable Grow action is a **signed testnet
+transaction**, verifiable on stellar.expert. There is no reference-rate simulation, no
+fake balances, no seeded fake history — the reference-rate fallback was removed outright.
+Anything that genuinely can't exist on testnet appears only as a non-purchasable Roadmap
+card.
+
+---
+
 ## General posture
 
 - Lead every answer with the **honest boundary**, then the **mitigation**. This

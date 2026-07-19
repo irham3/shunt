@@ -63,6 +63,21 @@ Not a remittance app. Shunt works **after** the money lands: split, save, protec
 
 ---
 
+## 5b — Growth roadmap (DeFi & Composability)
+
+The optional Invest slice is now a tiered **Grow** lane. Everything demoable is a **real on-chain transaction — here are the hashes.**
+
+| Tier | Testnet today | Mainnet target |
+| --- | --- | --- |
+| 🟡 Value hedge | **TXAUM** spot buy via DEX path payment | Matrixdock **XAUm** (LBMA gold, live on Stellar) |
+| 🔵 Crypto | **XLM** spot buy via DEX path payment | XLM |
+| 🟣 Yield (interest) | Blend/DeFindex supply — **integration path pinned**, Roadmap until a signed round-trip is verified | Blend / DeFindex lending |
+| ⚪ Coming to Stellar | *(non-purchasable)* | **BENJI** (Franklin Templeton, ~$654M on Stellar), USDY, Stablebonds, **DTCC ETFs (H1 2027)** |
+
+> Portfolio value and growth are derived from real Horizon balances + trade history + live DEX quotes — never a stored estimate. On mainnet the rails already exist ($3B+ RWAs on Stellar); Shunt adds one adapter per asset, not a rewrite.
+
+---
+
 ## 6 — Live demo
 
 > Screen-share the app (testnet). Beats: connect → set rules (show the "Active

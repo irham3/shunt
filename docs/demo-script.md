@@ -68,7 +68,17 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
   be fiction. Early exit costs 10%, but it's not lost — it goes to your *own*
   buffer. Discipline with a safety valve."
 
-### [2:20–2:45] Cash out & Transfer
+### [2:20–2:35] Grow — real DEX buy, honest roadmap
+- **On screen:** open **Grow**. Scroll the four tiers. Buy a small amount into
+  TXAUM (or XLM) — show the quote, sign, then click the tx hash to open
+  **stellar.expert** on the path payment that just executed.
+- **Say:** "Growth is opt-in and separate from Savings, which never leaves USDC.
+  This gold buy is a *real* testnet path payment — here's the hash on the explorer.
+  On mainnet this points at Matrixdock's XAUm; the roadmap cards — Franklin
+  Templeton's BENJI, DTCC ETFs in 2027 — are honestly marked 'not yet available,'
+  never faked. Everything you can click here is a real on-chain transaction."
+
+### [2:35–2:45] Cash out & Transfer
 - **On screen:** Send & Pay — choose between USDC and XLM for the asset. Show a direct transfer, then withdraw where the anchor's SEP-24 hosted flow opens, rate + fee shown before confirm.
 - **Say:** "You can send either USDC or XLM. Cash-out to fiat runs on standard SEP-24 anchor rails. Demo uses SDF's test anchor — the production corridor is a licensed regional anchor like IDRX or Coins.ph; swapping is config, not a rewrite. Settlement is the anchor's, and we say so instead of faking 'instant'."
 

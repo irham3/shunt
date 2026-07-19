@@ -61,7 +61,7 @@ F7 — Transaction History: on-chain explorer links. Shipped.
 F8 — Off-Ramp (SEP-24): anchor-hosted cash-out to IDR/PHP, rate and fee shown before confirm. Shipped.
 F9 — IDR Value Display: forex API with 10-min cache. Shipped.
 F10 — On-Ramp / Top Up (SEP-24 deposit): fund Shunt with IDR through the anchor's hosted deposit flow without leaving the app — reuses the shipped SEP-1/10 stack. Shipped.
-F11 — Invest Lane (auto-DCA): a 4th split lane converted USDC→XLM via classic path payment right after each split — spot purchase, no lending, no yield products. Falls back to a labeled simulated rate when DEX liquidity is unavailable. Shipped.
+F11 — Invest Lane (auto-DCA): a 4th split lane converts USDC→XLM via classic path payment right after each split — spot purchase, no lending, no yield products. If the DEX has no path this cycle, the slice simply stays as spendable wallet USDC — never a simulated fill. Shipped.
 F12 — Payment Request Link (SEP-7): request payment from inside Shunt via a web+stellar:pay link/QR any SEP-7 wallet can open, plus a public payer landing page; card checkout for non-crypto payers via an on-ramp partner is roadmap. Shipped.
 F13 — Savings Goals: named, on-chain sub-allocations of the Savings balance (e.g. "Emergency fund", "Wedding") via create/withdraw/rename/delete_savings_goal on ShuntVault — bookkeeping only, drawn from and released back to the same aggregate balance, no separate custody. Shipped.
 F14 — Laddered Goal Timelocks: each savings goal gets its own independent unlock date (contract field `Goal.unlock_at`), instead of sharing one aggregate lock — proven live with a 60-second and a 2-year goal withdrawn seconds apart, one penalty-free, one not. Shipped.
@@ -70,7 +70,23 @@ F16 — Pay a Request (SEP-7, any asset): pay someone else's `web+stellar:pay` l
 F17 — Multi-Currency Settle: spend USDC directly into a local-currency demo asset (Shunt-issued testnet TIDR/TPHP with real seeded DEX liquidity) via live-quoted path payment. Shipped.
 F18 — Scheduled Bill-Pay: a native Stellar `createClaimableBalance` with a future-dated claim predicate for the recipient (and an unconditional one for the sender, so it's cancellable) — schedules rent/cicilan without a custom contract or any "signs itself later" claim. Shipped.
 F19 — Savings Auto-Escalation: opt-in toggle that bumps the Savings % by 1 point every 3 splits (capped at 50%) via a real follow-up `set_rules` call, shown explicitly in the confirmation UI. Shipped.
-F20 — Real Gold DCA (TXAUM): the Invest lane's Gold option now executes a genuine path payment against Shunt's own seeded testnet gold-demo-asset liquidity instead of always falling back to a labeled reference-rate simulation. Shipped.
+F20 — Real Gold DCA (TXAUM): the Invest lane's Gold option executes a genuine path payment against Shunt's own seeded testnet gold-demo-asset liquidity. The reference-rate simulation has been removed entirely (real over mock) — if TXAUM has no DEX path, the buy is blocked with an honest message rather than faked. Shipped.
+
+F21 — Grow lane (tiered): the Invest lane is restructured into a registry-driven "Grow" experience with four tiers — Value hedge (TXAUM→XAUm), Yield-bearing (interest), Crypto (XLM), and a non-purchasable "Coming to Stellar" roadmap. Portfolio value and growth are derived from real Horizon balances + trade history + live DEX quotes, never local state. Shipped.
+
+GROW — REAL vs ROADMAP (DeFi & Composability)
+
+REAL on testnet today (every action is a signed tx, verifiable on stellar.expert):
+- DEX path payments — spot USDC→XLM and USDC→TXAUM, live-quoted via Horizon strict-send/receive pathfinding.
+- Seeded AMM/orderbook liquidity — Shunt's own TXAUM/USDC market, two-sided (`scripts/issue-demo-assets.mjs`).
+- Horizon-derived portfolio — balances + real trade history + live quotes drive value and "+X% since first buy".
+- Reflector/DEX pricing — XLM/USD marked from live sources, never hardcoded.
+
+ROADMAP (cannot exist on testnet — shown as non-purchasable cards, never faked):
+- XAUm (Matrixdock physical gold), BENJI (Franklin Templeton), USDY (Ondo), Stablebonds (Etherfuse CETES), DTCC tokenized ETFs.
+- Yield tier (Blend/DeFindex lending) — the integration path is pinned (supply the XLM reserve; see `web/src/config/growth-assets.ts`) but stays Roadmap until a real wallet-signed supply→withdraw round-trip is verified on testnet. Never mocked.
+
+Growth today proves the mechanism with real testnet transactions. On mainnet the rails already exist: Matrixdock XAUm is our first target, and Stellar holds over $3B in RWAs including Franklin Templeton's BENJI. When DTCC brings tokenized ETFs to Stellar in 2027, Shunt adds one adapter — not a rewrite.
 
 Together F8+F10+F12 make Shunt a single touchpoint: money comes in (payment link / Top Up), gets structured (split, lock, DCA), and goes out (anchor cash-out) — the user never opens another app; licensed anchors and partners handle all fiat.
 
