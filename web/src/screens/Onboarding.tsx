@@ -156,14 +156,14 @@ export function Onboarding() {
       >
         <Reveal variant="up">
           <span className="chip lp-chip-live" style={{ display: "inline-flex", alignItems: "center", gap: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12 }}>
-            <span className="lp-live-dot" /> Live on Stellar testnet
+            <span className="lp-live-dot" /> Live on Stellar
           </span>
         </Reveal>
         <Reveal variant="blur" delay={0.05}>
           <h1 className="hero-title">
-            Split income
+            Automated
             <br />
-            Lock savings
+            Money Routing
           </h1>
         </Reveal>
         <Reveal variant="up" delay={0.12}>
