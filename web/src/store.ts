@@ -63,10 +63,11 @@ interface ShuntState {
   /** TXAUM (testnet demo gold) units accumulated the same way, while the
       toggle was set to GOLD. */
   investGoldHeld: number;
-  /** USDC earmarked for Invest that never left the wallet (simulated/reference-
-      rate conversions, e.g. GOLD on testnet). Subtracted from the "unsplit
-      USDC" heuristic so a fresh split doesn't immediately re-flag its own
-      invest slice as unsplit income. */
+  /** Legacy: USDC earmarked for Invest that never left the wallet. This only
+      ever accrued from the reference-rate simulation, which has been removed
+      ("real over mock") — an invest slice that can't fill on-chain now simply
+      stays as spendable wallet USDC. Retained (always 0) for persisted-state
+      compatibility; still subtracted in Home's unsplit-USDC heuristic. */
   investWalletUsdc: number;
   /** Which asset the Invest lane buys. XLM = live testnet DEX liquidity;
       GOLD = TXAUM, Shunt's own testnet demo gold token (stands in for
@@ -125,10 +126,13 @@ interface ShuntState {
   offramp: (amount: number) => void;
   /** F11: record a Top Up request sent to the anchor (funds land later as a normal inflow). */
   recordTopUp: (amount: number) => void;
-  /** F12: record a DCA conversion of the invest slice (real tx or labeled simulation). */
-  applyInvestConversion: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
-  /** Manually buy invest assets using spendable USDC (moves balance from needs to invest). */
-  manualInvestBuy: (usd: number, xlm: number, txHash?: string, simulated?: boolean) => void;
+  /** F12: record a DCA conversion of the invest slice. Only ever called for a
+   *  REAL on-chain conversion (a signed path payment) — there is no simulated
+   *  path. If the DEX can't fill, the slice simply stays as spendable USDC. */
+  applyInvestConversion: (usd: number, xlm: number, txHash?: string) => void;
+  /** Manually buy invest assets using spendable USDC (moves balance from needs
+   *  to invest). Real on-chain buys only — no reference-rate simulation. */
+  manualInvestBuy: (usd: number, xlm: number, txHash?: string) => void;
   /** Record a direct wallet-to-wallet XLM payment (Send & Pay, XLM tab). */
   recordXlmPayment: (destination: string, amountXlm: string, txHash: string) => void;
   /** Record a direct wallet-to-wallet USDC payment (Send & Pay, USDC transfer). */
@@ -408,21 +412,18 @@ export const useShunt = create<ShuntState>()(
         });
       },
 
-      applyInvestConversion: (usd, xlm, txHash, simulated) => {
-        const { investXlmHeld, investGoldHeld, investWalletUsdc, activity, investAsset } = get();
+      applyInvestConversion: (usd, xlm, txHash) => {
+        const { investXlmHeld, investGoldHeld, activity, investAsset } = get();
         const isGold = investAsset === "GOLD";
         const unit = isGold ? "TXAUM" : "XLM";
         set({
           investXlmHeld: isGold ? investXlmHeld : investXlmHeld + xlm,
           investGoldHeld: isGold ? investGoldHeld + xlm : investGoldHeld,
-          // Simulated conversion → the USDC is still in the wallet; remember
-          // that so Home doesn't offer to re-split it.
-          investWalletUsdc: simulated ? investWalletUsdc + usd : investWalletUsdc,
           activity: [
             {
               id: `${Date.now()}-inv`,
               kind: "invest",
-              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${unit}${simulated ? " (reference rate)" : ""}`,
+              title: `DCA ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${unit}`,
               amountUsdc: usd,
               txHash,
               at: new Date().toISOString(),
@@ -433,8 +434,8 @@ export const useShunt = create<ShuntState>()(
         });
       },
 
-      manualInvestBuy: (usd, xlm, txHash, simulated) => {
-        const { investXlmHeld, investGoldHeld, investWalletUsdc, activity, investAsset, balances } = get();
+      manualInvestBuy: (usd, xlm, txHash) => {
+        const { investXlmHeld, investGoldHeld, activity, investAsset, balances } = get();
         const isGold = investAsset === "GOLD";
         const unit = isGold ? "TXAUM" : "XLM";
         set({
@@ -445,12 +446,11 @@ export const useShunt = create<ShuntState>()(
           },
           investXlmHeld: isGold ? investXlmHeld : investXlmHeld + xlm,
           investGoldHeld: isGold ? investGoldHeld + xlm : investGoldHeld,
-          investWalletUsdc: simulated ? investWalletUsdc + usd : investWalletUsdc,
           activity: [
             {
               id: `${Date.now()}-inv-manual`,
               kind: "invest",
-              title: `Manual Buy: ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${unit}${simulated ? " (reference rate)" : ""}`,
+              title: `Manual Buy: ${fmtUsdc(usd)} USDC → ${xlm.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${unit}`,
               amountUsdc: usd,
               txHash,
               at: new Date().toISOString(),

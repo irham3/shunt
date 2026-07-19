@@ -6,6 +6,7 @@ import { useShunt } from "./store";
 import { Onboarding } from "./screens/Onboarding";
 import { ConnectWallet } from "./screens/ConnectWallet";
 import { Home } from "./screens/Home";
+import { Grow } from "./screens/Grow";
 import { LaneDetail } from "./screens/LaneDetail";
 import { ConfigureShunt } from "./screens/ConfigureShunt";
 import { AutoSplitConfirm } from "./screens/AutoSplitConfirm";
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/" element={address ? <Navigate to="/home" replace /> : t(<Onboarding />)} />
           <Route path="/connect" element={t(<ConnectWallet />)} />
           <Route path="/home" element={address ? t(<Home />) : <Navigate to="/" replace />} />
+          <Route path="/grow" element={address ? t(<Grow />) : <Navigate to="/" replace />} />
           <Route path="/lane/:id" element={address ? t(<LaneDetail />) : <Navigate to="/" replace />} />
           <Route path="/shunt" element={address ? t(<ConfigureShunt />) : <Navigate to="/" replace />} />
           <Route path="/confirm" element={t(<AutoSplitConfirm />)} />

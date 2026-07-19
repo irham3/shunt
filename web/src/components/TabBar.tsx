@@ -44,6 +44,14 @@ export function TabBar() {
           padding: "24px 16px", overflowY: "auto"
         }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+            <NavLink to="/grow" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `rail-item${isActive ? " active" : ""}`} style={{ background: "var(--color-bg-elevated)" }}>
+              {({ isActive }: { isActive: boolean }) => (
+                <>
+                  <i className={isActive ? "ph-fill ph-trend-up" : "ph ph-trend-up"} style={{ fontSize: 18 }} />
+                  Grow
+                </>
+              )}
+            </NavLink>
             <div style={{ fontSize: 13, textTransform: "uppercase", fontWeight: 700, color: "var(--color-text-secondary)", marginBottom: 8 }}>
               Your Lanes
             </div>
@@ -95,7 +103,15 @@ export function TabBar() {
               )}
             </NavLink>
           ))}
-          
+          <NavLink to="/grow" className={({ isActive }) => `rail-item${isActive ? " active" : ""}`}>
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <i className={`${isActive ? "ph-fill" : "ph"} ph-trend-up`} style={{ fontSize: 18 }} />
+                Grow
+              </>
+            )}
+          </NavLink>
+
           {/* Lanes submenu — each allocation category (incl. custom) is its own
               menu item, so navigating to a lane's detail never routes through the
               allocation editor. */}

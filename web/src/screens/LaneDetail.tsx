@@ -11,7 +11,6 @@ import {
   USDC_CODE, USDC_ISSUER, hasTrustline, addTrustline,
 } from "../lib/stellar";
 import { Asset, StrKey } from "@stellar/stellar-sdk";
-import { getGoldUsdRate } from "../lib/rates";
 
 const TXAUM = DEMO_ASSETS.find((a) => a.code === "TXAUM");
 
@@ -87,33 +86,24 @@ export function LaneDetail() {
     setBuying(true);
     try {
       if (investAsset === "GOLD") {
-        // Real testnet gold: if Shunt's own TXAUM demo asset has live
-        // orderbook liquidity (scripts/issue-demo-assets.mjs), execute a
-        // genuine path payment — same honesty pattern as XLM. Falls back to
-        // the labeled reference-rate simulation only if that liquidity is
-        // unavailable, never silently.
+        // Real testnet gold only. If Shunt's TXAUM demo asset has no live DEX
+        // path right now (thin liquidity), the buy is blocked with an honest
+        // message — never recorded as a simulated/reference-rate fill.
         const txaumQuote = TXAUM ? await quoteUsdcToAsset(new Asset(TXAUM.code, TXAUM.issuer), amount.toFixed(7)) : null;
-        if (TXAUM && txaumQuote) {
-          const txaumAsset = new Asset(TXAUM.code, TXAUM.issuer);
-          // A path payment to self can't deliver an asset the account has
-          // never held before — Stellar requires the trustline to already
-          // exist. One extra signature, first time only (same two-step
-          // honesty pattern as everywhere else a new trustline is needed).
-          if (!(await hasTrustline(address, txaumAsset))) {
-            await addTrustline(address, txaumAsset);
-          }
-          const minGold = (txaumQuote.amount * 0.98).toFixed(7);
-          const hash = await convertUsdcToAsset(address, txaumAsset, amount.toFixed(7), minGold, txaumQuote.path);
-          manualInvestBuy(amount, txaumQuote.amount, hash, false);
-          showToast(`Bought ${txaumQuote.amount.toFixed(4)} TXAUM (testnet demo gold) for ${fmtUsdc(amount)} USDC`);
-        } else {
-          const { rate } = await getGoldUsdRate();
-          const goldAmt = amount / rate;
-          // Simulated purchase (no on-chain tx) — record without a tx hash so
-          // Activity doesn't link to a nonexistent explorer page.
-          manualInvestBuy(amount, goldAmt, undefined, true);
-          showToast(`Bought ${goldAmt.toFixed(4)} TXAUM (reference rate) for ${fmtUsdc(amount)} USDC`);
+        if (!TXAUM || !txaumQuote) {
+          throw new Error("No USDC → TXAUM path on the testnet DEX right now — try again shortly.");
         }
+        const txaumAsset = new Asset(TXAUM.code, TXAUM.issuer);
+        // A path payment to self can't deliver an asset the account has never
+        // held before — Stellar requires the trustline to already exist. One
+        // extra signature, first time only.
+        if (!(await hasTrustline(address, txaumAsset))) {
+          await addTrustline(address, txaumAsset);
+        }
+        const minGold = (txaumQuote.amount * 0.98).toFixed(7);
+        const hash = await convertUsdcToAsset(address, txaumAsset, amount.toFixed(7), minGold, txaumQuote.path);
+        manualInvestBuy(amount, txaumQuote.amount, hash);
+        showToast(`Bought ${txaumQuote.amount.toFixed(4)} TXAUM (testnet demo gold) for ${fmtUsdc(amount)} USDC`);
       } else {
         // Size the slippage floor from a LIVE DEX quote — the CoinGecko
         // display rate reflects mainnet and can sit far above the testnet
@@ -122,7 +112,7 @@ export function LaneDetail() {
         if (!quote) throw new Error("No USDC → XLM path on the DEX right now — try again later.");
         const minXlm = (quote.amount * 0.98).toFixed(7);
         const hash = await convertUsdcToXlm(address, amount.toFixed(7), minXlm, quote.path);
-        manualInvestBuy(amount, quote.amount, hash, false);
+        manualInvestBuy(amount, quote.amount, hash);
         showToast(`Bought ≈${quote.amount.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM for ${fmtUsdc(amount)} USDC`);
       }
       setBuyAmount("");

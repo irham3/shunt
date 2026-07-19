@@ -9,7 +9,6 @@ import { Asset } from "@stellar/stellar-sdk";
 
 const TXAUM = DEMO_ASSETS.find((a) => a.code === "TXAUM");
 import { resolveRulesNotSet, vaultSetRules } from "../lib/vault";
-import { getXlmUsdRate, getGoldUsdRate } from "../lib/rates";
 import { fmtUsdc, useShunt } from "../store";
 
 /**
@@ -90,54 +89,42 @@ export function AutoSplitConfirm() {
     const thisInvestAmt = (splitAmount * pct) / 100;
     if (thisInvestAmt <= 0) return;
 
-    if (investAsset === "GOLD") {
-      // Real testnet gold via Shunt's own TXAUM demo asset (real liquidity —
-      // see scripts/issue-demo-assets.mjs), same honesty pattern as XLM.
-      // Falls back to the labeled reference-rate simulation only if that
-      // liquidity is unavailable this cycle.
-      if (splitWasOnChain && address && TXAUM) {
-        try {
-          const txaumAsset = new Asset(TXAUM.code, TXAUM.issuer);
-          const quote = await quoteUsdcToAsset(txaumAsset, thisInvestAmt.toFixed(7));
-          if (quote) {
-            // First-time trustline, same as the manual-buy path — a path
-            // payment to self can't deliver an asset never held before.
-            if (!(await hasTrustline(address, txaumAsset))) {
-              await addTrustline(address, txaumAsset);
-            }
-            const minGold = (quote.amount * 0.95).toFixed(7);
-            const hash = await convertUsdcToAsset(address, txaumAsset, thisInvestAmt.toFixed(7), minGold, quote.path);
-            applyInvestConversion(thisInvestAmt, quote.amount, hash, false);
-            return;
-          }
-        } catch {
-          // fall through to simulation
-        }
-      }
-      const { rate } = await getGoldUsdRate();
-      const grams = thisInvestAmt / rate;
-      applyInvestConversion(thisInvestAmt, grams, undefined, true);
-      return;
-    }
+    // Real on-chain conversion ONLY — no reference-rate simulation. This is a
+    // best-effort post-split step: if the split wasn't on-chain, or the DEX has
+    // no path, or the user declines the signature, the invest slice simply
+    // stays as spendable USDC in the wallet and nothing fake is recorded. Any
+    // error is swallowed so a split that already succeeded on-chain never fails
+    // on this optional step.
+    if (!splitWasOnChain || !address) return;
 
-    if (splitWasOnChain && address) {
-      try {
-        // Live DEX quote sizes both the expected amount and the slippage
-        // floor — the CoinGecko rate tracks mainnet and made testnet path
-        // payments fail with op_under_dest_min every time.
-        const quote = await quoteConversion("usdc-xlm", thisInvestAmt.toFixed(7));
-        if (quote) {
-          const minXlm = (quote.amount * 0.95).toFixed(7);
-          const hash = await convertUsdcToXlm(address, thisInvestAmt.toFixed(7), minXlm, quote.path);
-          applyInvestConversion(thisInvestAmt, quote.amount, hash, false);
-          return;
+    try {
+      if (investAsset === "GOLD") {
+        if (!TXAUM) return;
+        const txaumAsset = new Asset(TXAUM.code, TXAUM.issuer);
+        const quote = await quoteUsdcToAsset(txaumAsset, thisInvestAmt.toFixed(7));
+        if (!quote) return;
+        // First-time trustline, same as the manual-buy path — a path payment to
+        // self can't deliver an asset never held before.
+        if (!(await hasTrustline(address, txaumAsset))) {
+          await addTrustline(address, txaumAsset);
         }
-      } catch {
-        // fall through to simulation
+        const minGold = (quote.amount * 0.95).toFixed(7);
+        const hash = await convertUsdcToAsset(address, txaumAsset, thisInvestAmt.toFixed(7), minGold, quote.path);
+        applyInvestConversion(thisInvestAmt, quote.amount, hash);
+        return;
       }
+
+      // Live DEX quote sizes both the expected amount and the slippage floor —
+      // the CoinGecko display rate tracks mainnet and made testnet path
+      // payments fail with op_under_dest_min every time.
+      const quote = await quoteConversion("usdc-xlm", thisInvestAmt.toFixed(7));
+      if (!quote) return;
+      const minXlm = (quote.amount * 0.95).toFixed(7);
+      const hash = await convertUsdcToXlm(address, thisInvestAmt.toFixed(7), minXlm, quote.path);
+      applyInvestConversion(thisInvestAmt, quote.amount, hash);
+    } catch {
+      // Best effort — the invest slice stays as wallet USDC, never simulated.
     }
-    const { rate } = await getXlmUsdRate();
-    applyInvestConversion(thisInvestAmt, thisInvestAmt / rate, undefined, true);
   }
 
   async function onApprove() {

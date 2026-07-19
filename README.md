@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/hero.svg" alt="Shunt — income lands, instantly split" width="900">
+  <img src="design/hero.svg" alt="Shunt — Automated money routing" width="900">
 </p>
 
 <p align="center">
