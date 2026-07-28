@@ -54,6 +54,12 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 | 📈**Optional investing that actually happens** | If you opt in, a slice of each income is spot-converted (DCA) into XLM or gold the moment it lands — the strategy everyone knows and nobody sticks to. Separate from the safety net; set it to 0% and nothing else changes |
 | 🔁**One app for the whole loop**      | Money in, structured, and out to your bank — anchors and partners handle fiat; you never leave Shunt                                       |
 
+### How Shunt differs from standard vaults (Vaquita, Piggy Wallet, Microvault)
+
+Standard vaults demand willpower. You receive money, open an app, and manually lock a portion away. This fails for freelancers with irregular income. 
+
+Shunt removes willpower. It operates as an **income router**, not a storage box. It sits at the entry point of your cashflow. The moment an invoice is paid or a client transfer lands, Shunt detects it. One tap routes the entire arrival into spending cash, an emergency buffer, and time-locked savings. It enforces financial discipline at the exact moment you get paid, before the money leaks into daily expenses.
+
 ## One app, the whole money loop
 
 <p align="center">
