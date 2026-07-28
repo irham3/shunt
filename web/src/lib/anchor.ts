@@ -16,14 +16,19 @@ import { NETWORK_PASSPHRASE } from "./stellar";
 export const ANCHOR_HOME_DOMAIN =
   import.meta.env.VITE_ANCHOR_HOME_DOMAIN ?? "testanchor.stellar.org";
 
-/**
- * SDF's public test anchor caps every sandbox deposit/withdraw at 1–10 of
- * the asset (its /sep24/info, not something Shunt imposes) — a production
- * anchor (IDRX etc.) would have real limits instead. Surfaced client-side
- * so the amount field fails fast instead of round-tripping to a 400.
- */
-export const ANCHOR_MIN_AMOUNT = 1;
-export const ANCHOR_MAX_AMOUNT = 10;
+async function fetchWithRetry(url: string | URL, options?: RequestInit, retries = 2): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.status >= 500) throw new Error(`Server error ${res.status}`);
+      return res;
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1))); // exponential backoff
+    }
+  }
+  return fetch(url, options);
+}
 
 /** Extract the anchor's own `{"error": "..."}` body, if present, for a readable message. */
 async function anchorErrorMessage(res: Response, fallback: string): Promise<string> {
@@ -47,7 +52,7 @@ let cachedInfo: AnchorInfo | null = null;
 /** SEP-1: fetch and parse the anchor's stellar.toml. */
 export async function discoverAnchor(): Promise<AnchorInfo> {
   if (cachedInfo) return cachedInfo;
-  const res = await fetch(`https://${ANCHOR_HOME_DOMAIN}/.well-known/stellar.toml`);
+  const res = await fetchWithRetry(`https://${ANCHOR_HOME_DOMAIN}/.well-known/stellar.toml`);
   if (!res.ok) throw new Error(`Anchor TOML fetch failed (${res.status})`);
   const toml = await res.text();
   const field = (key: string) =>
@@ -62,18 +67,48 @@ export async function discoverAnchor(): Promise<AnchorInfo> {
   return cachedInfo;
 }
 
+export interface AnchorAssetInfo {
+  minAmount: number;
+  maxAmount: number;
+}
+
+/** SEP-24 /info: Get dynamic limits for an asset */
+export async function getAnchorInfo(assetCode: string = "USDC"): Promise<AnchorAssetInfo> {
+  // TODO [MoneyGram]: Uncomment this once onboarding is complete to block non-USDC assets
+  // if (assetCode !== "USDC") throw new Error("MoneyGram staging currently only supports USDC.");
+
+  const { sep24Endpoint } = await discoverAnchor();
+  const res = await fetchWithRetry(`${sep24Endpoint}/info`);
+  if (!res.ok) throw new Error(await anchorErrorMessage(res, "Failed to get anchor /info"));
+  
+  const data = await res.json();
+  const info = data.deposit?.[assetCode] || data.receive?.[assetCode];
+  
+  return {
+    minAmount: Number(info?.min_amount ?? 1),
+    maxAmount: Number(info?.max_amount ?? 10000),
+  };
+}
+
+export const WALLET_HOME_DOMAIN = import.meta.env.VITE_WALLET_HOME_DOMAIN;
+
 /** SEP-10: obtain a JWT by signing the anchor's challenge with the wallet. */
 export async function authenticate(account: string): Promise<string> {
   const { webAuthEndpoint } = await discoverAnchor();
-  const chRes = await fetch(
-    `${webAuthEndpoint}?account=${encodeURIComponent(account)}`,
-  );
+  
+  const challengeUrl = new URL(webAuthEndpoint);
+  challengeUrl.searchParams.set("account", account);
+  if (WALLET_HOME_DOMAIN) {
+    challengeUrl.searchParams.set("home_domain", WALLET_HOME_DOMAIN);
+  }
+
+  const chRes = await fetchWithRetry(challengeUrl);
   if (!chRes.ok) throw new Error(await anchorErrorMessage(chRes, "SEP-10 challenge failed"));
   const { transaction } = await chRes.json();
 
   const signed = await signTxXdr(transaction, NETWORK_PASSPHRASE);
 
-  const tokRes = await fetch(webAuthEndpoint, {
+  const tokRes = await fetchWithRetry(webAuthEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transaction: signed.signedTxXdr }),
@@ -98,7 +133,7 @@ export async function startWithdraw(
   amount: string,
 ): Promise<WithdrawSession> {
   const { sep24Endpoint } = await discoverAnchor();
-  const res = await fetch(`${sep24Endpoint}/transactions/withdraw/interactive`, {
+  const res = await fetchWithRetry(`${sep24Endpoint}/transactions/withdraw/interactive`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -119,7 +154,7 @@ export async function startDeposit(
   amount: string,
 ): Promise<WithdrawSession> {
   const { sep24Endpoint } = await discoverAnchor();
-  const res = await fetch(`${sep24Endpoint}/transactions/deposit/interactive`, {
+  const res = await fetchWithRetry(`${sep24Endpoint}/transactions/deposit/interactive`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -147,7 +182,7 @@ export async function getWithdrawStatus(
   id: string,
 ): Promise<AnchorTxStatus> {
   const { sep24Endpoint } = await discoverAnchor();
-  const res = await fetch(`${sep24Endpoint}/transaction?id=${encodeURIComponent(id)}`, {
+  const res = await fetchWithRetry(`${sep24Endpoint}/transaction?id=${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${jwt}` },
   });
   if (!res.ok) throw new Error(await anchorErrorMessage(res, "SEP-24 status failed"));

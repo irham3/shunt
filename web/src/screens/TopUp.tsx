@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { authenticate, startDeposit, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
+import { authenticate, startDeposit, ANCHOR_HOME_DOMAIN, getAnchorInfo, AnchorAssetInfo } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { formatError } from "../lib/stellar";
@@ -17,9 +17,11 @@ export function TopUp() {
   const [anchorUrl, setAnchorUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [limits, setLimits] = useState<AnchorAssetInfo | null>(null);
 
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
+    getAnchorInfo("USDC").then(setLimits).catch(e => setErr(formatError(e)));
   }, []);
 
   const usdc = Number(amount) || 0;
@@ -31,8 +33,8 @@ export function TopUp() {
       setErr("Enter a valid amount.");
       return;
     }
-    if (usdc < ANCHOR_MIN_AMOUNT || usdc > ANCHOR_MAX_AMOUNT) {
-      setErr(`The test anchor accepts ${ANCHOR_MIN_AMOUNT}–${ANCHOR_MAX_AMOUNT} USDC per transaction.`);
+    if (limits && (usdc < limits.minAmount || usdc > limits.maxAmount)) {
+      setErr(`The test anchor accepts ${limits.minAmount}–${limits.maxAmount} USDC per transaction.`);
       return;
     }
     setErr(null);
@@ -42,7 +44,26 @@ export function TopUp() {
       const jwt = await authenticate(address);
       const session = await startDeposit(address, jwt, "USDC", String(usdc));
       setAnchorUrl(session.url);
-      window.open(session.url, "_blank", "noopener");
+      
+      const width = 500, height = 700;
+      const left = window.innerWidth / 2 - width / 2;
+      const top = window.innerHeight / 2 - height / 2;
+      const popup = window.open(
+        session.url,
+        "anchor_popup",
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+
+      // Listen for popup close or completion messages
+      const onMessage = (e: MessageEvent) => {
+        // In a real integration, we'd check e.origin against ANCHOR_HOME_DOMAIN.
+        if (e.data?.type === "close" || e.data?.type === "success") {
+          window.removeEventListener("message", onMessage);
+          if (popup) popup.close();
+        }
+      };
+      window.addEventListener("message", onMessage);
+
       recordTopUp(usdc);
       setSubmitted("anchor");
       showToast("Top Up started at the anchor");
@@ -86,6 +107,12 @@ export function TopUp() {
         Fund your wallet with IDR through the anchor — it lands as USDC, without leaving Shunt.
       </p>
 
+      {/* TODO [MoneyGram]: Uncomment MoneyGram disclosure once approved
+      <div style={{ padding: "8px 12px", background: "var(--color-bg-elevated)", borderRadius: 6, fontSize: 12, marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+        <span>Powered by <b>MoneyGram</b></span>
+      </div>
+      */}
+
       <motion.div
         className="card"
         style={{ display: "flex", flexDirection: "column", gap: 10 }}
@@ -105,7 +132,7 @@ export function TopUp() {
           />
         </label>
         <span className="muted" style={{ fontSize: 12 }}>
-          Test anchor accepts {ANCHOR_MIN_AMOUNT}–{ANCHOR_MAX_AMOUNT} USDC per transaction.
+          {limits ? `Test anchor accepts ${limits.minAmount}–${limits.maxAmount} USDC per transaction.` : "Fetching limits..."}
         </span>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
           <span className="muted">Rate</span>

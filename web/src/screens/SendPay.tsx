@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDownUp } from "lucide-react";
-import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, ANCHOR_MIN_AMOUNT, ANCHOR_MAX_AMOUNT } from "../lib/anchor";
+import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, getAnchorInfo, AnchorAssetInfo } from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import {
   sendXlmPayment,
@@ -75,6 +75,7 @@ export function SendPay() {
   const [anchorUrl, setAnchorUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [limits, setLimits] = useState<AnchorAssetInfo | null>(null);
 
   // Transfer state — user picks which asset (XLM or USDC) to send.
   const [sendAsset, setSendAsset] = useState<"XLM" | "USDC">("XLM");
@@ -119,6 +120,7 @@ export function SendPay() {
 
   useEffect(() => {
     getIdrRate().then((r) => setIdr(r.rate));
+    getAnchorInfo("USDC").then(setLimits).catch(e => setErr(formatError(e)));
   }, []);
 
   useEffect(() => {
@@ -132,14 +134,12 @@ export function SendPay() {
 
   // --- USDC off-ramp submit ---
   async function onSubmitUsdc() {
-    // Validate against the real on-chain USDC balance — the Needs lane is
-    // bookkeeping guidance, but the wallet is what actually pays the anchor.
-    if (usdc <= 0 || usdc > walletUsdc) {
-      setErr(`Invalid amount or exceeds your wallet USDC (${fmtUsdc(walletUsdc)} USDC on-chain).`);
+    if (usdc <= 0) {
+      setErr("Enter a valid amount.");
       return;
     }
-    if (usdc < ANCHOR_MIN_AMOUNT || usdc > ANCHOR_MAX_AMOUNT) {
-      setErr(`The test anchor accepts ${ANCHOR_MIN_AMOUNT}–${ANCHOR_MAX_AMOUNT} USDC per transaction.`);
+    if (limits && (usdc < limits.minAmount || usdc > limits.maxAmount)) {
+      setErr(`The test anchor accepts ${limits.minAmount}–${limits.maxAmount} USDC per transaction.`);
       return;
     }
     setErr(null);
@@ -149,7 +149,28 @@ export function SendPay() {
       const jwt = await authenticate(address);
       const session = await startWithdraw(address, jwt, "USDC", String(usdc));
       setAnchorUrl(session.url);
-      window.open(session.url, "_blank", "noopener");
+      
+      const width = 500, height = 700;
+      const left = window.innerWidth / 2 - width / 2;
+      const top = window.innerHeight / 2 - height / 2;
+      const popup = window.open(
+        session.url,
+        "anchor_popup",
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+
+      // Listen for popup close or completion messages
+      const onMessage = (e: MessageEvent) => {
+        if (e.data?.type === "close" || e.data?.type === "success") {
+          window.removeEventListener("message", onMessage);
+          if (popup) popup.close();
+          if (e.data?.type === "success") {
+            setSubmitted("anchor");
+            showToast("Withdrawal successful");
+          }
+        }
+      };
+      window.addEventListener("message", onMessage);
       offramp(usdc);
       setSubmitted("anchor");
       showToast("Withdrawal started at the anchor");
@@ -180,9 +201,6 @@ export function SendPay() {
     }
     const amt = Number(xlmAmount);
     if (isNaN(amt) || amt <= 0) { setXlmErr("Enter a valid amount."); return; }
-    // Balance hasn't loaded yet — don't reject an honest amount as "exceeds
-    // your balance (0)". The button is disabled for this case too; this is
-    // the defensive check in case submit fires before that state settles.
     if (!transferBalanceLoaded) { setXlmErr("Still loading your balance — try again in a moment."); return; }
     if (amt > transferBalance) { setXlmErr(`Exceeds your ${sendAsset} balance (${transferBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}).`); return; }
     if (sendAsset === "USDC" && !usdcTrustline) { setXlmErr("Enable USDC on your wallet first (add the trustline)."); return; }
@@ -308,7 +326,6 @@ export function SendPay() {
       return;
     }
     if (payReqIsUsdcAlready) {
-      // Paying in the same asset the payer already holds — no DEX hop needed.
       setPayReqQuote({ amount: Number(payReqParsed.amount), path: [] });
       return;
     }
@@ -319,7 +336,6 @@ export function SendPay() {
       setPayReqQuoting(false);
     }, 400);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payReqUri]);
 
   async function onSubmitPayRequest() {
@@ -393,7 +409,6 @@ export function SendPay() {
     }
   }
 
-  // --- Convert result ---
   if (cvResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
@@ -427,7 +442,6 @@ export function SendPay() {
     );
   }
 
-  // --- Pay-a-request result ---
   if (payReqResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
@@ -460,7 +474,6 @@ export function SendPay() {
     );
   }
 
-  // --- Settle result ---
   if (settleResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
@@ -494,7 +507,6 @@ export function SendPay() {
     );
   }
 
-  // --- USDC off-ramp result ---
   if (submitted) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
@@ -517,7 +529,6 @@ export function SendPay() {
     );
   }
 
-  // --- Transfer result ---
   if (xlmResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
@@ -552,7 +563,6 @@ export function SendPay() {
     <div className="screen">
       <h2 style={{ margin: 0 }}>Send & Pay</h2>
 
-      {/* Tab switcher */}
       <div style={{ display: "flex", gap: 0, borderRadius: 12, overflow: "hidden", border: "1px solid #1f2732" }}>
         <button
           onClick={() => setTab("xlm")}
@@ -598,19 +608,12 @@ export function SendPay() {
         </button>
       </div>
 
-      {/* Enter-only, no AnimatePresence exit-wait: mode="wait" blocks the next
-          tab from mounting until the previous one's exit finishes, and that
-          exit reliably never fires for a plain useState tab switch here —
-          same root cause as the route-level freeze fixed elsewhere this
-          session (App.tsx). Clicking a tab must never depend on animation
-          completing. */}
       {tab === "xlm" && (
         <motion.div key="xlm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
             Send to another Stellar wallet on {NETWORK}. Choose which asset to pay with.
           </p>
 
-          {/* Which money to send */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }} role="tablist" aria-label="Asset to send">
             {(["XLM", "USDC"] as const).map((a) => (
               <button
@@ -675,7 +678,6 @@ export function SendPay() {
         </motion.div>
       )}
 
-      {/* ─── Pay a Request Tab: SEP-7 URI, pay in any asset the recipient asked for ─── */}
       {tab === "payreq" && (
         <motion.div key="payreq" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
@@ -753,7 +755,6 @@ export function SendPay() {
         </motion.div>
       )}
 
-      {/* ─── Convert Tab: XLM ⇄ USDC via the DEX, no third party ─── */}
       {tab === "convert" && (
         <motion.div key="convert" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
@@ -840,7 +841,14 @@ export function SendPay() {
 
           {SETTLE_ASSETS.length > 0 && (
             <>
-              <h3 style={{ fontSize: 15, margin: "24px 0 4px" }}>Settle in a local currency</h3>
+              <h3 style={{ fontSize: 15, margin: "24px 0 4px" }}>Local bank withdrawal</h3>
+
+              {/* TODO [MoneyGram]: Uncomment MoneyGram disclosure once approved
+              <div style={{ padding: "8px 12px", background: "var(--color-bg-elevated)", borderRadius: 6, fontSize: 12, marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                <span>Powered by <b>MoneyGram</b></span>
+              </div>
+              */}
+
               <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
                 Spend USDC directly into a local-currency demo asset — Shunt's own testnet issuance with
                 real DEX liquidity, standing in for a regulated local stablecoin (not the real branded one).
@@ -968,7 +976,7 @@ export function SendPay() {
               />
             </label>
             <span className="muted" style={{ fontSize: 12 }}>
-              Test anchor accepts {ANCHOR_MIN_AMOUNT}–{ANCHOR_MAX_AMOUNT} USDC per transaction.
+              {limits ? `Test anchor accepts ${limits.minAmount}–${limits.maxAmount} USDC per transaction.` : "Fetching limits..."}
             </span>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span className="muted">Rate</span>

@@ -1,0 +1,8 @@
+NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"
+SIGNING_KEY = "GACE7H6G722KXUQT5PV26M2SOEVMMOY2K2CFEZ6AG4PYGGP3JQBCO2HU"
+
+[DOCUMENTATION]
+ORG_NAME = "Shunt"
+ORG_URL = "https://shuntapp.xyz"
+ORG_DESCRIPTION = "A non-custodial Stellar application for programmable income allocation."
+ORG_OFFICIAL_EMAIL = "partnerships@shuntapp.xyz"
