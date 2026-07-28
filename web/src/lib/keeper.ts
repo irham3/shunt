@@ -14,12 +14,21 @@ export function randomTxHash(): string {
     .join("");
 }
 
+export type KeeperJobStatus =
+  | "detected"
+  | "prepared"
+  | "confirmed"
+  | "failed";
+
 export interface PendingSplit {
   account: string;
   amount: string;
   txHash: string;
+  status: KeeperJobStatus;
   xdr: string | null;
   detectedAt: string;
+  updatedAt: string;
+  submissionTxHash?: string;
   error?: string;
 }
 
@@ -67,14 +76,31 @@ export async function manualTrigger(
   }
 }
 
-export async function markComplete(txHash: string): Promise<void> {
-  try {
-    await fetch(`${KEEPER_URL}/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ txHash }),
-    });
-  } catch {
-    // best effort
+export async function markComplete(
+  inflowTxHash: string,
+  submissionTxHash: string,
+): Promise<void> {
+  const res = await fetch(`${KEEPER_URL}/complete`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      inflowTxHash,
+      submissionTxHash,
+    }),
+  });
+
+  if (!res.ok) {
+    let message = `Keeper confirmation failed (${res.status})`;
+    try {
+      const body = await res.json() as { error?: string };
+      if (body.error) {
+        message = body.error;
+      }
+    } catch {
+      // Preserve the status-based message.
+    }
+    throw new Error(message);
   }
 }

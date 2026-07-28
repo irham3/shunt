@@ -5,6 +5,7 @@ target/
 .env
 keeper-state.json
 .claude/
+.agents/
 *.tsbuildinfo
 level1-objection.md
 

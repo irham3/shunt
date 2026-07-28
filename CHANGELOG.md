@@ -7,6 +7,21 @@ progression, not a padded timeline).
 
 ---
 
+## Keeper lifecycle hardening
+
+- Replaced the ambiguous pending/processed flow with explicit
+  `detected`, `prepared`, `failed`, and `confirmed` job states.
+- Preparing an unsigned distribute XDR no longer marks an inflow complete.
+- Failed and XDR-less jobs can be rebuilt with the same inflow hash.
+- `/complete` now requires both the original inflow hash and the submitted
+  distribute transaction hash.
+- Keeper completion now verifies transaction existence, success, and source
+  account through Horizon before writing the confirmed replay marker.
+- Updated the web client to send the submitted transaction hash.
+- Added regression tests for expired preparation recovery and false completion.
+
+---
+
 ## v0.14 — Contract hardening round 2 + security-hardened redeploy (2026-07-18)
 
 **New contract deployment (testnet):**

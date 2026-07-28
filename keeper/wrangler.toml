@@ -24,5 +24,9 @@ USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
 VAULT_CONTRACT_ID = "CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B"
 WATCH_ACCOUNTS = "GC4IUJPBQZKXYONI6UABEXE7EA6QXT4OYV2JYJA5GTPMXSMEKDL6AGDZ"
 # CORS allowlist for the deployed frontend, and per-IP /trigger cap per minute.
-ALLOWED_ORIGINS = "https://shunt-app.vercel.app"
+ALLOWED_ORIGINS = "https://shunt-app.vercel.app,http://localhost:5199,http://127.0.0.1:5199"
 TRIGGER_RATE_PER_MIN = "30"
+# Retryable keeper jobs remain available for 7 days.
+JOB_TTL_SECONDS = "604800"
+# Only chain-confirmed inflows receive this 30-day replay marker.
+CONFIRMED_TTL_SECONDS = "2592000"

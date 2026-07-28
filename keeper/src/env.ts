@@ -12,11 +12,26 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
   /** Optional per-IP /trigger cap per minute (default 30). */
   TRIGGER_RATE_PER_MIN?: string;
+  /** Optional TTL for detected/failed/prepared jobs. Default: 7 days. */
+  JOB_TTL_SECONDS?: string;
+  /** TTL for confirmed replay markers. Default: 30 days. */
+  CONFIRMED_TTL_SECONDS?: string;
 }
 
 export function watchAccounts(env: Env): string[] {
   return env.WATCH_ACCOUNTS.split(",").map((s) => s.trim()).filter(Boolean);
 }
+
+export function jobTtlSeconds(env: Env): number {
+  const parsed = Number(env.JOB_TTL_SECONDS ?? "604800");
+  return Number.isFinite(parsed) && parsed >= 60 ? Math.floor(parsed) : 604800;
+}
+
+export function confirmedTtlSeconds(env: Env): number {
+  const parsed = Number(env.CONFIRMED_TTL_SECONDS ?? "2592000");
+  return Number.isFinite(parsed) && parsed >= 60 ? Math.floor(parsed) : 2592000;
+}
+
 
 export function allowedOrigins(env: Env): string[] {
   return (env.ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);

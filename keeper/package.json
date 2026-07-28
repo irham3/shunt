@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^14.5.0"
@@ -15,6 +17,7 @@
     "@cloudflare/workers-types": "^5.20260708.1",
     "@types/node": "^22.10.0",
     "typescript": "^5.9.0",
+    "vitest": "^3.2.7",
     "wrangler": "^4.4.0"
   }
 }

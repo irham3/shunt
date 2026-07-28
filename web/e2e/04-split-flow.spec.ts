@@ -32,6 +32,10 @@ test.describe("one-tap split", () => {
     await page.getByRole("button", { name: "Done" }).click();
     await expect(page).toHaveURL(/\/home/);
 
+    await expect(
+      page.getByTestId("unsplit-banner"),
+    ).toHaveCount(0, { timeout: 90_000 });
+
     // The vault (contract read) now holds the savings share: 25% of 8 = 2 USDC
     const expectedSavings = (Number(e2e.usdcAmount) * 0.25).toFixed(2);
     await expect(page.getByTestId("row-vault-savings")).toContainText(`${expectedSavings} USDC`, { timeout: 90_000 });

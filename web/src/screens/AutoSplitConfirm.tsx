@@ -141,7 +141,7 @@ export function AutoSplitConfirm() {
     setBusy(true);
     setErr(null);
     const hashes: string[] = [];
-
+    let lastSubmittedHash: string | null = null;
     try {
       for (let i = 0; i < allPending.length; i++) {
         setProgress(i);
@@ -181,7 +181,14 @@ export function AutoSplitConfirm() {
         }
 
         const hash = await signAndSubmitXdr(xdr);
-        await markComplete(p.txHash);
+        lastSubmittedHash = hash;
+        /**
+         * The distribute transaction is already on-chain at this point.
+         * Pass both hashes so the keeper can verify the successful submitted
+         * transaction before marking the original inflow as confirmed.
+         */
+        await markComplete(p.txHash, hash);
+        lastSubmittedHash = null;
         applySplit(amt, hash);
         await runInvestConversion(amt, true);
         hashes.push(hash);
@@ -222,6 +229,19 @@ export function AutoSplitConfirm() {
         }
       }
     } catch (e) {
+      if (lastSubmittedHash) {
+        setErr(
+          "The split succeeded on-chain, but the keeper could not verify it yet. " +
+          "Do not sign the split again. Refresh after Horizon indexes transaction " +
+          `${lastSubmittedHash}.`,
+        );
+        setDoneHashes((current) =>
+          current.includes(lastSubmittedHash!)
+            ? current
+            : [...current, lastSubmittedHash!],
+        );
+        return;
+      }
       const formatted = formatError(e);
       if (formatted) setErr(formatted);
       // Still save any hashes that succeeded

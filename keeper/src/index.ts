@@ -1,14 +1,75 @@
 import { Horizon } from "@stellar/stellar-sdk";
 import { buildDistributeTx, amountToStroops } from "./distribute";
-import { watchAccounts, corsHeaders, isRateLimited, type Env } from "./env";
+import {
+  watchAccounts,
+  corsHeaders,
+  isRateLimited,
+  jobTtlSeconds,
+  confirmedTtlSeconds,
+  type Env,
+} from "./env";
 
-interface PendingSplit {
+export type KeeperJobStatus =
+  | "detected"
+  | "prepared"
+  | "confirmed"
+  | "failed";
+
+export interface PendingSplit {
   account: string;
   amount: string;
+  /**
+   * Hash of the original incoming payment.
+   * Kept as `txHash` for backward compatibility with the web client.
+   */
   txHash: string;
+  status: KeeperJobStatus;
   xdr: string | null;
   detectedAt: string;
+  updatedAt: string;
+  /**
+   * Hash of the successful signed distribute transaction.
+   * Only present after chain verification.
+   */
+  submissionTxHash?: string;
   error?: string;
+}
+
+function pendingKey(inflowTxHash: string): string {
+  return `pending:${inflowTxHash}`;
+}
+
+function processedKey(inflowTxHash: string): string {
+  return `processed:${inflowTxHash}`;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+async function saveJob(
+  env: Env,
+  job: PendingSplit,
+): Promise<void> {
+  await env.KEEPER_KV.put(
+    pendingKey(job.txHash),
+    JSON.stringify(job),
+    { expirationTtl: jobTtlSeconds(env) },
+  );
+}
+
+async function loadJob(
+  env: Env,
+  inflowTxHash: string,
+): Promise<PendingSplit | null> {
+  return await env.KEEPER_KV.get(
+    pendingKey(inflowTxHash),
+    "json",
+  ) as PendingSplit | null;
+}
+
+function publicJob(job: PendingSplit): PendingSplit {
+  return { ...job };
 }
 
 function json(data: unknown, status = 200, cors: Record<string, string> = {}): Response {
@@ -18,62 +79,109 @@ function json(data: unknown, status = 200, cors: Record<string, string> = {}): R
   });
 }
 
-async function handleInflow(
+export async function handleInflow(
   env: Env,
   account: string,
   amount: string,
-  txHash: string,
+  inflowTxHash: string,
   isSimulated = false,
   bufferTopup?: string,
 ): Promise<PendingSplit> {
-  const processedKey = `processed:${txHash}`;
-  const pendingKey = `pending:${txHash}`;
+  const existingConfirmed = await env.KEEPER_KV.get(
+    processedKey(inflowTxHash),
+  );
 
-  // Already split (completed) → never rebuild; the contract would reject the
-  // replayed inflow_key anyway. This is the terminal idempotency guard.
-  if (!isSimulated && await env.KEEPER_KV.get(processedKey)) {
-    const existing = await env.KEEPER_KV.get(pendingKey, "json");
-    return (existing as PendingSplit) ?? { account, amount, txHash, xdr: null, detectedAt: new Date().toISOString(), error: "already processed" };
+  if (!isSimulated && existingConfirmed) {
+    const existing = await loadJob(env, inflowTxHash);
+    if (existing) {
+      return publicJob(existing);
+    }
+    const timestamp = nowIso();
+    return {
+      account,
+      amount,
+      txHash: inflowTxHash,
+      status: "confirmed",
+      xdr: null,
+      detectedAt: timestamp,
+      updatedAt: timestamp,
+      error: "already confirmed on-chain",
+    };
   }
 
-  // Reuse a previously-prepared XDR (idempotent, avoids rebuild churn) — but
-  // ONLY if that prior build actually succeeded. A cached entry with a null
-  // xdr means the last build FAILED (e.g. rules weren't on-chain yet); fall
-  // through and retry so the split isn't stuck broken until the 24h TTL.
-  if (!isSimulated) {
-    const cached = (await env.KEEPER_KV.get(pendingKey, "json")) as PendingSplit | null;
-    if (cached && cached.xdr) return cached;
+  const existing = isSimulated
+    ? null
+    : await loadJob(env, inflowTxHash);
+
+  /**
+   * A prepared XDR can be returned while it still exists.
+   * We intentionally do not create a processed marker here.
+   * "Prepared" is not the same as "confirmed".
+   */
+  if (existing?.status === "prepared" && existing.xdr) {
+    return publicJob(existing);
   }
 
-  const entry: PendingSplit = {
+  /**
+   * Existing failed, detected, or XDR-less prepared jobs are rebuilt.
+   * This makes jobs recoverable after an XDR expires or an earlier
+   * Soroban RPC simulation failure.
+   */
+  const detectedAt = existing?.detectedAt ?? nowIso();
+
+  const detectedJob: PendingSplit = {
     account,
     amount,
-    txHash,
+    txHash: inflowTxHash,
+    status: "detected",
     xdr: null,
-    detectedAt: new Date().toISOString(),
+    detectedAt,
+    updatedAt: nowIso(),
   };
 
+  if (!isSimulated) {
+    await saveJob(env, detectedJob);
+  }
+
   try {
-    entry.xdr = await buildDistributeTx(
+    const xdr = await buildDistributeTx(
       env,
       account,
       amountToStroops(amount),
-      txHash,
+      inflowTxHash,
       bufferTopup ? amountToStroops(bufferTopup) : 0n,
     );
-  } catch (e) {
-    entry.error = String(e);
-  }
 
-  // TTL: pending splits are demo-scoped, expire after a day so KV doesn't grow forever.
-  if (!isSimulated) {
-    await env.KEEPER_KV.put(pendingKey, JSON.stringify(entry), { expirationTtl: 86400 });
+    const preparedJob: PendingSplit = {
+      ...detectedJob,
+      status: "prepared",
+      xdr,
+      updatedAt: nowIso(),
+      error: undefined,
+    };
+
+    if (!isSimulated) {
+      await saveJob(env, preparedJob);
+    }
+    return publicJob(preparedJob);
+  } catch (error) {
+    const failedJob: PendingSplit = {
+      ...detectedJob,
+      status: "failed",
+      xdr: null,
+      updatedAt: nowIso(),
+      error: error instanceof Error ? error.message : String(error),
+    };
+
+    if (!isSimulated) {
+      await saveJob(env, failedJob);
+    }
+    return publicJob(failedJob);
   }
-  return entry;
 }
 
 /** Cron: poll each watched account's recent payments for new USDC inflows. */
-async function poll(env: Env): Promise<void> {
+export async function poll(env: Env): Promise<void> {
   const horizon = new Horizon.Server(env.HORIZON_URL);
   for (const account of watchAccounts(env)) {
     const cursorKey = `cursor:${account}`;
@@ -94,38 +202,138 @@ async function poll(env: Env): Promise<void> {
           payment.asset_code === env.USDC_CODE &&
           payment.asset_issuer === env.USDC_ISSUER;
         if (isUsdcIn) {
-          const entry = await handleInflow(env, account, payment.amount, payment.transaction_hash);
-          // Only mark processed once we have a valid prepared XDR. A failed
-          // build (null xdr) stays un-processed so a later /trigger (or the
-          // next detection) can rebuild it instead of being stuck 30 days.
-          if (entry.xdr) {
-            await env.KEEPER_KV.put(`processed:${payment.transaction_hash}`, "1", {
-              expirationTtl: 2592000, // 30 days
-            });
-          }
+          /**
+           * `handleInflow` persists detected/prepared/failed state before
+           * this cursor is advanced. Even a preparation failure therefore
+           * remains visible and retryable through /pending and /trigger.
+           */
+          await handleInflow(
+            env,
+            account,
+            payment.amount,
+            payment.transaction_hash,
+          );
         }
+        /**
+         * Advance only after processing/persisting this record.
+         * If KV persistence throws, execution jumps to catch and this
+         * record can be revisited from the previous stored cursor.
+         */
         await env.KEEPER_KV.put(cursorKey, payment.paging_token);
       }
-    } catch (e) {
-      console.error(`poll failed for ${account}:`, e);
+    } catch (error) {
+      console.error(`poll failed for ${account}:`, error);
     }
   }
 }
 
-async function listPending(env: Env, account: string): Promise<PendingSplit[]> {
-  const out: PendingSplit[] = [];
+export async function listPending(
+  env: Env,
+  account: string,
+): Promise<PendingSplit[]> {
+  const jobs: PendingSplit[] = [];
   let cursor: string | undefined;
   do {
-    const page = await env.KEEPER_KV.list({ prefix: "pending:", cursor });
+    const page = await env.KEEPER_KV.list({
+      prefix: "pending:",
+      cursor,
+    });
     for (const key of page.keys) {
-      const entry = await env.KEEPER_KV.get(key.name, "json");
-      if (entry && (entry as PendingSplit).account === account) {
-        out.push(entry as PendingSplit);
+      const job = await env.KEEPER_KV.get(
+        key.name,
+        "json",
+      ) as PendingSplit | null;
+      if (
+        job &&
+        job.account === account &&
+        job.status !== "confirmed"
+      ) {
+        jobs.push(publicJob(job));
       }
     }
     cursor = page.list_complete ? undefined : page.cursor;
   } while (cursor);
-  return out;
+
+  return jobs.sort(
+    (a, b) =>
+      new Date(a.detectedAt).getTime() -
+      new Date(b.detectedAt).getTime(),
+  );
+}
+
+interface CompleteRequest {
+  inflowTxHash?: string;
+  submissionTxHash?: string;
+}
+
+export async function confirmJob(
+  env: Env,
+  inflowTxHash: string,
+  submissionTxHash: string,
+): Promise<PendingSplit> {
+  const job = await loadJob(env, inflowTxHash);
+  if (!job) {
+    throw new Error("keeper job not found");
+  }
+
+  if (job.status === "confirmed") {
+    if (
+      job.submissionTxHash &&
+      job.submissionTxHash !== submissionTxHash
+    ) {
+      throw new Error(
+        "job was already confirmed with a different transaction",
+      );
+    }
+    return publicJob(job);
+  }
+
+  const horizon = new Horizon.Server(env.HORIZON_URL);
+  let transaction: any;
+  try {
+    transaction = await horizon
+      .transactions()
+      .transaction(submissionTxHash)
+      .call();
+  } catch {
+    throw new Error(
+      "submitted transaction was not found on Horizon",
+    );
+  }
+
+  if (transaction.successful !== true) {
+    throw new Error(
+      "submitted transaction is not successful",
+    );
+  }
+
+  if (transaction.source_account !== job.account) {
+    throw new Error(
+      "submitted transaction source does not match keeper job account",
+    );
+  }
+
+  const confirmedJob: PendingSplit = {
+    ...job,
+    status: "confirmed",
+    xdr: null,
+    updatedAt: nowIso(),
+    submissionTxHash,
+    error: undefined,
+  };
+
+  /**
+   * Persist the terminal job first, then write the replay marker.
+   * If the second write fails, /complete can safely be retried.
+   */
+  await saveJob(env, confirmedJob);
+  await env.KEEPER_KV.put(
+    processedKey(inflowTxHash),
+    submissionTxHash,
+    { expirationTtl: confirmedTtlSeconds(env) },
+  );
+
+  return publicJob(confirmedJob);
 }
 
 export default {
@@ -150,6 +358,14 @@ export default {
         contractId: env.VAULT_CONTRACT_ID,
         watchingCount: watching.length,
         watching,
+        jobTtlSeconds: jobTtlSeconds(env),
+        confirmedTtlSeconds: confirmedTtlSeconds(env),
+        lifecycle: [
+          "detected",
+          "prepared",
+          "confirmed",
+          "failed",
+        ],
       }, 200, cors);
     }
 
@@ -181,11 +397,47 @@ export default {
     }
 
     if (url.pathname === "/complete" && request.method === "POST") {
-      const body = (await request.json().catch(() => ({}))) as { txHash?: string };
-      if (!body.txHash) return json({ error: "txHash required" }, 400, cors);
-      await env.KEEPER_KV.delete(`pending:${body.txHash}`);
-      await env.KEEPER_KV.put(`processed:${body.txHash}`, "1", { expirationTtl: 2592000 });
-      return json({ ok: true }, 200, cors);
+      const body = await request
+        .json()
+        .catch(() => ({})) as CompleteRequest;
+
+      if (!body.inflowTxHash || !body.submissionTxHash) {
+        return json(
+          {
+            error:
+              "inflowTxHash and submissionTxHash are required",
+          },
+          400,
+          cors,
+        );
+      }
+
+      try {
+        const job = await confirmJob(
+          env,
+          body.inflowTxHash,
+          body.submissionTxHash,
+        );
+        return json(
+          {
+            ok: true,
+            job,
+          },
+          200,
+          cors,
+        );
+      } catch (error) {
+        return json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : String(error),
+          },
+          409,
+          cors,
+        );
+      }
     }
 
     return json({ error: "not found" }, 404, cors);

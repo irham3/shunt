@@ -25,7 +25,14 @@ Shunt is a financial autopilot for people who earn from abroad. The moment USDC 
 
 - **49 Soroban unit tests** (split exactness, rounding, replay, timelock, penalty, savings goals, the **unallocated-withdrawal guard**, a **per-user goal cap**, **authorization boundaries**, and a **solvency/conservation invariant**) + a **real-testnet end-to-end suite** (Playwright, 41 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow. **No mocked Stellar network or contract interactions** — signing is injected for headless execution, and everything after signing runs against live Stellar testnet services.
 - **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
-- **Double idempotency:** the keeper dedupes by tx hash *and* the contract rejects repeat `inflow_key`s — the same inflow can't be split twice while its on-chain guard is live. Replay is rejected on-chain (Error #6). *(The guard entry carries a persistent-storage TTL and isn't re-bumped; the [limitations](#honest-limitations) note is precise about the pre-production replay window rather than claiming "forever.")*
+- **Recoverable keeper lifecycle:** detected inflows move through explicit
+  `detected → prepared → confirmed` states. Preparing an unsigned XDR does not
+  mark an inflow complete. Completion is recorded only after the keeper verifies
+  the successful submitted transaction through Horizon. Failed or expired
+  preparations remain rebuildable.
+- **Two-layer replay protection:** the keeper suppresses only chain-confirmed
+  inflows, while the contract independently rejects a repeated `inflow_key`
+  during the lifetime of its persistent replay entry.
 - **Verifiable on-chain:** every step of the split + savings-goals lifecycle is a clickable **testnet** hash ([Live on testnet](#live-on-testnet)). Network for this submission is **testnet only** — no mainnet claims.
 
 ---
@@ -177,7 +184,14 @@ Three deliberate design principles:
 
 - **The keeper holds zero keys — and is now optional for detection.** It only *watches* (Horizon payment stream, cursor-resumed reconnects) and *prepares* (unsigned XDR). Every fund movement requires your signature. Detection no longer depends on it at all: the app polls Horizon itself and flags un-split income client-side. The keeper's only remaining job is preparing the split XDR — stateless, replaceable, and open-API, so the in-app manual trigger does the identical thing and anyone can run their own. If it dies mid-demo, worst case is a short delay, never a fund risk.
 - **Savings must be held by code.** A timelock on funds in your own wallet is theater — you could just transfer them out. `ShuntVault` holds the Savings lane and enforces the lock on-chain; `withdraw_savings` answers to your address and no one else's. Not third-party custody — code custody, owner-only.
-- **Double idempotency.** The keeper deduplicates by transaction hash *and* the contract rejects repeated `inflow_key`s. A retry, a reconnect, or a hostile replay all hit the same wall: one income, one split, ever.
+- **Recoverable keeper lifecycle:** detected inflows move through explicit
+  `detected → prepared → confirmed` states. Preparing an unsigned XDR does not
+  mark an inflow complete. Completion is recorded only after the keeper verifies
+  the successful submitted transaction through Horizon. Failed or expired
+  preparations remain rebuildable.
+- **Two-layer replay protection:** the keeper suppresses only chain-confirmed
+  inflows, while the contract independently rejects a repeated `inflow_key`
+  during the lifetime of its persistent replay entry.
 
 ### `ShuntVault` contract API
 

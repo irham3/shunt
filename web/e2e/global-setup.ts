@@ -124,8 +124,22 @@ export default async function globalSetup(): Promise<void> {
 
   let keeperUp = false;
   try {
-    const res = await fetch("https://shunt-keeper.irhamtria.workers.dev/health");
+    let KEEPER = "https://shunt-keeper.irhamtria.workers.dev";
+    try {
+      const envText = fs.readFileSync(path.join(HERE, "../.env"), "utf-8");
+      const match = envText.match(/VITE_KEEPER_URL=(.+)/);
+      if (match) KEEPER = match[1].trim();
+    } catch {}
+
+    const res = await fetch(`${KEEPER}/health`);
     keeperUp = res.ok;
+    
+    if (keeperUp && usdcAcquired) {
+      // Force the keeper to poll immediately so the E2E specs don't have to
+      // wait up to 60 seconds for the cron to discover the DEX purchase.
+      await fetch(`${KEEPER}/test/poll`);
+      console.log(`[e2e setup] keeper triggered to detect test USDC`);
+    }
   } catch {
     /* keeper offline — split spec asserts the manual-fallback path instead */
   }
