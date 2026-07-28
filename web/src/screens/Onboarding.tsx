@@ -154,11 +154,6 @@ export function Onboarding() {
         className="lp-section"
         style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "72px 24px 40px" }}
       >
-        <Reveal variant="up">
-          <span className="chip lp-chip-live" style={{ display: "inline-flex", alignItems: "center", gap: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12 }}>
-            <span className="lp-live-dot" /> Live on Stellar
-          </span>
-        </Reveal>
         <Reveal variant="blur" delay={0.05}>
           <h1 className="hero-title">
             Automated

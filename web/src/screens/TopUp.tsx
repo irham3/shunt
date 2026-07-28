@@ -154,8 +154,28 @@ export function TopUp() {
       </p>
 
       <button className="btn-primary" disabled={usdc <= 0 || busy} onClick={onSubmit}>
-        {busy ? "Contacting anchor…" : "Top up"}
+        {busy ? "Contacting anchor…" : "Top up via Anchor"}
       </button>
+
+      <div style={{ marginTop: 16, textAlign: "center", borderTop: "1px solid var(--color-border)", paddingTop: 16 }}>
+        <span className="muted" style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
+          Need it instantly? Buy with card (Global)
+        </span>
+        <button 
+          className="btn-secondary" 
+          disabled={!address}
+          style={{ width: "100%" }}
+          onClick={() => {
+            if (!address) return;
+            // Production Transak URL for Stellar USDC
+            const url = `https://global.transak.com/?cryptoCurrencyCode=USDC&network=stellar&walletAddress=${address}`;
+            window.open(url, "_blank");
+          }}
+        >
+          Buy USDC via Transak ↗
+        </button>
+      </div>
+
       {err && (
         <p role="alert" style={{ color: "#ffb4ab", fontSize: 13 }}>
           {err}
