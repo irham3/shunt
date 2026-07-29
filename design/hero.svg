@@ -34,8 +34,8 @@
   <g>
     <text x="48" y="118" font-size="54" font-weight="700" fill="#F5F7FA" letter-spacing="-1">Shunt</text>
     <text x="218" y="118" font-size="44" fill="#D8F15A">⑃</text>
-    <text x="48" y="152" font-size="17" fill="#8A93A3">Automated money routing.</text>
-    <text x="48" y="176" font-size="13" fill="#5c6b7d">Non-custodial USDC autopilot on Stellar</text>
+    <text x="48" y="152" font-size="14" fill="#8A93A3">Split freelance income before you spend it.</text>
+    <text x="48" y="176" font-size="12" fill="#5c6b7d">Automated money routing for USDC income</text>
   </g>
 
   <!-- circuit lanes (versi redup dari tiap warna) -->

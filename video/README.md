@@ -20,7 +20,7 @@ bundler never touches the app's build.
 2. **Incoming payment** — a glass card lands and counts to **+1,000 USDC**.
 3. **Split** — the current branches down three circuit traces into **Spend 500 · Save 300 · Invest 200**.
 4. **Vault** — the Save allocation pours into a timelocked savings vault.
-5. **Final CTA** — *Shunt · Automated money routing on Stellar.*
+5. **Final CTA** — *Shunt · Split freelance income before you spend it.*
 
 Palette and fonts (Montserrat / Plus Jakarta Sans) mirror
 `web/src/styles/tokens.css`. Rendering is deterministic — no `Math.random()`,

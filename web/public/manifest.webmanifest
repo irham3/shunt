@@ -1,7 +1,7 @@
 {
-  "name": "Shunt — USDC auto-split",
+  "name": "Shunt — USDC income routing",
   "short_name": "Shunt",
-  "description": "Automated money routing. Set it once, the rest is automatic.",
+  "description": "Split freelance income before you spend it. Review and sign each payday; Savings locks in a Soroban vault.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0B0F14",

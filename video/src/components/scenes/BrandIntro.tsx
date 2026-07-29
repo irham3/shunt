@@ -123,7 +123,7 @@ export const BrandIntro: React.FC = () => {
           marginTop: 18,
         }}
       >
-        Automated money routing
+        Split freelance income before you spend it
       </div>
     </div>
   );

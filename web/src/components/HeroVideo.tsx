@@ -26,7 +26,7 @@ export function HeroVideo({ className, poster, style }: HeroVideoProps) {
       loop
       playsInline
       preload="auto"
-      aria-label="Shunt — automated money routing on Stellar"
+      aria-label="Shunt — split freelance income before you spend it"
       style={{
         display: "block",
         width: "100%",

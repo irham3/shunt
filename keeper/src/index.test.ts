@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleInflow, confirmJob } from "./index";
+import worker, { handleInflow, confirmJob } from "./index";
 import * as distribute from "./distribute";
 import { Horizon } from "@stellar/stellar-sdk";
 import { Env } from "./env";
@@ -17,6 +17,125 @@ vi.mock("@stellar/stellar-sdk", async (importOriginal) => {
       Server: vi.fn(),
     },
   };
+});
+
+describe("ramp session endpoints", () => {
+  let env: Env;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    env = {
+      KEEPER_KV: new MockKV() as unknown as KVNamespace,
+      STELLAR_NETWORK: "TESTNET",
+      HORIZON_URL: "https://horizon-testnet.stellar.org",
+      SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org",
+      NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
+      USDC_CODE: "USDC",
+      USDC_ISSUER: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      VAULT_CONTRACT_ID: "C...",
+      WATCH_ACCOUNTS: "",
+      MOONPAY_API_KEY: "moonpay-api-key",
+      MOONPAY_SECRET_KEY: "moonpay-secret",
+      TRANSAK_API_KEY: "transak-key",
+      TRANSAK_API_SECRET: "transak-secret",
+    };
+  });
+
+  it("MoonPay rejects non-Stellar wallet addresses before signing a URL", async () => {
+    const response = await worker.fetch(
+      new Request("https://keeper.test/moonpay-url", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ walletAddress: "not-a-stellar-address" }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "valid Stellar walletAddress required",
+    });
+  });
+
+  it("Transak rejects non-Stellar wallet addresses before requesting a token", async () => {
+    const response = await worker.fetch(
+      new Request("https://keeper.test/transak-url", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ walletAddress: "not-a-stellar-address" }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "valid Stellar walletAddress required",
+    });
+  });
+
+  it("Transak is disabled by default because its staging widget uses Stellar mainnet rails", async () => {
+    const walletAddress = "GC4IUJPBQZKXYONI6UABEXE7EA6QXT4OYV2JYJA5GTPMXSMEKDL6AGDZ";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request("https://keeper.test/transak-url", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ walletAddress, fiatAmount: 100 }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "Transak staging is disabled because this demo is Stellar testnet-only. Transak's staging widget still labels Stellar as Mainnet; enable TRANSAK_ALLOW_MAINNET_STAGING=true only for an explicit provider-staging test.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("Transak creates a secure staging session with a locked Stellar recipient", async () => {
+    env.TRANSAK_ALLOW_MAINNET_STAGING = "true";
+    const walletAddress = "GC4IUJPBQZKXYONI6UABEXE7EA6QXT4OYV2JYJA5GTPMXSMEKDL6AGDZ";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { accessToken: "access-token-for-tests" },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { widgetUrl: "https://global-stg.transak.com?sessionId=session-for-tests" },
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(
+      new Request("https://keeper.test/transak-url", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "cf-connecting-ip": "203.0.113.10",
+        },
+        body: JSON.stringify({ walletAddress, fiatAmount: 100 }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      widgetUrl: "https://global-stg.transak.com?sessionId=session-for-tests",
+    });
+    const sessionRequest = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(sessionRequest.widgetParams).toMatchObject({
+      apiKey: "transak-key",
+      fiatCurrency: "USD",
+      fiatAmount: "100",
+      cryptoCurrencyCode: "XLM",
+      network: "mainnet",
+      walletAddress,
+      disableWalletAddressForm: true,
+      hideExchangeScreen: true,
+    });
+  });
 });
 
 class MockKV {

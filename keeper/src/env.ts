@@ -16,6 +16,13 @@ export interface Env {
   JOB_TTL_SECONDS?: string;
   /** TTL for confirmed replay markers. Default: 30 days. */
   CONFIRMED_TTL_SECONDS?: string;
+  TRANSAK_API_KEY?: string;
+  TRANSAK_API_SECRET?: string;
+  TRANSAK_STELLAR_RECIPIENT_ADDRESS?: string;
+  TRANSAK_STELLAR_RECIPIENT_MEMO?: string;
+  TRANSAK_ALLOW_MAINNET_STAGING?: string;
+  MOONPAY_API_KEY?: string;
+  MOONPAY_SECRET_KEY?: string;
 }
 
 export function watchAccounts(env: Env): string[] {

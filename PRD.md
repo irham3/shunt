@@ -4,14 +4,21 @@
 **Network:** Stellar (Soroban) · USDC via SAC (SEP-41)
 **Context:** APAC Stellar Hackathon 2026
 
-> **Shunt** — an electrical term: a component that diverts current to another path so the main circuit doesn't overload. Shunt does the same for your income: it diverts portions into separate lanes so no single lane overloads — and your savings don't erode against the rupiah.
+> **Shunt** is an electrical component that diverts current into separate
+> paths. The product applies that idea to freelance income.
 
 ---
 
 ## 1. Summary
 
-Shunt is a "financial autopilot" for the money you receive from abroad. The moment USDC lands on Stellar, Shunt prepares the split according to rules you set once — you just confirm with one tap: part is kept in USDC (which holds its value and resists rupiah depreciation), part becomes a buffer (emergency fund), and part is cashed out to rupiah/PHP for everyday needs.
-**Not** a remittance app. Shunt works *after* the money lands: it splits, saves, and protects the value.
+**Headline:** Split freelance income before you spend it.
+
+**Category:** Automated money routing for USDC income.
+
+Shunt lets a user set allocation rules before payday. When USDC reaches the
+wallet, Shunt prepares the exact split. The user reviews and signs. Needs and
+Buffer remain liquid, Savings enters a timelocked Soroban vault, and an optional
+Grow allocation uses a separate wallet-approved conversion.
 **Platform:** Responsive Web App (mobile-first / PWA) → native mobile later
 **Network:** Stellar (Soroban), USDC via SAC (SEP-41)
 
@@ -291,84 +298,59 @@ Framing principle (for judges): the contract guarantees an atomic, correct split
 
 ---
 
-# 🎤 Demo Day Pitch Script (5 minutes)
+# 🎤 Demo Day Pitch Script (3 minutes + 2 minutes Q&A)
 
 <aside>
 ⏱️
-Target: 5 minutes. Structure = Hook (30s) → Problem (45s) → Solution & live demo (2m30s) → Why Stellar & differentiation (45s) → Traction/roadmap & closing (30s). Leave a buffer for demo transitions.
+Pitch and demo stop at 3:00. Reserve the remaining 2:00 for judge Q&A.
+Use a 60-second prerecorded screen demo so wallet and testnet latency cannot
+consume the presentation window. The canonical slide-by-slide script lives in
+the local, ignored `docs/pitch-deck.md`.
 </aside>
 
-### [0:00–0:30] Hook
+### [0:00–0:15] Outcome
 
-> "Imagine you're an Indonesian freelancer. A client abroad pays you $2,000. The money lands, becomes a single balance — and within two weeks, it's gone. Savings? Leftover. That is: zero.
-> It's called Shunt — an electrical term: a component that diverts current so the main circuit doesn't overload. Shunt does the same for your income."
+> "Split freelance income before you spend it. Shunt turns one USDC payday into
+> spending money, a buffer, and savings protected by an on-chain timelock."
 
-### [0:30–1:15] Problem
+### [0:15–0:35] Problem
 
-> "There are two leaks. First, once it becomes a single balance, all the money feels 'spendable' — and it disappears. Second, even if you save it in rupiah, it erodes: the rupiah has already hit ~Rp18,000 per dollar.
-> For irregular-income earners, there's no fixed salary to automate. The only clean moment to set money aside is when new income arrives. That's the moment Shunt captures."
+> "Freelance income is irregular. When it lands as one balance, every dollar
+> feels available and savings become whatever is left. Shunt acts at payday,
+> before that money blends into daily spending."
 
-### [1:15–3:45] Solution + live demo
+### [0:35–0:55] Product
 
-> "Shunt isn't a money-transfer app. Shunt is a layer on top of money that has already landed — splitting it, saving it, protecting its value. The rules are set ONCE."
+> "Set the allocation once. When USDC arrives, Shunt detects it and prepares
+> the exact split. The user reviews and signs; Shunt never holds their keys."
 
-**Demo (share screen / URL):**
+### [0:55–1:55] Prerecorded product demo
 
-1. *Connect Freighter* → "Just a browser, no app install needed."
-2. *Set rules with sliders* → "Needs 60, Savings 25, Buffer 15. Save — this is stored on-chain in the Shunt contract."
-3. *USDC income arrives in the wallet* → "Income lands — Shunt detects it instantly."
-4. *Auto-split happens* → "Shunt detects it, I approve once, and within seconds the money splits atomically into three lanes." (fallback: "if needed, trigger it manually — a safety net.")
-5. *Savings* → "The savings lane is held in USDC — value-holding, not eroded by the rupiah. I also show the progress in rupiah via the Reflector oracle."
-6. *One off-ramp lane* → "The Needs lane can exit to fiat through an anchor. And it's all transparent — every transaction has a link to the explorer."
+Show wallet connection, saved rules, detected income, the review screen, the
+wallet signature, the updated Savings vault, and the testnet transaction hash.
+Do not show Transak or MoonPay in the main path; their sandbox widgets do not
+prove a Stellar testnet fiat settlement.
 
-### [3:45–4:30] Why Stellar & differentiation
+### [1:55–2:20] Proof
 
-> "Why Stellar? Sub-cent fees, so auto-splitting even small amounts stays economical. Native USDC. Per-second settlement. And an anchor network for local on/off-ramp.
-> The difference from Wise or MoneyGram: they move the money and they're done. Shunt works AFTER the money lands — giving the structure and discipline that neither banks nor remittance provide."
+> "This is not a clickable mockup. The split runs on Stellar testnet with USDC,
+> the Savings timelock is enforced by Soroban, and the explorer hash verifies
+> the transaction. The keeper prepares unsigned transactions and holds no keys."
 
-### [4:30–5:00] Roadmap & closing
+### [2:20–2:40] Why Stellar
 
-> "Today we've shown the engine running end-to-end — a real on-chain split executed with real testnet USDC, every step verifiable on the explorer. Next: the IDRX local asset, a gold lane, and native mobile.
-> Income comes in once, automatically split into its lanes — and your savings aren't eroded by the rupiah. That's Shunt. Thank you."
+> "Stellar gives us fast settlement, low fees, native USDC, Soroban contracts,
+> and the SEP standards needed to connect licensed fiat providers without
+> turning Shunt into a custodian."
 
-### Anticipated judge questions (prepare answers)
+### [2:40–3:00] Close
 
-- **"Truly non-custodial?"** → "Our definition: no third party holds the keys. Needs & Buffer live in the user's wallet; Savings is held by the contract CODE — only the owning user can withdraw, not the keeper. That lets the timelock be enforced without third-party custody."
-- **"Isn't the keeper centralization?"** → "For the MVP, yes — we're honest about that. There's idempotency, reconnect, and a manual fallback. Decentralizing the keeper is on the roadmap."
-- **"How is this different from just holding USDC?"** → "For those already holding USDC, the value is in automated discipline. For the mainstream, the value is in the bridge to rupiah + anti-erosion."
-- **"Local anchor?"** → "Our real local-asset target is IDRX — a regulated rupiah stablecoin; we're checking its availability on Stellar. The demo uses the SDF sandbox; if IDRX isn't on Stellar yet, the first GTM goes through the PHP corridor with a real anchor."
+> "Today the money-routing core is real on testnet. Fiat providers remain
+> clearly labeled sandbox or partnership-dependent until a production corridor
+> is approved. Shunt makes the moment income arrives the moment saving happens."
 
----
+### [3:00–5:00] Judge Q&A
 
-# ⚡ Quick Pitch Script (3 minutes)
-
-<aside>
-⏱️
-Condensed version for early rounds / limited slots. Structure = Hook (20s) → Problem (30s) → Core demo (1m20s) → Why Stellar & the difference (30s) → Closing (20s). Drop the details; keep only the flow the eye can see.
-</aside>
-
-### [0:00–0:20] Hook
-
-> "An Indonesian freelancer gets paid $2,000 by a foreign client. The money lands, becomes a single balance — two weeks later it's gone, savings zero. Shunt fixes that: the moment income arrives, it's automatically split into its lanes."
-
-### [0:20–0:50] Problem
-
-> "Two leaks: money that becomes a single balance feels 'spendable' and then disappears; and if you save it in rupiah, it erodes — already ~Rp18,000 per dollar. The one clean moment to set money aside is when new income arrives."
-
-### [0:50–2:10] Core demo (straight to screen)
-
-> "The rules are set ONCE."
-
-1. *Connect Freighter* → "just a browser."
-2. *Sliders 60/25/15* → "save, stored on-chain."
-3. *USDC income arrives in the wallet* → "Shunt detects it automatically."
-4. *Auto-split* → "I approve once, and in seconds it splits into three lanes — atomically." (fallback: "trigger manually if needed.")
-5. *Savings + cash-out* → "savings held in USDC, its rupiah value shown; the Needs lane can exit to fiat through an anchor. All transparent on the explorer."
-
-### [2:10–2:40] Why Stellar & the difference
-
-> "Sub-cent fees make splitting small amounts economical, native USDC, per-second settlement. Wise/MoneyGram just move money; Shunt works AFTER the money lands — giving structure and discipline."
-
-### [2:40–3:00] Closing
-
-> "The engine already runs end-to-end — we prove the split on-chain with real testnet USDC, every hash verifiable. Income comes in, one tap, instantly split into its lanes — and your savings aren't eroded by the rupiah. That's Shunt."
+Prioritize four short answers: what is on-chain rather than mocked, what the
+fiat-provider status actually proves, why the keeper cannot move funds, and why
+the submission uses testnet. Keep each answer near 25 seconds.
