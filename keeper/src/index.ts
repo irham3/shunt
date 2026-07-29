@@ -1,4 +1,4 @@
-import { Horizon } from "@stellar/stellar-sdk";
+import { Horizon, StrKey } from "@stellar/stellar-sdk";
 import { buildDistributeTx, amountToStroops } from "./distribute";
 import {
   watchAccounts,
@@ -77,6 +77,34 @@ function json(data: unknown, status = 200, cors: Record<string, string> = {}): R
     status,
     headers: { "content-type": "application/json", ...cors },
   });
+}
+
+function isValidStellarAccount(address: unknown): address is string {
+  return typeof address === "string" && StrKey.isValidEd25519PublicKey(address);
+}
+
+async function verifyTransakWalletAddress(
+  apiKey: string,
+  cryptoCurrencyCode: string,
+  network: string,
+  walletAddress: string,
+): Promise<boolean> {
+  const verifyUrl = new URL("https://api-stg.transak.com/cryptocoverage/api/v1/public/verify-wallet-address");
+  verifyUrl.searchParams.set("cryptoCurrency", cryptoCurrencyCode);
+  verifyUrl.searchParams.set("network", network);
+  verifyUrl.searchParams.set("walletAddress", walletAddress);
+
+  const verifyRes = await fetch(verifyUrl.toString(), {
+    method: "GET",
+    headers: {
+      "x-api-key": apiKey,
+    },
+  });
+  const verifyText = await verifyRes.text();
+  let verifyData: any = {};
+  try { verifyData = JSON.parse(verifyText); } catch (_) { /* non-JSON */ }
+
+  return verifyRes.ok && verifyData?.response === true;
 }
 
 export async function handleInflow(
@@ -437,6 +465,202 @@ export default {
           409,
           cors,
         );
+      }
+    }
+
+    if (url.pathname === "/transak-url" && request.method === "POST") {
+      const { TRANSAK_API_KEY, TRANSAK_API_SECRET } = env;
+      if (!TRANSAK_API_KEY || !TRANSAK_API_SECRET) {
+        return json({ error: "Transak credentials not configured on the backend" }, 500, cors);
+      }
+
+      const body = (await request.json().catch(() => ({}))) as {
+        mode?: "hosted" | "locked";
+        walletAddress?: string;
+        walletMemo?: string;
+        fiatAmount?: string | number;
+      };
+      // Shunt never exposes Transak's hosted/manual wallet form. Older clients may
+      // still send mode="hosted"; treat those requests as locked as well.
+      const mode = "locked";
+      const configuredRecipient = env.TRANSAK_STELLAR_RECIPIENT_ADDRESS?.trim();
+      const configuredMemo = env.TRANSAK_STELLAR_RECIPIENT_MEMO?.trim();
+      const recipientAddress = mode === "locked"
+        ? configuredRecipient || body.walletAddress
+        : undefined;
+      const recipientMemo = mode === "locked"
+        ? configuredMemo || body.walletMemo
+        : undefined;
+
+      if (mode === "locked" && !recipientAddress) {
+        return json({
+          error: "Transak auto-fill needs a funded Stellar mainnet recipient configured in Shunt.",
+        }, 400, cors);
+      }
+      if (mode === "locked" && !isValidStellarAccount(recipientAddress)) {
+        return json({ error: "valid Stellar walletAddress required" }, 400, cors);
+      }
+
+      try {
+        // Get caller IP to forward as x-user-ip (required by Transak)
+        const userIp = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+        const fiatAmount = Number(body.fiatAmount ?? "100");
+        const normalizedFiatAmount = Number.isFinite(fiatAmount) && fiatAmount > 0 ? String(fiatAmount) : "100";
+        const fiatCurrency = "USD";
+        // Transak staging currently accepts Stellar recipient addresses for XLM
+        // but rejects the same addresses for Stellar USDC in its own verifier.
+        // Keep this sandbox route honest and internally consistent by using XLM.
+        const cryptoCurrencyCode = "XLM";
+        // Transak identifies native Stellar XLM as network="mainnet"; its
+        // network="stellar" identifier is reserved for Stellar-issued assets.
+        const network = "mainnet";
+        const paymentMethod = "credit_debit_card";
+        const quoteCountryCode = "ID";
+
+        const quoteUrl = new URL("https://api-stg.transak.com/api/v1/pricing/public/quotes");
+        quoteUrl.searchParams.set("partnerApiKey", TRANSAK_API_KEY);
+        quoteUrl.searchParams.set("fiatCurrency", fiatCurrency);
+        quoteUrl.searchParams.set("cryptoCurrency", cryptoCurrencyCode);
+        quoteUrl.searchParams.set("network", network);
+        quoteUrl.searchParams.set("isBuyOrSell", "BUY");
+        quoteUrl.searchParams.set("fiatAmount", normalizedFiatAmount);
+        quoteUrl.searchParams.set("paymentMethod", paymentMethod);
+        quoteUrl.searchParams.set("quoteCountryCode", quoteCountryCode);
+        const quoteRes = await fetch(quoteUrl.toString(), {
+          method: "GET",
+          headers: {
+            "x-api-key": TRANSAK_API_KEY,
+          },
+        });
+        const quoteText = await quoteRes.text();
+        let quoteData: any = {};
+        try { quoteData = JSON.parse(quoteText); } catch (_) { /* non-JSON */ }
+
+        if (!quoteRes.ok || !quoteData?.response) {
+          return json({
+            error: "Transak route unavailable for USD to Stellar XLM in the current staging environment.",
+            providerStatus: quoteRes.status,
+            providerMessage: quoteData?.error?.message ?? quoteData?.message ?? "Unknown provider response",
+          }, 400, cors);
+        }
+
+        if (mode === "locked") {
+          const isAcceptedWallet = await verifyTransakWalletAddress(
+            TRANSAK_API_KEY,
+            cryptoCurrencyCode,
+            network,
+            recipientAddress!,
+          );
+
+          if (!isAcceptedWallet) {
+            return json({
+              error: "Transak staging does not accept this wallet for USD to Stellar XLM.",
+            }, 400, cors);
+          }
+        }
+
+        // 1. Refresh Access Token
+        // Note: correct staging base is api-stg.transak.com (not api-gateway-stg)
+        const tokenRes = await fetch("https://api-stg.transak.com/partners/api/v2/refresh-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "accept": "application/json",
+            "api-secret": TRANSAK_API_SECRET,
+          },
+          body: JSON.stringify({ apiKey: TRANSAK_API_KEY }),
+        });
+        const tokenText = await tokenRes.text();
+        let tokenData: any = {};
+        try { tokenData = JSON.parse(tokenText); } catch (_) { /* non-JSON */ }
+
+        const accessToken = tokenData?.data?.accessToken || tokenData?.accessToken;
+
+        if (!accessToken) {
+          return json({ error: "Transak token exchange failed" }, 502, cors);
+        }
+
+        // 2. Create Secure Widget Session
+        const widgetParams: Record<string, unknown> = {
+          apiKey: TRANSAK_API_KEY,
+          referrerDomain: "shuntapp.xyz",
+          productsAvailed: "BUY",
+          fiatCurrency,
+          fiatAmount: normalizedFiatAmount,
+          cryptoCurrencyCode,
+          network,
+          isBuyOrSell: "BUY",
+          paymentMethod,
+          quoteCountryCode,
+          hideExchangeScreen: true,
+        };
+        if (mode === "locked") {
+          widgetParams.walletAddress = recipientAddress;
+          widgetParams.disableWalletAddressForm = true;
+        }
+        const sessionRes = await fetch("https://api-gateway-stg.transak.com/api/v2/auth/session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "access-token": accessToken,
+            "x-api-key": TRANSAK_API_KEY,
+            "x-user-ip": userIp,
+          },
+          body: JSON.stringify({
+            widgetParams,
+          }),
+        });
+        const sessionText = await sessionRes.text();
+        let sessionData: any = {};
+        try { sessionData = JSON.parse(sessionText); } catch (_) { /* non-JSON */ }
+
+        const widgetUrl = sessionData?.data?.widgetUrl || sessionData?.widgetUrl;
+
+        if (!widgetUrl) {
+          return json({ error: "Transak session creation failed" }, 502, cors);
+        }
+
+        return json({ ok: true, widgetUrl }, 200, cors);
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : String(error) }, 500, cors);
+      }
+    }
+
+    if (url.pathname === "/moonpay-url" && request.method === "POST") {
+      const { MOONPAY_API_KEY, MOONPAY_SECRET_KEY } = env;
+      if (!MOONPAY_API_KEY || !MOONPAY_SECRET_KEY || MOONPAY_SECRET_KEY.includes("PASTE_YOUR")) {
+        return json({ error: "MoonPay credentials not configured" }, 500, cors);
+      }
+
+      const body = (await request.json().catch(() => ({}))) as { walletAddress?: string };
+      if (!isValidStellarAccount(body.walletAddress)) {
+        return json({ error: "valid Stellar walletAddress required" }, 400, cors);
+      }
+
+      try {
+        // Build query string — order matters for signature validity
+        const params = new URLSearchParams();
+        params.set("apiKey", MOONPAY_API_KEY);
+        params.set("currencyCode", "usdc_xlm");
+        params.set("walletAddress", body.walletAddress!);
+        params.set("colorCode", "#cdf14a");
+        const queryString = `?${params.toString()}`;
+
+        // Sign with HMAC-SHA256 — MoonPay expects base64 output
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(MOONPAY_SECRET_KEY);
+        const msgData = encoder.encode(queryString);
+        const cryptoKey = await crypto.subtle.importKey(
+          "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+        );
+        const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+        // Convert to base64
+        const signatureBase64 = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+
+        const widgetUrl = `https://buy-sandbox.moonpay.com${queryString}&signature=${encodeURIComponent(signatureBase64)}`;
+        return json({ ok: true, widgetUrl }, 200, cors);
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : String(error) }, 500, cors);
       }
     }
 
