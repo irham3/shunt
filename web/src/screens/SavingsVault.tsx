@@ -126,7 +126,7 @@ export function SavingsVault() {
       <header>
         <h2 style={{ margin: 0 }}>Savings Vault</h2>
         <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>
-          Held in hard value — resistant to rupiah depreciation.
+          USDC savings protected by an on-chain timelock.
         </p>
       </header>
 

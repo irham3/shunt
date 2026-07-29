@@ -112,7 +112,7 @@ export const IncomingPayment: React.FC = () => {
           marginTop: 18,
         }}
       >
-        Payment received — routing automatically
+        Payment received · split ready to review
       </div>
     </GlassCard>
   );

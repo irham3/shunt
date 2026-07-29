@@ -4,7 +4,9 @@ import { test, expect } from "@playwright/test";
 test.describe("onboarding", () => {
   test("landing page pitches the split and routes to connect", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /automated money routing/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /split freelance income before you spend it/i }),
+    ).toBeVisible();
     await page.getByRole("button", { name: /get started/i }).click();
     await expect(page).toHaveURL(/\/connect/);
     await expect(page.getByText("Connect your wallet")).toBeVisible();

@@ -8,7 +8,7 @@ import { DEFAULT_BUCKETS } from "../store";
 const PROOF = [
   "Stellar testnet",
   "Soroban vault",
-  "SEP-24 test flow",
+  "User-signed",
   "49 contract tests",
 ];
 
@@ -66,11 +66,11 @@ export function Onboarding() {
       <main>
         <section className="lp-section lp-hero">
           <div className="lp-hero-copy">
-            <p className="lp-eyebrow">USDC income routing for freelancers</p>
+            <p className="lp-eyebrow">Automated money routing for USDC income</p>
             <h1 className="hero-title">Split freelance income before you spend it.</h1>
             <p className="lp-hero-sub">
-              Shunt turns one wallet balance into clear lanes: spending, savings, buffer, and growth.
-              You approve the split. The vault enforces the lock.
+              Set rules once. Review and sign each payday. Savings locks in a Soroban vault
+              while the rest stays liquid.
             </p>
             <div className="lp-actions">
               <button className="btn-primary" onClick={() => nav("/connect")}>

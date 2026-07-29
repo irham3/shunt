@@ -84,8 +84,7 @@ export const FinalCTA: React.FC = () => {
           marginTop: 30,
         }}
       >
-        Automated money routing on{" "}
-        <span style={{ color: COLORS.textPrimary, fontWeight: 600 }}>Stellar</span>
+        Split freelance income before you spend it
       </div>
     </div>
   );

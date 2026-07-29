@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/hero.svg" alt="Shunt — Automated money routing" width="900">
+  <img src="design/hero.svg" alt="Shunt — Split freelance income before you spend it" width="900">
 </p>
 
 <p align="center">
@@ -15,15 +15,22 @@
   <i>(Includes 1-click testnet XLM/USDC funding directly on the Home screen)</i>
 </p>
 
-**Get paid in dollars. Keep them worth something. Never watch a month's income evaporate again.**
+**Split freelance income before you spend it.**
 
-Shunt is a financial autopilot for people who earn from abroad. The moment USDC lands in your Stellar wallet, **one tap** splits it by rules you set once: spending money stays liquid, an emergency buffer fills, savings get **locked by code** in hard value the rupiah can't erode, and — if you opt in — a slice is **dollar-cost-averaged into an asset** (XLM or gold). One tap per income, at the one moment discipline is easy: payday. *(Detection is automatic; the money only ever moves when you sign — never hands-free.)*
+Shunt is automated money routing for USDC income. Set rules once, then review
+and sign each payday. Needs and Buffer stay liquid in your wallet. Savings
+enters a timelocked Soroban vault. An optional Grow allocation uses a separate
+wallet-approved conversion.
 
 > *Shunt* (electronics): a component that diverts current into parallel paths so no single path overloads. Shunt does the same for your income.
 
-### Built real, not slideware
+### Repository proof
 
-- **49 Soroban unit tests** (split exactness, rounding, replay, timelock, penalty, savings goals, the **unallocated-withdrawal guard**, a **per-user goal cap**, **authorization boundaries**, and a **solvency/conservation invariant**) + a **real-testnet end-to-end suite** (Playwright, 41 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow. **No mocked Stellar network or contract interactions** — signing is injected for headless execution, and everything after signing runs against live Stellar testnet services.
+- **49 Soroban unit tests** cover split exactness, rounding, replay, timelocks,
+  penalties, savings goals, authorization boundaries, and solvency. A real-testnet
+  Playwright suite funds a fresh account, acquires testnet USDC, and exercises the
+  product loop. Stellar network and contract calls are not mocked; only browser
+  signing is injected for headless execution.
 - **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
 - **Recoverable keeper lifecycle:** detected inflows move through explicit
   `detected → prepared → confirmed` states. Preparing an unsigned XDR does not
@@ -58,7 +65,10 @@ What you get is not "an app that splits money into pockets." It's four concrete 
 
 Standard vaults demand willpower. You receive money, open an app, and manually lock a portion away. This fails for freelancers with irregular income. 
 
-Shunt removes willpower. It operates as an **income router**, not a storage box. It sits at the entry point of your cashflow. The moment an invoice is paid or a client transfer lands, Shunt detects it. One tap routes the entire arrival into spending cash, an emergency buffer, and time-locked savings. It enforces financial discipline at the exact moment you get paid, before the money leaks into daily expenses.
+Shunt acts when income arrives, before it blends into the user's spending
+balance. It detects the payment, prepares the saved allocation, and asks the
+user to review and sign. One approved transaction keeps Needs and Buffer liquid
+while moving Savings into the timelocked vault.
 
 ## One app, the whole money loop
 
@@ -83,7 +93,7 @@ Shunt never touches fiat and never holds your keys — licensed anchors do fiat,
 ## How it works
 
 <p align="center">
-  <img src="design/how-it-works.svg" alt="Five steps: connect, set rules, income lands, one tap, auto-split" width="920">
+  <img src="design/how-it-works.svg" alt="Five steps: connect, set rules, detect income, review, sign and split" width="920">
 </p>
 
 |   | Step                   | What happens under the hood                                                                                                                                                                                                                                           |
@@ -92,7 +102,7 @@ Shunt never touches fiat and never holds your keys — licensed anchors do fiat,
 | 2 | **Set rules**    | Sliders for Needs / Savings / Buffer / Invest + a savings timelock. Saved on-chain via`set_rules` — the contract is the single source of truth.                                                                                                                    |
 | 3 | **Income lands** | Via your payment link, a Top Up, or any direct USDC transfer. The keeper streams Horizon and detects it within seconds.                                                                                                                                               |
 | 4 | **One tap**      | The keeper prepares an unsigned`distribute` transaction. You review the exact breakdown and sign. *Nothing moves without your signature.*                                                                                                                         |
-| 5 | **Auto-split**   | The three-lane allocation is **one atomic Soroban transaction**: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is spot-converted into your chosen asset (XLM or TXAUM) by a **separate path payment you approve afterward** — not part of the atomic split. Sub-cent fees, settled in seconds. |
+| 5 | **Signed split** | The three-lane allocation is **one atomic Soroban transaction**: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is spot-converted into your chosen asset (XLM or TXAUM) by a **separate path payment you approve afterward** — not part of the atomic split. Sub-cent fees, settled in seconds. |
 
 **Where each lane lives — and why:**
 

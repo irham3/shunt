@@ -236,7 +236,7 @@ export function ConfigureShunt() {
           <div>
             <h2 style={{ margin: 0 }}>Configure Shunt</h2>
             <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>
-              Every incoming income is automatically split by these rules.
+              Set the rules once. Review and sign the split when income arrives.
             </p>
           </div>
           {rulesSavedOnChain && !isEditing ? (
