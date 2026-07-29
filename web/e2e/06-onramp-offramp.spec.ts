@@ -1,50 +1,62 @@
 /**
- * Money in / money out (README "the anchor stack"): SEP-1 discovery →
- * SEP-10 web auth (challenge signed by the E2E keypair) → SEP-24 hosted
- * flow — against the LIVE SDF test anchor. The hosted KYC UI itself is the
- * anchor's own web app; the loop is proven once it hands us a session URL.
+ * SDF test-anchor protocol simulation: SEP-1 discovery -> SEP-10 web auth
+ * -> SEP-24 hosted flow. This proves the Stellar protocol path on testnet.
+ * It does not prove a live fiat deposit or cash payout.
  */
 import { test, expect } from "./fixtures";
 
-test.describe("anchor on-ramp / off-ramp", () => {
-  test("Top Up (SEP-24 deposit) reaches the anchor's hosted flow", async ({ page }) => {
+test.describe("SDF test-anchor protocol simulation", () => {
+  test("Add money opens an SDF SEP-24 deposit session with simulation copy", async ({ page }) => {
     await page.goto("/topup");
-    await page.getByLabel(/amount to receive/i).fill("5");
 
-    // Rate + fee are disclosed before confirmation (business model: 0.35%)
-    await expect(page.getByText(/on-ramp fee \(0.35%\)/i)).toBeVisible();
-    await expect(page.getByText(/you pay/i)).toBeVisible();
+    await expect(page.getByText(/Live fiat routes appear only after/i)).toBeVisible();
+    await expect(page.getByText("Stellar testnet simulation")).toBeVisible();
+    await expect(page.getByText(/No bank account is charged/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /^top up$/i }).click();
+    await page.getByLabel(/test usdc amount/i).fill("5");
+    await page.getByRole("button", { name: /^start stellar test flow$/i }).click();
 
-    // Real SEP-10 + SEP-24 round-trip → interactive session URL
-    await expect(page.getByText("Top Up in progress")).toBeVisible({ timeout: 90_000 });
-    const reopen = page.getByRole("link", { name: /reopen the anchor/i });
+    await expect(page.getByText("Test deposit session created")).toBeVisible({ timeout: 90_000 });
+    const reopen = page.getByRole("link", { name: /reopen the sdf test flow/i });
     await expect(reopen).toBeVisible();
     await expect(reopen).toHaveAttribute("href", /^https:\/\//);
   });
 
-  test("Cash-out (SEP-24 withdraw) shows rate & fee first, then reaches the anchor", async ({ page, e2e }) => {
-    await page.goto("/send");
-    await page.getByRole("button", { name: "USDC Off-Ramp" }).click();
+  test("Transak does not fall back to a manual wallet form when locked setup fails", async ({ page }) => {
+    let transakRequests = 0;
+    await page.route("**/transak-url", async (route) => {
+      transakRequests += 1;
+      await route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Transak needs a funded Stellar mainnet recipient." }),
+      });
+    });
 
-    // Real on-chain wallet balance is what gates the withdrawal
-    await expect(page.getByText(/wallet holds/i)).toBeVisible();
+    await page.goto("/topup");
+    await expect(page.getByText(/USD card to Stellar XLM/i)).toBeVisible();
+    await page.getByRole("button", { name: /^try transak$/i }).click();
+
+    await expect(page.getByRole("alert")).toContainText(/funded Stellar mainnet recipient/i);
+    expect(transakRequests).toBe(1);
+  });
+
+  test("Test withdrawal opens an SDF SEP-24 withdraw session when the wallet has USDC", async ({ page, e2e }) => {
+    await page.goto("/send");
+    await page.getByRole("button", { name: "Test Withdrawal" }).click();
+
+    await expect(page.getByText(/Create a Stellar testnet withdrawal session/i)).toBeVisible();
+    await expect(page.getByText(/does not quote IDR or provider fees/i)).toBeVisible();
 
     await page.getByLabel(/amount \(usdc\)/i).fill("1");
-    // Fee disclosure before confirm (business model: 0.4% on Needs cash-out)
-    await expect(page.getByText(/off-ramp fee \(0.4%\)/i)).toBeVisible();
-    await expect(page.getByText(/you receive/i)).toBeVisible();
-
     await page.getByRole("button", { name: "Continue" }).click();
 
     if (e2e.usdcAcquired) {
-      await expect(page.getByText("Cash-out in progress")).toBeVisible({ timeout: 90_000 });
-      const reopen = page.getByRole("link", { name: /reopen the anchor/i });
+      await expect(page.getByText("Test withdrawal session created")).toBeVisible({ timeout: 90_000 });
+      const reopen = page.getByRole("link", { name: /reopen the sdf test flow/i });
       await expect(reopen).toBeVisible();
       await expect(reopen).toHaveAttribute("href", /^https:\/\//);
     } else {
-      // Without wallet USDC the app must refuse honestly, not pretend
       await expect(page.getByRole("alert")).toContainText(/exceeds your wallet USDC/i);
     }
   });

@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDownUp } from "lucide-react";
 import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, getAnchorInfo, AnchorAssetInfo } from "../lib/anchor";
-import { getIdrRate } from "../lib/rates";
 import {
   sendXlmPayment,
   sendUsdcPayment,
@@ -28,21 +27,13 @@ import {
   formatError,
 } from "../lib/stellar";
 import { parseSep7PayUri, type ParsedSep7Request } from "../lib/sep7";
-import { fmtIdr, fmtUsdc, useShunt } from "../store";
+import { fmtUsdc, useShunt } from "../store";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { StrKey, Asset } from "@stellar/stellar-sdk";
 
 /** Local-currency demo assets available to "settle" spending into (excludes
  *  the gold demo asset — that belongs to the Invest lane, not Needs spend). */
 const SETTLE_ASSETS = DEMO_ASSETS.filter((a) => a.code !== "TXAUM");
-
-const FEE_PCT = 0.4; // off-ramp fee (PRD §7b: 0.3–0.5%)
-
-const DESTS = [
-  { id: "bank", label: "Bank transfer", icon: "🏦" },
-  { id: "ewallet", label: "E-wallet", icon: "📱" },
-  { id: "bill", label: "Bills", icon: "🧾" },
-];
 
 type Tab = "usdc" | "xlm" | "convert" | "payreq";
 
@@ -68,9 +59,7 @@ export function SendPay() {
   const [tab, setTab] = useState<Tab>(
     initialTab === "convert" ? "convert" : initialTab === "usdc" ? "usdc" : "xlm",
   );
-  const [dest, setDest] = useState("bank");
   const [amount, setAmount] = useState("");
-  const [idr, setIdr] = useState(18000);
   const [submitted, setSubmitted] = useState<"anchor" | "local" | null>(null);
   const [anchorUrl, setAnchorUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -119,7 +108,6 @@ export function SendPay() {
   const [payReqResult, setPayReqResult] = useState<{ hash: string; asset: string; amount: string } | null>(null);
 
   useEffect(() => {
-    getIdrRate().then((r) => setIdr(r.rate));
     getAnchorInfo("USDC").then(setLimits).catch(e => setErr(formatError(e)));
   }, []);
 
@@ -128,8 +116,6 @@ export function SendPay() {
   }, [address, refreshWallet]);
 
   const usdc = Number(amount) || 0;
-  const fee = (usdc * FEE_PCT) / 100;
-  const receiveIdr = (usdc - fee) * idr;
   const walletUsdc = Number(usdcBalance ?? 0);
 
   // --- USDC off-ramp submit ---
@@ -173,13 +159,11 @@ export function SendPay() {
       window.addEventListener("message", onMessage);
       offramp(usdc);
       setSubmitted("anchor");
-      showToast("Withdrawal started at the anchor");
+      showToast("Stellar test withdrawal session created");
     } catch (e) {
-      offramp(usdc);
-      setSubmitted("local");
       const formatted = formatError(e);
-      if (formatted) setErr(`Anchor flow unavailable (${formatted}) — recorded as a sketched request.`);
-      showToast("Cash-out request submitted");
+      if (formatted) setErr(`Test-anchor withdrawal failed: ${formatted}`);
+      showToast("Withdrawal session failed");
     } finally {
       setBusy(false);
     }
@@ -511,15 +495,14 @@ export function SendPay() {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
         <div style={{ fontSize: 48 }}>⏳</div>
-        <h2>Cash-out in progress</h2>
+        <h2>Test withdrawal session created</h2>
         <p className="muted">
-          Request for {fmtUsdc(usdc)} USDC → {fmtIdr(receiveIdr)} sent to the anchor (
-          {ANCHOR_HOME_DOMAIN}). Settlement time depends on the anchor & KYC — it is not
-          instant, and that's normal.
+          The SDF test anchor opened a SEP-24 withdrawal session for {fmtUsdc(usdc)} test USDC at{" "}
+          {ANCHOR_HOME_DOMAIN}. This does not pay IDR to a bank account.
         </p>
         {anchorUrl && (
           <a href={anchorUrl} target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-secondary)" }}>
-            Reopen the anchor's hosted flow ↗
+            Reopen the SDF test flow
           </a>
         )}
         <button className="btn-primary" onClick={() => { setSubmitted(null); setAnchorUrl(null); }}>
@@ -604,7 +587,7 @@ export function SendPay() {
             color: tab === "usdc" ? "var(--color-text-on-accent)" : "var(--color-text-secondary)",
           }}
         >
-          USDC Off-Ramp
+          Test Withdrawal
         </button>
       </div>
 
@@ -841,7 +824,7 @@ export function SendPay() {
 
           {SETTLE_ASSETS.length > 0 && (
             <>
-              <h3 style={{ fontSize: 15, margin: "24px 0 4px" }}>Local bank withdrawal</h3>
+              <h3 style={{ fontSize: 15, margin: "24px 0 4px" }}>Local asset settlement (testnet)</h3>
 
               {/* TODO [MoneyGram]: Uncomment MoneyGram disclosure once approved
               <div style={{ padding: "8px 12px", background: "var(--color-bg-elevated)", borderRadius: 6, fontSize: 12, marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
@@ -936,32 +919,14 @@ export function SendPay() {
         </motion.div>
       )}
 
-      {/* ─── USDC Off-Ramp Tab ─── */}
+      {/* ─── USDC test-withdrawal tab ─── */}
       {tab === "usdc" && (
         <motion.div key="usdc" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 14 }}>
-            Cash out to your bank — wallet holds{" "}
+            Create a Stellar testnet withdrawal session. Your wallet holds{" "}
             <AnimatedNumber value={walletUsdc} decimals={2} /> USDC on-chain
             (Needs lane: {fmtUsdc(balances.needs)} USDC).
           </p>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            {DESTS.map((d) => (
-              <button
-                key={d.id}
-                className="card"
-                onClick={() => setDest(d.id)}
-                style={{
-                  flex: 1,
-                  textAlign: "center",
-                  border: dest === d.id ? "1px solid var(--color-accent-primary)" : "1px solid transparent",
-                }}
-              >
-                <div style={{ fontSize: 26 }}>{d.icon}</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>{d.label}</div>
-              </button>
-            ))}
-          </div>
 
           <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <label className="muted" style={{ fontSize: 13 }}>
@@ -978,23 +943,14 @@ export function SendPay() {
             <span className="muted" style={{ fontSize: 12 }}>
               {limits ? `Test anchor accepts ${limits.minAmount}–${limits.maxAmount} USDC per transaction.` : "Fetching limits..."}
             </span>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span className="muted">Rate</span>
-              <span className="numeric">1 USDC ≈ {fmtIdr(idr)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span className="muted">Off-ramp fee ({FEE_PCT}%)</span>
-              <span className="numeric"><AnimatedNumber value={fee} decimals={4} /> USDC</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
-              <span>You receive</span>
-              <span className="numeric" style={{ color: "var(--color-accent-primary)" }}>{fmtIdr(receiveIdr)}</span>
-            </div>
+            <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+              The SDF test anchor does not quote IDR or provider fees.
+            </p>
           </div>
 
           <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-            Sent via anchor — rate & fees shown before you confirm. Bank details are entered in the
-            anchor's hosted flow (KYC); the anchor address itself is locked by the on-chain allowlist.
+            SEP-24 via the SDF test anchor. Use MoneyGram Production Preview or a licensed provider
+            route before presenting a real cash-out.
           </p>
 
           {/* Gate on the balance actually being loaded — clicking against a

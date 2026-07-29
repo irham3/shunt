@@ -52,10 +52,6 @@ export function ConnectWallet() {
     <AnimatedBackground aurora threads>
       <div className="screen" style={{ justifyContent: "center", minHeight: "100dvh", maxWidth: 440, margin: "0 auto" }}>
         <motion.div {...rise(0)} className="cw-card">
-          <motion.span {...rise(0.05)} className="chip lp-chip-live" style={{ display: "inline-flex", alignItems: "center", gap: 8, alignSelf: "center" }}>
-            <span className="lp-live-dot" /> Stellar testnet
-          </motion.span>
-
           <motion.h1 {...rise(0.1)} style={{ fontSize: 30, textAlign: "center", margin: "16px 0 6px" }}>
             <ShinyText text="Connect your wallet" speed={3} />
           </motion.h1>

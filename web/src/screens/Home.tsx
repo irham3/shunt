@@ -17,7 +17,7 @@ import { resolveRulesNotSet } from "../lib/vault";
 import { fmtIdr, fmtUsdc, useShunt } from "../store";
 import { BentoGrid, BentoCard } from "../components/BentoGrid";
 import { AnimatedNumber } from "../components/AnimatedNumber";
-import { Lock, Wallet, ArrowUpRight, ShieldCheck, Sparkles, SlidersHorizontal } from "lucide-react";
+import { Lock, Wallet, ArrowUpRight, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 /** Balance denominations the user can flip between (README: XLM + USDC live side by side). */
 type AssetView = "USDC" | "XLM" | "IDR";
@@ -409,16 +409,16 @@ export function Home() {
           className="card"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ border: "1px dashed var(--color-accent-secondary)", display: "flex", alignItems: "center", gap: 12 }}
+          style={{ border: "1px solid var(--color-accent-secondary)", display: "flex", alignItems: "center", gap: 12 }}
           data-testid="unsplit-banner"
         >
-          <Sparkles size={20} style={{ color: "var(--color-accent-secondary)", flexShrink: 0 }} />
+          <Wallet size={20} style={{ color: "var(--color-accent-secondary)", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>
-              {fmtUsdc(unsplitUsdc)} USDC in your wallet isn't split yet
+              {fmtUsdc(unsplitUsdc)} USDC unallocated
             </div>
             <div className="muted" style={{ fontSize: 12 }}>
-              Received directly? Route it through your rules now.
+              Split this balance across your lanes.
             </div>
           </div>
           <button
@@ -434,7 +434,7 @@ export function Home() {
       )}
 
       {/* Desktop: allocation + buckets left, activity right. Mobile: stacked. */}
-      <div className="split-cols">
+      <div className="split-cols home-dashboard">
         <div className="col-main">
           <section className="card">
             <AllocationBar buckets={buckets} />
@@ -442,37 +442,29 @@ export function Home() {
 
           <BentoGrid className="bucket-grid">
             {buckets.map((b, i) => (
-              <BentoCard key={b.id} delay={i * 0.1}>
+              <BentoCard key={b.id} delay={i * 0.1} className="bucket-card">
                 <Link
                   to={b.id === "savings" ? "/savings" : `/lane/${b.id}`}
-                  style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, textDecoration: "none", color: "inherit", height: "100%" }}
+                  className="bucket-card-link"
                   data-testid={`bucket-card-${b.id}`}
                 >
+                  <span className="bucket-card-accent" aria-hidden style={{ background: b.color }} />
                   <span
+                    className="bucket-card-icon"
                     aria-hidden
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 12,
-                      background: b.color,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--color-text-on-accent)",
-                      fontWeight: 700,
-                    }}
+                    style={{ color: b.color }}
                   >
                     {b.kind === "savings" ? <Lock size={20} /> : b.kind === "invest" ? <ArrowUpRight size={20} /> : <Wallet size={20} />}
                   </span>
-                  <span>
-                    <div style={{ fontWeight: 600 }}>{b.name}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>{b.pct}% of each income · {bucketNote(b.kind)}</div>
+                  <span className="bucket-card-copy">
+                    <span className="bucket-card-title">{b.name}</span>
+                    <span className="muted bucket-card-meta">{b.pct}% of each income · {bucketNote(b.kind)}</span>
                   </span>
-                  <span className="numeric" style={{ fontWeight: 600, fontSize: 20, marginTop: "auto" }}>
+                  <span className="numeric bucket-card-balance">
                     <AnimatedNumber value={bucketBalance(b.id)} decimals={2} />{" "}
-                    <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>USDC</span>
+                    <span className="muted bucket-card-unit">USDC</span>
                     {b.id === "invest" && (investXlmHeld > 0 || investGoldHeld > 0) && (
-                      <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
+                      <span className="muted bucket-card-detail">
                         {[
                           investXlmHeld > 0 && `${investXlmHeld.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`,
                           investGoldHeld > 0 && `${investGoldHeld.toLocaleString("en-US", { maximumFractionDigits: 4 })} TXAUM`,
@@ -480,7 +472,7 @@ export function Home() {
                       </span>
                     )}
                     {b.id === "savings" && goals.length > 0 && (
-                      <span className="muted" style={{ fontSize: 12, display: "block", fontWeight: 400 }}>
+                      <span className="muted bucket-card-detail">
                         <ShieldCheck size={11} style={{ verticalAlign: "-1px" }} />{" "}
                         {goals.slice(0, 2).map((g) => g.label).join(" · ")}
                         {goals.length > 2 ? ` +${goals.length - 2}` : ""}

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil, vaultGetGoals, vaultGetUnallocatedSavings, vaultGetRules, type Goal as ChainGoal } from "./lib/vault";
 import { fetchAccountBalances } from "./lib/stellar";
+import { createRampActivity } from "./lib/ramp-activity";
 
 /**
  * Single source of truth for allocation rules (DESIGN.md §5.1):
@@ -398,17 +399,7 @@ export const useShunt = create<ShuntState>()(
         // balance the moment a user closed the tab without finishing.
         // Mirrors recordTopUp, which is activity-only for the same reason.
         set({
-          activity: [
-            {
-              id: `${Date.now()}`,
-              kind: "offramp",
-              title: "Cash-out via anchor (pending)",
-              amountUsdc: amount,
-              at: new Date().toISOString(),
-              bucket: "needs",
-            },
-            ...activity,
-          ],
+          activity: [createRampActivity("withdraw", amount), ...activity],
         });
       },
 
@@ -466,16 +457,7 @@ export const useShunt = create<ShuntState>()(
       recordTopUp: (amount) => {
         const { activity } = get();
         set({
-          activity: [
-            {
-              id: `${Date.now()}`,
-              kind: "deposit",
-              title: "Top Up via anchor (pending)",
-              amountUsdc: amount,
-              at: new Date().toISOString(),
-            },
-            ...activity,
-          ],
+          activity: [createRampActivity("deposit", amount), ...activity],
         });
       },
 
