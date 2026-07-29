@@ -1077,3 +1077,4 @@ Jangan commit credential, JWT, secret key, personal KYC data, atau unredacted le
 **Tindakan berikutnya:** pilih satu domain, deploy `stellar.toml`, validasi TOML, lalu kirim partner-form request untuk MoneyGram Ramps staging allowlist. Jangan menunggu perubahan kode besar sebelum memulai onboarding.
 
 </aside>
+> Current status, July 29, 2026: Shunt treats the SDF test anchor as a Stellar testnet simulation. Provider sandbox, Production Preview, and live routes are separate environments. A route becomes "live" only after provider capability, order completion, and matching Stellar mainnet settlement evidence.

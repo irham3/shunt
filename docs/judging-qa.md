@@ -8,13 +8,11 @@ Keep answers short out loud; the detail here is backup.
 ## Q1. "SDF sandbox doesn't connect users to any local economy — where's the real regional anchor?"
 
 **30-second answer:** "The corridor that already connects Stellar USDC to a local
-APAC economy today is **MoneyGram Access** — USDC cashed out to **PHP at physical
-MoneyGram locations across the Philippines**, live on mainnet. Our off-ramp is
-generic SEP-24, so pointing at it is one config value. Run `node
-scripts/verify-anchor.mjs stellar.moneygram.com` — our SEP-1 discovery resolves
-MoneyGram's real SEP-24 endpoint. The demo uses the SDF test anchor only because
-MoneyGram and every regulated regional off-ramp run on **mainnet only** — no one
-exposes a testnet SEP-24 endpoint except SDF. Same code, different domain."
+cash route is **MoneyGram Ramps**, but we do not claim it live until Shunt has
+allowlisting, staging evidence, Production Preview or production access, and a
+participating location returned by MoneyGram. Our current demo uses the SDF test
+anchor as a clearly labeled Stellar testnet simulation. Same SEP standards,
+different evidence level."
 
 **Why it holds:** off-ramp = generic SEP-24 + an on-chain `anchors` allowlist in
 `set_rules`. Swapping corridor = `VITE_ANCHOR_HOME_DOMAIN`, not a contract change.
@@ -202,3 +200,8 @@ card.
   team's credibility *is* the pitch — the savings lane "never lies to you" only
   lands if the team doesn't either.
 - When you don't know a number, say "that's an assumption" — never invent one.
+## Q0. "Is this still a mock anchor?"
+
+**30-second answer:** "We separated the environments. The SDF anchor is now labeled as a Stellar testnet simulation. It proves SEP-1, SEP-10, and SEP-24, but it does not move rupiah. Live fiat routes appear only after a licensed provider confirms the exact country, fiat, asset, network, and direction, then Shunt reconciles the provider order with a Stellar mainnet transaction. Alchemy Pay/Banxa are on-ramp candidates; MoneyGram Ramps is the preferred cash route after allowlisting and Production Preview."
+
+**MoneyGram detail:** users must use a participating MoneyGram Ramps location returned by the provider. Do not assume BRILink or a normal MoneyGram remittance outlet supports crypto cash-in/out.

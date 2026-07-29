@@ -103,3 +103,4 @@ Keep the honest boundaries in — they're a differentiator, not a weakness.
   errors. A failed Vercel build silently keeps serving the previous good
   deploy, so a broken build never shows up as "down" — it shows up as stale
   bugs already fixed in the repo. If in doubt, record against `npm run dev`.
+> Ramp narration update: call the SDF SEP-24 flow a Stellar testnet simulation. Show MoonPay/Transak only as sandbox spikes. Do not say IDR cash-in or cash-out is live unless a provider order completes and matches a Stellar mainnet transaction.
