@@ -402,7 +402,7 @@ export const useShunt = create<ShuntState>()(
             {
               id: `${Date.now()}`,
               kind: "offramp",
-              title: "Cash-out via anchor (pending)",
+              title: "Test anchor withdrawal (submitted)",
               amountUsdc: amount,
               at: new Date().toISOString(),
               bucket: "needs",
@@ -470,7 +470,7 @@ export const useShunt = create<ShuntState>()(
             {
               id: `${Date.now()}`,
               kind: "deposit",
-              title: "Top Up via anchor (pending)",
+              title: "Test deposit session (opened)",
               amountUsdc: amount,
               at: new Date().toISOString(),
             },

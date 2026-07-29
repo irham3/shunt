@@ -16,6 +16,7 @@ import {
   StrKey,
   Transaction,
   Claimant,
+  Memo,
 } from "@stellar/stellar-sdk";
 
 export const NETWORK = (import.meta.env.VITE_STELLAR_NETWORK ?? "testnet") as
@@ -315,11 +316,24 @@ export async function fetchRecentPayments(
 /** Build, sign (WalletKit), and submit a classic payment of `asset` on Horizon.
     Shared by the XLM and USDC transfer paths — the user picks which asset to
     send in Send & Pay. */
+export type PaymentMemo =
+  | { type: "text"; value: string }
+  | { type: "id"; value: string }
+  | { type: "hash"; value: string };
+
+function toStellarMemo(memo?: PaymentMemo): Memo | undefined {
+  if (!memo?.value) return undefined;
+  if (memo.type === "id") return Memo.id(memo.value);
+  if (memo.type === "hash") return Memo.hash(Buffer.from(memo.value, "base64"));
+  return Memo.text(memo.value);
+}
+
 async function sendAssetPayment(
   sender: string,
   destination: string,
   amount: string,
   asset: Asset,
+  memo?: PaymentMemo,
 ): Promise<string> {
   const horizon = new Horizon.Server(HORIZON_URL);
   let source;
@@ -329,13 +343,15 @@ async function sendAssetPayment(
     throw new Error("Sender account not found on network.");
   }
 
-  const tx = new TransactionBuilder(source, {
+  const builder = new TransactionBuilder(source, {
     fee: "100",
     networkPassphrase: NETWORK_PASSPHRASE,
   })
     .addOperation(Operation.payment({ destination, asset, amount }))
-    .setTimeout(300)
-    .build();
+    .setTimeout(300);
+  const stellarMemo = toStellarMemo(memo);
+  if (stellarMemo) builder.addMemo(stellarMemo);
+  const tx = builder.build();
 
   try {
     const { signedTxXdr } = await signTxXdr(tx.toEnvelope().toXDR("base64"), NETWORK_PASSPHRASE);
@@ -354,8 +370,8 @@ export async function sendXlmPayment(sender: string, destination: string, amount
 
 /** Send USDC to another wallet. The recipient must hold a USDC trustline or the
     payment is rejected by the network (surfaced as an error). */
-export async function sendUsdcPayment(sender: string, destination: string, amount: string): Promise<string> {
-  return sendAssetPayment(sender, destination, amount, new Asset(USDC_CODE, USDC_ISSUER));
+export async function sendUsdcPayment(sender: string, destination: string, amount: string, memo?: PaymentMemo): Promise<string> {
+  return sendAssetPayment(sender, destination, amount, new Asset(USDC_CODE, USDC_ISSUER), memo);
 }
 
 /**

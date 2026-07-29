@@ -11,6 +11,7 @@
  * anchor once verified on Stellar.
  */
 import { signTxXdr } from "./signer";
+import type { PaymentMemo } from "./stellar";
 import { NETWORK_PASSPHRASE } from "./stellar";
 
 export const ANCHOR_HOME_DOMAIN =
@@ -174,6 +175,42 @@ export interface AnchorTxStatus {
   withdrawAnchorAccount?: string;
   withdrawMemo?: string;
   withdrawMemoType?: string;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function isSep24WithdrawReady(status: string): boolean {
+  return status === "pending_user_transfer_start" || status === "completed";
+}
+
+export function isSep24TerminalStatus(status: string): boolean {
+  return status === "completed" || status === "expired" || status === "error" || status === "refunded";
+}
+
+export function buildSep24Memo(tx: Pick<AnchorTxStatus, "withdrawMemo" | "withdrawMemoType">): PaymentMemo | undefined {
+  if (!tx.withdrawMemo) return undefined;
+  if (tx.withdrawMemoType === "id") return { type: "id", value: tx.withdrawMemo };
+  if (tx.withdrawMemoType === "hash") return { type: "hash", value: tx.withdrawMemo };
+  return { type: "text", value: tx.withdrawMemo };
+}
+
+export async function pollWithdrawUntil(
+  jwt: string,
+  id: string,
+  until: (tx: AnchorTxStatus) => boolean,
+  options: { intervalMs?: number; timeoutMs?: number } = {},
+): Promise<AnchorTxStatus> {
+  const intervalMs = options.intervalMs ?? 3000;
+  const deadline = Date.now() + (options.timeoutMs ?? 15 * 60_000);
+  let tx = await getWithdrawStatus(jwt, id);
+  while (!until(tx) && Date.now() < deadline) {
+    if (tx.status === "error" || tx.status === "expired") {
+      throw new Error(`SEP-24 withdrawal ${tx.status}.`);
+    }
+    await sleep(intervalMs);
+    tx = await getWithdrawStatus(jwt, id);
+  }
+  return tx;
 }
 
 /** SEP-24: poll a withdraw transaction's status. */

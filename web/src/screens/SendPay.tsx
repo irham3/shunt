@@ -2,7 +2,16 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDownUp } from "lucide-react";
-import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, getAnchorInfo, AnchorAssetInfo } from "../lib/anchor";
+import {
+  authenticate,
+  startWithdraw,
+  ANCHOR_HOME_DOMAIN,
+  getAnchorInfo,
+  AnchorAssetInfo,
+  buildSep24Memo,
+  isSep24WithdrawReady,
+  pollWithdrawUntil,
+} from "../lib/anchor";
 import { getIdrRate } from "../lib/rates";
 import {
   sendXlmPayment,
@@ -73,6 +82,7 @@ export function SendPay() {
   const [idr, setIdr] = useState(18000);
   const [submitted, setSubmitted] = useState<"anchor" | "local" | null>(null);
   const [anchorUrl, setAnchorUrl] = useState<string | null>(null);
+  const [withdrawHash, setWithdrawHash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [limits, setLimits] = useState<AnchorAssetInfo | null>(null);
@@ -171,15 +181,29 @@ export function SendPay() {
         }
       };
       window.addEventListener("message", onMessage);
+      showToast("Finish the hosted test withdrawal flow");
+      const ready = await pollWithdrawUntil(jwt, session.id, (tx) => isSep24WithdrawReady(tx.status));
+      if (ready.status !== "completed") {
+        if (!ready.withdrawAnchorAccount || !ready.amountIn) {
+          throw new Error("Anchor did not return payment instructions.");
+        }
+        const hash = await sendUsdcPayment(
+          address,
+          ready.withdrawAnchorAccount,
+          ready.amountIn,
+          buildSep24Memo(ready),
+        );
+        setWithdrawHash(hash);
+        await pollWithdrawUntil(jwt, session.id, (tx) => tx.status === "completed");
+      }
+      await refreshWallet(address);
       offramp(usdc);
       setSubmitted("anchor");
-      showToast("Withdrawal started at the anchor");
+      showToast("Stellar test withdrawal submitted");
     } catch (e) {
-      offramp(usdc);
-      setSubmitted("local");
       const formatted = formatError(e);
-      if (formatted) setErr(`Anchor flow unavailable (${formatted}) — recorded as a sketched request.`);
-      showToast("Cash-out request submitted");
+      if (formatted) setErr(`Test-anchor withdrawal failed: ${formatted}`);
+      showToast("Withdrawal was not completed");
     } finally {
       setBusy(false);
     }
@@ -511,12 +535,9 @@ export function SendPay() {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
         <div style={{ fontSize: 48 }}>⏳</div>
-        <h2>Cash-out in progress</h2>
-        <p className="muted">
-          Request for {fmtUsdc(usdc)} USDC → {fmtIdr(receiveIdr)} sent to the anchor (
-          {ANCHOR_HOME_DOMAIN}). Settlement time depends on the anchor & KYC — it is not
-          instant, and that's normal.
-        </p>
+        <h2>Test withdrawal submitted</h2>
+        <p className="muted">Shunt opened the SDF SEP-24 withdrawal flow and sent the requested test USDC to the anchor after it returned payment instructions. No rupiah payout is implied.</p>
+        {withdrawHash && (<a href={EXPLORER_TX(withdrawHash)} target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-secondary)" }}>View wallet payment to anchor</a>)}
         {anchorUrl && (
           <a href={anchorUrl} target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-secondary)" }}>
             Reopen the anchor's hosted flow ↗
