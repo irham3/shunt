@@ -15,3 +15,9 @@ level1-objection.md
 web/e2e/.state/
 web/test-results/
 web/playwright-report/
+
+# Auto-generated ignored paths
+/.tmp/
+/.tmp-*/
+/scripts/
+/videos/
