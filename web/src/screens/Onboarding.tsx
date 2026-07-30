@@ -107,9 +107,19 @@ function resetTilt(e: React.MouseEvent<HTMLElement>) {
   el.style.setProperty("--ry", "0deg");
 }
 
-export function Onboarding() {
+const RISING_PARTICLES = Array.from({ length: 32 }).map((_, i) => ({
+  id: i,
+  left: (i * 3.1 + (i % 5) * 7) % 92 + 4,
+  size: i % 3 === 0 ? 3 : 2,
+  duration: 2.2 + (i % 7) * 0.4,
+  delay: (i % 11) * 0.3,
+  color: i % 4 === 0 ? "#ffffff" : i % 2 === 0 ? "#cdf14a" : "#a3e635",
+}));
+
+export const Onboarding: React.FC = () => {
   const nav = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
   const reduceMotion = useReducedMotion();
 
   // Scroll-driven motion: a thin top progress bar + gentle hero-card parallax.
@@ -117,7 +127,23 @@ export function Onboarding() {
   const heroCardY = useTransform(scrollYProgress, [0, 0.25], [0, reduceMotion ? 0 : -70]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 8);
+
+      const sections = ["why", "loop", "how", "proof"];
+      let current = "home";
+      for (const s of sections) {
+        const el = document.getElementById(s);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 140) {
+            current = s;
+          }
+        }
+      }
+      setActiveSection(current);
+    };
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
 
@@ -143,106 +169,138 @@ export function Onboarding() {
   }, []);
 
   return (
-    <AnimatedBackground aurora threads>
+    <AnimatedBackground>
       {/* Scroll progress bar */}
       <motion.div className="lp-scroll-progress" style={{ scaleX: scrollYProgress }} aria-hidden />
 
-      {/* Full-bleed sticky nav */}
-      <nav className={`lp-nav${scrolled ? " scrolled" : ""}`}>
-        <div className="lp-nav-inner">
-          <div className="lp-brand" style={{ fontSize: 20 }}>
-            <Logo />
-            Shunt
-          </div>
-          <div className="lp-nav-links">
-            <a href="#why">Why</a>
-            <a href="#loop">The loop</a>
-            <a href="#how">How it works</a>
-            <a href="#proof">Proof</a>
+      {/* Hero Wrapper containing Navbar + Hero with bg-hero.png background */}
+      <div className="landing-hero-wrapper">
+        {/* Full-bleed sticky nav */}
+        <nav className={`lp-nav${scrolled ? " scrolled" : ""}`}>
+          <div className="lp-nav-inner">
+            <div className="lp-brand">
+              <Logo />
+              <span>Shunt</span>
+            </div>
+            <div className="lp-nav-links">
+              <a
+                href="#"
+                className={activeSection === "home" ? "active" : ""}
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                Home
+              </a>
+              <a href="#why" className={activeSection === "why" ? "active" : ""}>Why</a>
+              <a href="#loop" className={activeSection === "loop" ? "active" : ""}>The loop</a>
+              <a href="#how" className={activeSection === "how" ? "active" : ""}>How it works</a>
+              <a href="#proof" className={activeSection === "proof" ? "active" : ""}>Proof</a>
+            </div>
             <button
-              className="btn-primary lp-btn-primary-glow"
-              style={{ width: "auto", padding: "9px 20px", fontSize: 14, minHeight: 0 }}
+              className="lp-btn-cta"
               onClick={() => nav("/connect")}
             >
-              Connect Wallet
+              <span>Connect Wallet</span>
+              <i className="ph ph-arrow-up-right" />
             </button>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* 1. Hero */}
-      <section
-        className="lp-section"
-        style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "72px 24px 40px" }}
-      >
-        <Reveal variant="blur" delay={0.05}>
-          <h1 className="hero-title">
-            Automated
-            <br />
-            Money Routing
-          </h1>
-        </Reveal>
-        <Reveal variant="up" delay={0.12}>
-          <p className="muted" style={{ fontSize: "clamp(16px, 1.6vw, 18px)", maxWidth: 620, margin: 0, lineHeight: 1.55 }}>
-            Set the rules once, confirm each payday, and keep Savings in a timelocked Soroban vault while the rest stays liquid
-          </p>
-        </Reveal>
-        <Reveal variant="up" delay={0.18}>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-            <button
-              className="btn-primary lp-btn-primary-glow"
-              style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
-              onClick={() => nav("/connect")}
-            >
-              Get Started <i className="ph ph-arrow-right" />
-            </button>
-            <button
-              className="btn-secondary"
-              style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
-              onClick={() => window.open("https://github.com/irham3/shunt", "_blank")}
-            >
-              <i className="ph ph-github-logo" /> View source
-            </button>
-          </div>
-        </Reveal>
-        <Reveal variant="up" delay={0.24}>
-          <div className="muted" style={{ fontSize: 13, letterSpacing: "0.01em", marginTop: 2 }}>
-            USDC · Non-custodial · Built on Stellar
-          </div>
-        </Reveal>
-
-        <motion.div style={{ y: heroCardY, marginTop: 40, width: "100%", maxWidth: 600 }}>
-          <Reveal variant="scale" delay={0.3}>
-            <div className="lp-float">
-              <div className="card lp-hero-card" onMouseMove={spotlight} onMouseLeave={resetTilt} style={{ padding: 26 }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "center", justifyContent: "center" }}>
-                  <DonutChart buckets={DEFAULT_BUCKETS} size={168} strokeWidth={22} />
-                  <div style={{ flex: 1, minWidth: 200, textAlign: "left" }}>
-                    <div className="muted" style={{ fontSize: 13 }}>Default split rules</div>
-                    <div style={{ marginTop: 10 }}>
-                      <AllocationBar buckets={DEFAULT_BUCKETS} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* 1. Hero Section */}
+        <section
+          className="lp-section"
+          style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 18, padding: "124px 24px 0" }}
+        >
+          {/* Top Pill Badge */}
+          <Reveal variant="blur" delay={0.02}>
+            <div className="lp-hero-badge">
+              <span className="lp-badge-tag">Soroban Vault</span>
+              <span>Automated Payday Splitter on Stellar</span>
             </div>
           </Reveal>
-        </motion.div>
-      </section>
 
-      {/* Trust marquee */}
-      <div style={{ overflow: "hidden", padding: "18px 0", borderTop: "1px solid var(--color-border-subtle)", borderBottom: "1px solid var(--color-border-subtle)" }}>
-        <div className="lp-marquee-track">
-          {[...Array(2)].flatMap((_, dup) =>
-            ["Stellar Testnet", "Soroban · Rust", "React + TypeScript", "PWA — Mobile First", "49 Contract Tests Passing", "SEP-1 · SEP-7 · SEP-10 · SEP-24"].map((t, i) => (
-              <span key={`${dup}-${i}`} className="muted" style={{ fontSize: 13, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ width: 5, height: 5, borderRadius: 3, background: "var(--color-accent-primary)", display: "inline-block" }} />
-                {t}
-              </span>
-            )),
-          )}
-        </div>
+          {/* Hero Headline */}
+          <Reveal variant="blur" delay={0.08}>
+            <h1 className="hero-title">
+              Automated
+              <br />
+              Money Routing
+            </h1>
+          </Reveal>
+
+          {/* Hero Subtitle */}
+          <Reveal variant="up" delay={0.14}>
+            <p className="hero-subtitle">
+              Set the rules once, confirm each payday, and keep Savings in a timelocked Soroban vault while the rest stays liquid.
+            </p>
+          </Reveal>
+
+          {/* Hero CTA Combined Glass Capsule Box */}
+          <Reveal variant="up" delay={0.2}>
+            <div className="lp-hero-cta-capsule">
+              <button
+                className="lp-hero-cta-left"
+                onClick={() => window.open("https://github.com/irham3/shunt", "_blank")}
+              >
+                <i className="ph ph-github-logo" style={{ fontSize: 18 }} />
+                <span>View source</span>
+              </button>
+              <button
+                className="lp-btn-olive"
+                onClick={() => nav("/connect")}
+              >
+                <span>Get Started</span>
+                <i className="ph ph-arrow-right" />
+              </button>
+            </div>
+          </Reveal>
+
+          {/* Microcopy tightly below button */}
+          <Reveal variant="up" delay={0.24}>
+            <div className="hero-microcopy">
+              USDC · Non-custodial · Built on Stellar
+            </div>
+          </Reveal>
+
+          {/* Hero Web Preview Mockup Cropped at Bottom Boundary of Hero Section */}
+          <motion.div style={{ y: heroCardY, marginTop: 32, marginBottom: 0, width: "100%", maxWidth: 1020, position: "relative" }}>
+            {/* Rising Pixel Particles & Glowing Light Aura */}
+            <div className="hero-particles-container">
+              <div className="hero-particles-glow" />
+              {RISING_PARTICLES.map((p) => (
+                <span
+                  key={p.id}
+                  className="hero-pixel-particle"
+                  style={{
+                    left: `${p.left}%`,
+                    width: p.size,
+                    height: p.size,
+                    backgroundColor: p.color,
+                    animationDuration: `${p.duration}s`,
+                    animationDelay: `${p.delay}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <Reveal variant="scale" delay={0.28}>
+              <div className="hero-preview-crop-container">
+                <div className="lp-hero-preview-glass">
+                  <img
+                    src="/images/previeweb-hero.png"
+                    alt="Shunt Dashboard Preview"
+                    className="lp-hero-preview-img"
+                  />
+                </div>
+              </div>
+            </Reveal>
+          </motion.div>
+        </section>
       </div>
+
+      {/* Trust marquee — commented out for now */}
 
       {/* 2. Problem → outcome */}
       <section id="why" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
