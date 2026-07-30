@@ -1,3 +1,5 @@
+.
+
 # Shunt — Design System & Screen Specification
 
 > **Status note (2026-07):** this document is the original pre-implementation
@@ -8,14 +10,14 @@
 
 ## 1. Product Summary
 
-| Parameter | Value |
-|---|---|
-| Product Name | Shunt |
-| Category | Fintech — auto-split cross-border remittance (USDC on Stellar network) |
-| Brand Metaphor | Electrical shunt — one incoming current, split into multiple paths so no single path is overloaded |
-| Platform | Responsive web app, **mobile-first** (~390px column, PWA-style), scales to desktop |
-| Wallet | Freighter / Albedo / xBull via Stellar Wallets Kit (non-custodial) |
-| Core Lanes (as built) | Needs (sky-blue `#38BDF8`), Savings (lime `#CDF14A`), Buffer (amber `#F59E0B`), Invest (violet `#A78BFA`) + user-defined custom lanes |
+| Parameter             | Value                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product Name          | Shunt                                                                                                                                        |
+| Category              | Fintech — auto-split cross-border remittance (USDC on Stellar network)                                                                      |
+| Brand Metaphor        | Electrical shunt — one incoming current, split into multiple paths so no single path is overloaded                                          |
+| Platform              | Responsive web app,**mobile-first** (~390px column, PWA-style), scales to desktop                                                      |
+| Wallet                | Freighter / Albedo / xBull via Stellar Wallets Kit (non-custodial)                                                                           |
+| Core Lanes (as built) | Needs (sky-blue`#38BDF8`), Savings (lime `#CDF14A`), Buffer (amber `#F59E0B`), Invest (violet `#A78BFA`) + user-defined custom lanes |
 
 Resolved: the original "what about a 4th bucket?" question was decided in code — Invest became the 4th core lane (violet), and custom lanes draw from an extension palette (`--color-bucket-extra-1/2`, then indigo/emerald/red), capped at 5 extra lanes.
 
@@ -25,30 +27,30 @@ Resolved: the original "what about a 4th bucket?" question was decided in code �
 
 ### 2.1 Colors (as built — `web/src/styles/tokens.css`)
 
-| Token | Hex | Usage |
-|---|---|---|
-| `--color-bg-base` | `#060707` | Main background, near-black |
-| `--color-bg-elevated` | `#101112` | Cards, modals, elevated surfaces |
-| `--color-accent-primary` | `#CDF14A` | Primary CTA, positive indicators, active state ("live-wire" lime) |
-| `--color-accent-secondary` | `#38BDF8` | Electric blue — secondary elements |
-| `--color-accent-tertiary` | `#A78BFA` | Soft violet — additional differentiator |
-| `--color-bucket-needs` | `#38BDF8` | Needs lane (sky-blue — everyday spending) |
-| `--color-bucket-savings` | `#CDF14A` | Savings lane (lime — growth / lock-up) |
-| `--color-bucket-buffer` | `#F59E0B` | Buffer lane (amber — safety net) |
-| `--color-bucket-extra-1` | `#A78BFA` | Invest lane (violet) / first custom lane color |
-| `--color-bucket-extra-2` | `#34D399` | Extension palette for further custom lanes |
-| `--color-text-primary` | `#F4F5F6` | Primary text on dark background |
-| `--color-text-secondary` | `#8C9099` | Secondary/muted text |
-| `--color-text-on-accent` | `#0A0C07` | Near-black text on lime/amber surfaces (WCAG) |
+| Token                        | Hex         | Usage                                                             |
+| ---------------------------- | ----------- | ----------------------------------------------------------------- |
+| `--color-bg-base`          | `#060707` | Main background, near-black                                       |
+| `--color-bg-elevated`      | `#101112` | Cards, modals, elevated surfaces                                  |
+| `--color-accent-primary`   | `#CDF14A` | Primary CTA, positive indicators, active state ("live-wire" lime) |
+| `--color-accent-secondary` | `#38BDF8` | Electric blue — secondary elements                               |
+| `--color-accent-tertiary`  | `#A78BFA` | Soft violet — additional differentiator                          |
+| `--color-bucket-needs`     | `#38BDF8` | Needs lane (sky-blue — everyday spending)                        |
+| `--color-bucket-savings`   | `#CDF14A` | Savings lane (lime — growth / lock-up)                           |
+| `--color-bucket-buffer`    | `#F59E0B` | Buffer lane (amber — safety net)                                 |
+| `--color-bucket-extra-1`   | `#A78BFA` | Invest lane (violet) / first custom lane color                    |
+| `--color-bucket-extra-2`   | `#34D399` | Extension palette for further custom lanes                        |
+| `--color-text-primary`     | `#F4F5F6` | Primary text on dark background                                   |
+| `--color-text-secondary`   | `#8C9099` | Secondary/muted text                                              |
+| `--color-text-on-accent`   | `#0A0C07` | Near-black text on lime/amber surfaces (WCAG)                     |
 
 Resolved (contrast): the original critique flagged white-on-lime CTA contrast; the shipped tokens define `--color-text-on-accent` (near-black) which every filled button and colored chip uses.
 
 ### 2.2 Typography (as built)
 
-| Token | Font | Role |
-|---|---|---|
-| `--font-heading` | Montserrat | Headings, large numbers (portfolio value), `.numeric` |
-| `--font-body` | Plus Jakarta Sans | Body text, microcopy, labels |
+| Token              | Font              | Role                                                   |
+| ------------------ | ----------------- | ------------------------------------------------------ |
+| `--font-heading` | Montserrat        | Headings, large numbers (portfolio value),`.numeric` |
+| `--font-body`    | Plus Jakarta Sans | Body text, microcopy, labels                           |
 
 (The original spec proposed Space Grotesk / Inter; the build settled on Montserrat / Plus Jakarta Sans during the landing-page design pass.)
 
@@ -71,19 +73,19 @@ Resolved: the breakpoint question from the original spec was decided exactly as 
 
 ## 4. Screen Inventory
 
-| # | Screen | Main Goal | Key Elements | Primary CTA |
-|---|---|---|---|---|
-| 1 | Onboarding | Explain value proposition in 3 slides | Split-node hero, progress dots | "Start" |
-| 2 | Connect Wallet | Connect Freighter or manual address | Trust badge (Stellar, USDC), manual address fallback | "Connect Freighter" |
-| 3 | Home / Dashboard | Portfolio summary and recent activity | 3-segment allocation bar, 3 bucket cards, activity feed, auto-split toast | Implicit (navigate to bucket) |
-| 4 | Configure Shunt | Set allocation percentages (core screen) | Split-node diagram, slider/stepper per bucket, 100% total validation | "Save rules" |
-| 5 | Auto-split Confirmation | Confirm automatic split results | Split-node animation, nominal breakdown per bucket, execution time, network fee | "Done" |
-| 6 | Savings Vault Detail | Savings details and progress | USD/IDR/Gold toggle, growth chart, timelock badge | "Withdraw" / "Change goal" |
-| 7 | Send / Pay (off-ramp) | Withdrawal from Needs bucket | Bank transfer/e-wallet/bill card, rate & fee before confirmation | "Continue" |
-| 8 | Activity / History | On-chain transaction transparency | Chronological list, filter chips, on-chain explorer tags | — |
-| 9 | Settings / Profile | Account settings and preferences | Wallet, Shunt rules, security, display currency, PWA install hint | — |
-| 10 | Top Up (on-ramp) | Fund the wallet with IDR via the anchor's hosted SEP-24 deposit | Amount input, rate & fee before confirmation, hosted-flow handoff note, pending status | "Top up" |
-| 11 | Request Payment | Generate a SEP-7 payment link/QR to get paid from abroad | Amount + note inputs, generated `web+stellar:pay` URI, copy/share buttons, payer-view explainer | "Create link" |
+| #  | Screen                  | Main Goal                                                       | Key Elements                                                                                     | Primary CTA                   |
+| -- | ----------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------- |
+| 1  | Onboarding              | Explain value proposition in 3 slides                           | Split-node hero, progress dots                                                                   | "Start"                       |
+| 2  | Connect Wallet          | Connect Freighter or manual address                             | Trust badge (Stellar, USDC), manual address fallback                                             | "Connect Freighter"           |
+| 3  | Home / Dashboard        | Portfolio summary and recent activity                           | 3-segment allocation bar, 3 bucket cards, activity feed, auto-split toast                        | Implicit (navigate to bucket) |
+| 4  | Configure Shunt         | Set allocation percentages (core screen)                        | Split-node diagram, slider/stepper per bucket, 100% total validation                             | "Save rules"                  |
+| 5  | Auto-split Confirmation | Confirm automatic split results                                 | Split-node animation, nominal breakdown per bucket, execution time, network fee                  | "Done"                        |
+| 6  | Savings Vault Detail    | Savings details and progress                                    | USD/IDR/Gold toggle, growth chart, timelock badge                                                | "Withdraw" / "Change goal"    |
+| 7  | Send / Pay (off-ramp)   | Withdrawal from Needs bucket                                    | Bank transfer/e-wallet/bill card, rate & fee before confirmation                                 | "Continue"                    |
+| 8  | Activity / History      | On-chain transaction transparency                               | Chronological list, filter chips, on-chain explorer tags                                         | —                            |
+| 9  | Settings / Profile      | Account settings and preferences                                | Wallet, Shunt rules, security, display currency, PWA install hint                                | —                            |
+| 10 | Top Up (on-ramp)        | Fund the wallet with IDR via the anchor's hosted SEP-24 deposit | Amount input, rate & fee before confirmation, hosted-flow handoff note, pending status           | "Top up"                      |
+| 11 | Request Payment         | Generate a SEP-7 payment link/QR to get paid from abroad        | Amount + note inputs, generated`web+stellar:pay` URI, copy/share buttons, payer-view explainer | "Create link"                 |
 
 Sprint additions (P0.5, Jul 4–15): the Invest lane appears as a 4th slider in screen 4 (Configure Shunt) using the established extension palette (violet `#A78BFA`), and as a 4th card on screen 3 (Home) showing XLM units + USD value with a "converted after split" caption. Screen 7 gains a sibling: the flow in/out pair (Top Up / Send & Pay) should be visually symmetric — same rate-and-fee-before-confirm card pattern.
 
@@ -121,16 +123,16 @@ The "USD / IDR / Gold" toggle in Prompt 6 assumes the existence of a reliable pr
 
 ## 7. Microcopy (English translation reference)
 
-| Context | Microcopy |
-|---|---|
-| Onboarding headline | "Incomes in, instantly split." |
-| Onboarding sub | "Set it once, the rest is automatic." |
-| Connect wallet note | "Non-custodial — keys remain yours." |
-| Auto-split toast | "Income received — split automatically ✓" |
+| Context              | Microcopy                                                                |
+| -------------------- | ------------------------------------------------------------------------ |
+| Onboarding headline  | "Incomes in, instantly split."                                           |
+| Onboarding sub       | "Set it once, the rest is automatic."                                    |
+| Connect wallet note  | "Non-custodial — keys remain yours."                                    |
+| Auto-split toast     | "Income received — split automatically ✓"                              |
 | Configure Shunt note | "Every incoming income is automatically split according to these rules." |
-| Confirmation | "Automatically split in 8 seconds" |
-| Savings note | "Stored in hard value — resists currency depreciation." |
-| Off-ramp note | "Sent via anchor — rate & fees displayed before confirmation." |
+| Confirmation         | "Automatically split in 8 seconds"                                       |
+| Savings note         | "Stored in hard value — resists currency depreciation."                 |
+| Off-ramp note        | "Sent via anchor — rate & fees displayed before confirmation."          |
 
 Note: the "8 seconds" figure in the auto-split confirmation and "< Rp2" for network fees appear to be illustrative placeholders from the design prompt, not verified numbers against actual Stellar network conditions (ledger confirmation times and base fee costs may vary). These figures must not be brought as-is into production UI without validation against real network conditions.
 
