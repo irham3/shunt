@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import Lenis from "lenis";
+import "lenis/dist/lenis.css";
 import { DonutChart } from "../components/DonutChart";
 import { AllocationBar } from "../components/AllocationBar";
 import { AnimatedNumber } from "../components/AnimatedNumber";
@@ -118,7 +120,26 @@ export function Onboarding() {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+
+    // Initialize Lenis smooth inertial scrolling for the landing page
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
   }, []);
 
   return (

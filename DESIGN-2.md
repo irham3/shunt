@@ -552,3 +552,13 @@ _Note: breakpoints below are industry-standard recommendations, not measurements
     10. Ensure body text on `#000000` (`#ffffff` on `#000000`) and muted text on `#0f0f0f` (`#a3a3a3` on `#0f0f0f`) pass AAA contrast.
     11. On mobile, collapse the main navigation into a hamburger menu and stack multi-column layouts.
     12. Use `Inter Tight` `80px` `400` line-height `1.2` for the main display heading.
+
+## 10. Smooth Scrolling Specification (Lenis)
+
+- **Engine**: Lenis (`lenis` / `@studio-freight/lenis`).
+- **Scope**: Landing Page (`/` / `Onboarding`).
+- **Configuration**:
+  - `duration`: `1.2s` (Provides a weighted, luxurious inertial scroll feeling).
+  - `easing`: `(t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))` (Smooth exponential deceleration).
+  - `smoothWheel`: `true` (Intercepts and smooths mousewheel/trackpad scroll events).
+- **Implementation Note**: Lenis is initialized inside the Landing Page component (`Onboarding.tsx`) via React `useEffect` and cleaned up on unmount so dashboard/internal screens retain native quick scrolling.
