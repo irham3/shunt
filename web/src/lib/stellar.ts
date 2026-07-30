@@ -807,76 +807,7 @@ export async function fundWithFriendbot(address: string): Promise<void> {
   }
 }
 
-async function invoke(
-  userAddress: string,
-  method: string,
-  args: xdr.ScVal[],
-): Promise<string> {
-  if (!VAULT_CONTRACT_ID) {
-    throw new Error("VAULT_CONTRACT_ID is not configured (local demo mode).");
-  }
-  const server = new rpc.Server(RPC_URL);
-  let source;
-  try {
-    source = await server.getAccount(userAddress);
-  } catch {
-    throw new Error("Account not funded yet.");
-  }
 
-  const contract = new Contract(VAULT_CONTRACT_ID);
-  const tx = new TransactionBuilder(source, {
-    fee: "1000000",
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(contract.call(method, ...args))
-    .setTimeout(300)
-    .build();
-
-  try {
-    const prepared = await server.prepareTransaction(tx);
-    const { signedTxXdr } = await signTxXdr(
-      prepared.toEnvelope().toXDR("base64"),
-      NETWORK_PASSPHRASE,
-    );
-
-    const sendTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
-    const res = await server.sendTransaction(sendTx) as any;
-    if (res.status === "ERROR") throw new Error(`Transaction failed: ${res.errorResult}`);
-
-    // poll until confirmed
-    for (let i = 0; i < 20; i++) {
-      await new Promise((r) => setTimeout(r, 1500));
-      const g = await server.getTransaction(res.hash) as any;
-      if (g.status === "SUCCESS") return res.hash;
-      if (g.status === "FAILED") throw new Error("Transaction failed on the ledger.");
-    }
-    throw new Error("Timed out waiting for confirmation.");
-  } catch (e) {
-    parseWalletError(e);
-  }
-}
-
-const toI128 = (usdc: number) =>
-  nativeToScVal(BigInt(Math.round(usdc * 10_000_000)), { type: "i128" });
-
-/** set_rules on-chain (percentages -> bps). */
-export async function txSetRules(
-  user: string,
-  needsPct: number,
-  savingsPct: number,
-  bufferPct: number,
-  lockSecs: number,
-  anchors: string[] = [],
-): Promise<string> {
-  return invoke(user, "set_rules", [
-    new Address(user).toScVal(),
-    nativeToScVal(needsPct * 100, { type: "u32" }),
-    nativeToScVal(savingsPct * 100, { type: "u32" }),
-    nativeToScVal(bufferPct * 100, { type: "u32" }),
-    nativeToScVal(BigInt(lockSecs), { type: "u64" }),
-    xdr.ScVal.scvVec(anchors.map((a) => new Address(a).toScVal())),
-  ]);
-}
 
 /** Sign & submit a distribute tx prepared by the keeper (one-tap approve).
  *  Re-stamps the sequence number from the network before signing so the XDR
@@ -956,21 +887,6 @@ export async function signAndSubmitXdr(preparedXdr: string): Promise<string> {
   }
 }
 
-export async function txWithdrawSavings(user: string, usdc: number): Promise<string> {
-  return invoke(user, "withdraw_savings", [new Address(user).toScVal(), toI128(usdc)]);
-}
-
-export async function txOfframp(
-  user: string,
-  anchor: string,
-  usdc: number,
-): Promise<string> {
-  return invoke(user, "offramp", [
-    new Address(user).toScVal(),
-    new Address(anchor).toScVal(),
-    toI128(usdc),
-  ]);
-}
 
 // ---------------------------------------------------------------------------
 // Level 2 — Real-time Soroban Event Polling
