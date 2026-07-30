@@ -17,21 +17,9 @@ import {
   Transaction,
   Claimant,
 } from "@stellar/stellar-sdk";
+import { NETWORK, NETWORK_PASSPHRASE, RPC_URL } from "./stellar-config";
 
-export const NETWORK = (import.meta.env.VITE_STELLAR_NETWORK ?? "testnet") as
-  | "testnet"
-  | "mainnet";
-
-export const RPC_URL =
-  import.meta.env.VITE_SOROBAN_RPC_URL ??
-  (NETWORK === "testnet"
-    ? "https://soroban-testnet.stellar.org"
-    : "https://mainnet.sorobanrpc.com");
-
-export const NETWORK_PASSPHRASE =
-  NETWORK === "testnet"
-    ? "Test SDF Network ; September 2015"
-    : "Public Global Stellar Network ; September 2015";
+export { NETWORK, NETWORK_PASSPHRASE, RPC_URL };
 
 export const VAULT_CONTRACT_ID = import.meta.env.VITE_VAULT_CONTRACT_ID ?? "";
 

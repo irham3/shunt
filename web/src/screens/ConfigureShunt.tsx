@@ -609,7 +609,7 @@ export function ConfigureShunt() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
                   <CheckCircle2 size={18} style={{ color: "var(--color-accent-primary)" }} />
-                  Rules saved — here's what happens next
+                  Rules saved. Next steps
                 </div>
                 <ol className="muted" style={{ fontSize: 13, margin: "10px 0", paddingLeft: 20, display: "flex", flexDirection: "column", gap: 6 }}>
                   <li>USDC lands in your wallet — via a payment link, Top Up, or any direct transfer.</li>

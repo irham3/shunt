@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, Target } from "lucide-react";
+import { Clock, LockKeyhole, Plus, Pencil, Trash2, Target, UnlockKeyhole } from "lucide-react";
 import { getIdrRate } from "../lib/rates";
 import { vaultWithdrawSavings, vaultWithdrawBuffer, vaultCreateGoal, vaultWithdrawFromGoal, vaultRenameGoal, vaultDeleteGoal } from "../lib/vault";
 import { fmtIdr, fmtUsdc, totalPct, useShunt, type SavingsGoal } from "../store";
@@ -143,8 +143,8 @@ export function SavingsVault() {
                 is NOT the same feature as the Invest lane's XLM/Gold picker
                 (Configure Shunt), which is already live. Worded to avoid
                 implying gold itself is unavailable in Shunt. */}
-            <button className="chip" disabled title="Gold-denominated display coming later — invest into gold today via the Invest lane (Configure Shunt)" style={{ opacity: 0.4 }}>
-              Gold display 🔜
+            <button className="chip" disabled title="Gold-denominated display is planned. You can invest into gold today via the Invest lane in Configure Shunt." style={{ opacity: 0.4, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Clock size={14} /> Gold display planned
             </button>
           </div>
 
@@ -198,7 +198,11 @@ export function SavingsVault() {
             className="card"
             style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `3px solid ${locked ? "var(--color-bucket-needs)" : "var(--color-accent-primary)"}` }}
           >
-            <span style={{ fontSize: 22 }}>{locked ? "🔒" : "🔓"}</span>
+            {locked ? (
+              <LockKeyhole size={22} style={{ color: "var(--color-bucket-needs)", flexShrink: 0 }} />
+            ) : (
+              <UnlockKeyhole size={22} style={{ color: "var(--color-accent-primary)", flexShrink: 0 }} />
+            )}
             <span style={{ fontSize: 14 }}>
               {locked ? (
                 <>
@@ -616,8 +620,8 @@ function GoalRow({
               goal and from the aggregate Savings lock shown up top. */}
           <div className="muted" style={{ fontSize: 11, marginTop: 2 }} data-testid={`goal-lock-status-${goal.id}`}>
             {goalLocked
-              ? `🔒 locked until ${new Date(goal.unlockAt * 1000).toLocaleDateString("en-US")}`
-              : "🔓 unlocked — no penalty"}
+              ? `Locked until ${new Date(goal.unlockAt * 1000).toLocaleDateString("en-US")}`
+              : "Unlocked, no penalty"}
           </div>
         </div>
 

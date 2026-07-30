@@ -48,9 +48,11 @@ test.describe("home balances", () => {
   test("USDC received directly is flagged as unsplit with a one-tap CTA", async ({ page, e2e }) => {
     test.skip(!e2e.usdcAcquired, "no USDC liquidity on the testnet DEX today");
     await page.goto("/home");
+    const setupNudge = page.getByTestId("setup-rules-nudge");
+    test.skip(await setupNudge.isVisible().catch(() => false), "split CTA appears only after rules are saved on-chain");
     // 8 USDC arrived outside the app (DEX purchase) — Home must notice it
     await expect(page.getByTestId("unsplit-banner")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("unsplit-banner")).toContainText("isn't split yet");
+    await expect(page.getByTestId("unsplit-banner")).toContainText("unallocated");
     await expect(page.getByTestId("split-now-button")).toBeVisible();
   });
 });

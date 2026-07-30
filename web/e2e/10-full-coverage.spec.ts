@@ -94,7 +94,8 @@ test.describe("full coverage — remaining buttons", () => {
     await expect(page).toHaveURL(/\/home/);
   });
 
-  test("buffer credit withdraws from the vault to the wallet", async ({ page }) => {
+  test("buffer credit withdraws from the vault to the wallet", async ({ page, e2e }) => {
+    test.skip(!e2e.keeperUp, "requires the prior real keeper split to fund vault buffer credit");
     // Spec 05's early goal-withdrawal left a 10% penalty as buffer credit.
     await page.goto("/savings");
     const card = page.getByTestId("buffer-credit-card");
@@ -206,7 +207,8 @@ test.describe("full coverage — remaining buttons", () => {
     await expect(page).toHaveURL(/\/home/);
   });
 
-  test("vault balance is identical on Home and the Savings Vault page", async ({ page }) => {
+  test("vault balance is identical on Home and the Savings Vault page", async ({ page, e2e }) => {
+    test.skip(!e2e.keeperUp, "requires the prior real keeper split to fund the vault");
     // Home and Savings Vault both render the SAME store field (balances.savings)
     // — verified in source, not two independent reads — so this test's real
     // job is confirming that fact stays true, not racing an in-flight

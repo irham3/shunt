@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
+import { Smartphone } from "lucide-react";
 import { NETWORK, disconnectWalletKit, connectWithAuthModal, fetchXlmBalance, fetchUsdcBalance, addUsdcTrustline, hasUsdcTrustline, formatError } from "../lib/stellar";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { useShunt } from "../store";
@@ -14,14 +15,27 @@ export function Settings() {
   const [enablingUsdc, setEnablingUsdc] = useState(false);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [balanceStatus, setBalanceStatus] = useState<"loading" | "ready" | "unavailable">("loading");
 
   const short = address ? `${address.slice(0, 6)}…${address.slice(-6)}` : "—";
 
   useEffect(() => {
     if (address) {
-      fetchXlmBalance(address).then(setXlmBal).catch(console.error);
-      fetchUsdcBalance(address).then(setUsdcBal).catch(console.error);
-      hasUsdcTrustline(address).then(setHasUsdcLine).catch(console.error);
+      setBalanceStatus("loading");
+      Promise.all([
+        fetchXlmBalance(address),
+        fetchUsdcBalance(address),
+        hasUsdcTrustline(address),
+      ])
+        .then(([xlm, usdc, hasLine]) => {
+          setXlmBal(xlm);
+          setUsdcBal(usdc);
+          setHasUsdcLine(hasLine);
+          setBalanceStatus("ready");
+        })
+        .catch(() => {
+          setBalanceStatus("unavailable");
+        });
     }
   }, [address]);
 
@@ -90,9 +104,12 @@ export function Settings() {
         </div>
 
         {address && (
-          <div
+          <button
+            type="button"
             onClick={onCopyAddress}
             style={{
+              width: "100%",
+              textAlign: "left",
               background: "var(--color-bg-base)",
               borderRadius: 8,
               padding: "8px 12px",
@@ -106,7 +123,7 @@ export function Settings() {
             title="Click to copy"
           >
             {address}
-          </div>
+          </button>
         )}
 
         <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
@@ -123,6 +140,11 @@ export function Settings() {
             </div>
           </div>
         </div>
+        {balanceStatus === "unavailable" && (
+          <p role="status" className="muted" style={{ fontSize: 12, margin: 0 }}>
+            Balance refresh is unavailable. Your last known values stay visible.
+          </p>
+        )}
 
         {!hasUsdcLine && (
           <button
@@ -167,7 +189,9 @@ export function Settings() {
         className="card"
         style={{ background: "linear-gradient(135deg, #141a21, #1a2330)" }}
       >
-        <div style={{ fontWeight: 600 }}>📲 Install as an app</div>
+        <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+          <Smartphone size={17} /> Install as an app
+        </div>
         <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>
           Open your browser menu → "Add to Home Screen" for the full PWA experience.
         </p>

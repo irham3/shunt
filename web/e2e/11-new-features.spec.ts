@@ -36,7 +36,8 @@ test.describe("2026-07-16 feature expansion", () => {
     await expect(page.getByTestId("buffer-target-input")).toHaveValue("5", { timeout: 30_000 });
   });
 
-  test("laddered goal timelocks unlock independently", async ({ page }) => {
+  test("laddered goal timelocks unlock independently", async ({ page, e2e }) => {
+    test.skip(!e2e.keeperUp, "requires the prior real keeper split to fund unallocated savings");
     await page.goto("/savings");
     const unallocatedEl = page.getByTestId("unallocated-savings");
     await expect(unallocatedEl).toBeVisible({ timeout: 60_000 });
