@@ -26,7 +26,7 @@ spending money.”
 ### Show
 
 Open on the title slide. Point to the incoming USDC line branching into Needs,
-Savings, Buffer, and Grow. Do not explain the technology yet.
+Savings, Buffer, and Invest. Do not explain the technology yet.
 
 ---
 
@@ -34,9 +34,9 @@ Savings, Buffer, and Grow. Do not explain the technology yet.
 
 ### Slide
 
-**One payment. Four competing needs.**
+**One balance. Four jobs.**
 
-`NEEDS 50%` · `SAVINGS 25%` · `BUFFER 15%` · `GROW 10%`
+`NEEDS 50%` · `SAVINGS 25%` · `BUFFER 15%` · `INVEST 10%`
 
 **The decision repeats every payday.**
 
@@ -58,9 +58,9 @@ timing: the decision happens when income lands, not at the end of the month.
 
 ### Slide
 
-**Income in. Structured by code. Income out.**
+**The split happens before spending does.**
 
-`GET PAID → SPLIT → PROTECT → GROW → EXIT`
+`DETECT → REVIEW → ROUTE → VERIFY`
 
 `SEP-7` · `SOROBAN VAULT` · `DEX PATH PAYMENT` · `SEP-24`
 
@@ -76,8 +76,9 @@ flow.”
 
 ### Show
 
-Trace the five stations from left to right. Briefly point out the second wallet
-approval before Grow. Do not list every roadmap asset aloud.
+Trace the four steps from left to right. Briefly point out that an optional
+Invest conversion needs its own wallet approval. Do not list every roadmap
+asset aloud.
 
 ---
 
@@ -104,7 +105,7 @@ signing authority.”
 
 #### 1:05–1:25 — Set rules
 
-Open Configure Shunt. Adjust Needs, Savings, Buffer, and optional Grow. Set the
+Open Configure Shunt. Adjust Needs, Savings, Buffer, and optional Invest. Set the
 Savings lock. Save and sign `set_rules`. Point to **Active on-chain**.
 
 Say:
@@ -134,7 +135,7 @@ same user’s Buffer—never to Shunt.”
 
 #### 2:10–2:22 — Grow
 
-Open Grow. Show the separation banner and the asset cards. If testnet liquidity
+Open Grow from the Invest lane. Show the separation banner and the asset cards. If testnet liquidity
 is available, buy a very small amount of TXAUM or XLM and sign the path payment.
 
 Say:
@@ -157,50 +158,42 @@ sandboxes remain separate. Here is the split hash anyone can inspect.”
 
 ---
 
-## 5. Why Stellar — 2:30–2:50
+## 5. Grow and cash rails — 2:30–2:42
 
 ### Slide
 
-**Each promise maps to a real Stellar rail.**
+**Grow and cash rails stay explicit.**
 
-`RECEIVE — USDC + SEP-7`
+`LIVE TESTNET — XLM + TXAUM`
 
-`DETECT — HORIZON`
+`ROADMAP — BLEND + BENJI + USDY + BONDS + ETFs`
 
-`ENFORCE — SOROBAN + SAC`
-
-`SIGN — STELLAR WALLETS KIT`
-
-`CONVERT — DEX PATH PAYMENTS`
-
-`RAMP — SEP-1 / SEP-10 / SEP-24`
-
-`49 CONTRACT` · `14 KEEPER` · `21 WEB` · `PUBLIC TESTNET`
+`RAMP — SEP-24 TEST FLOW + PROVIDER STATUS`
 
 ### Say
 
-“Each promise maps to a Stellar rail: USDC and SEP-7 receive; Horizon detects;
-Soroban and SAC enforce; Wallets Kit keeps signatures with the user; path
-payments execute Grow; and SEP-1, SEP-10, and SEP-24 connect anchors. The result
-has forty-nine contract tests, fourteen keeper tests, twenty-one web tests, and
-public testnet records.”
+“The loop continues after the split. Grow stays separate from protected
+Savings: XLM and demo-gold TXAUM are live testnet spot purchases, while Blend,
+BENJI, USDY, Stablebonds, and tokenized ETFs remain visibly roadmap. Add Money
+shows SEP-24 working as a test flow while the Indonesia production route still
+requires a confirmed provider.”
 
 ### Show
 
-Read only the bold rail names. Do not recite protocol definitions. Point to the
-proof numbers as the last beat.
+Point first to the live labels on Grow, then to the environment labels on Add
+Money. Do not read every roadmap product.
 
 ---
 
-## 6. Close — 2:50–3:00
+## 6. Why Stellar + close — 2:42–3:00
 
 ### Slide
 
 **The loop works. Now connect the corridor.**
 
-`PROVEN — split · vault · Grow · SEP-24 client`
+`USDC` · `SOROBAN + SAC` · `HORIZON` · `WALLETS KIT`
 
-`NEXT — licensed Indonesia route · KYB · audit`
+`DEX PATH PAYMENTS` · `SEP-7` · `SEP-10` · `SEP-24`
 
 `ASK — ramp partner + pilot communities`
 
@@ -208,10 +201,11 @@ proof numbers as the last beat.
 
 ### Say
 
-“The testnet loop works. Next is a provider-confirmed Indonesia route, KYB, and
-an audit before real funds. We are looking for a ramp partner and pilot
-communities already earning cross-border USDC. Split freelance income before
-you spend it—that is Shunt.”
+“Every product promise maps to a Stellar rail: USDC carries value, Horizon
+detects it, Soroban and SAC enforce the split, Wallets Kit keeps control with
+the user, path payments execute optional Grow, and the SEPs connect payments
+and anchors. The testnet loop works. Now we need a ramp partner and pilot
+communities already earning cross-border USDC.”
 
 ### Show
 

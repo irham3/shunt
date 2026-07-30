@@ -4,13 +4,26 @@ const { pathToFileURL } = require("url");
 const { chromium } = require("playwright");
 
 async function main() {
-  const source = path.resolve(__dirname, "shunt-demo-pitch-3min.html");
-  const outputDir = path.resolve(__dirname, "rendered-pitch");
+  const source = path.resolve(process.argv[2] || path.join(__dirname, "shunt-demo-pitch-3min.html"));
+  const outputDir = path.resolve(process.argv[3] || path.join(__dirname, "rendered-pitch"));
   fs.mkdirSync(outputDir, { recursive: true });
 
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1920, height: 6480 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await page.goto(pathToFileURL(source).href, { waitUntil: "load" });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(
+      [...document.images].map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              img.addEventListener("load", resolve, { once: true });
+              img.addEventListener("error", resolve, { once: true });
+            }),
+      ),
+    );
+  });
 
   const audit = await page.evaluate(() => {
     const pages = [...document.querySelectorAll('[data-document-role="page"]')];
@@ -42,9 +55,9 @@ async function main() {
   }
 
   for (let index = 0; index < audit.count; index += 1) {
+    await page.evaluate((slideIndex) => window.scrollTo(0, slideIndex * 1080), index);
     await page.screenshot({
       path: path.join(outputDir, `slide-${String(index + 1).padStart(2, "0")}.png`),
-      clip: { x: 0, y: index * 1080, width: 1920, height: 1080 },
     });
   }
 
