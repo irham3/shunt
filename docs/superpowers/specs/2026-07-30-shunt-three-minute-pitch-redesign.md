@@ -13,10 +13,10 @@ empty space without becoming cluttered.
 | --- | --- | ---: |
 | 1 | Title and hook | 10 seconds |
 | 2 | Problem: one payment, four competing needs | 20 seconds |
-| 3 | Solution: rules before payday | 25 seconds |
-| 4 | Live demo: review, sign, and verify | 70 seconds |
-| 5 | Trust and proof | 30 seconds |
-| 6 | Next milestone and ask | 25 seconds |
+| 3 | Product loop: income in, structure, grow, and exit | 20 seconds |
+| 4 | Live demo of the complete loop | 100 seconds |
+| 5 | Why Stellar: tools, protocols, and proof | 20 seconds |
+| 6 | Next milestone and ask | 10 seconds |
 
 Total target: 180 seconds.
 
@@ -40,30 +40,65 @@ Total target: 180 seconds.
 - Emphasize that irregular income repeats the same allocation decision every
   payday.
 
-### 3. Solution — Set the rules before payday
+### 3. Product Loop — Income in, structured by code, income out
 
-- Three-step flow: income lands, user reviews, wallet signs.
-- Clarify that Savings locks in a Soroban vault while Needs and Buffer remain
-  liquid.
-- Use one strong horizontal or stepped process diagram instead of paragraph
-  copy.
+- Use a connected five-stage journey rather than a feature list:
+  1. Get paid in USDC through a wallet transfer or SEP-7 payment request.
+  2. Split into Needs, Savings, Buffer, and optional Grow.
+  3. Protect Savings as USDC in the Soroban vault; Needs and Buffer remain
+     liquid.
+  4. Optionally buy a Growth asset through a separately approved Stellar DEX
+     path payment.
+  5. Send USDC/XLM or open a SEP-24 deposit/withdrawal flow through an anchor.
+- Growth choices must distinguish executable testnet assets from roadmap:
+  - Live on testnet: XLM and TXAUM, an unbacked demo-gold stand-in for
+    Matrixdock XAUm.
+  - Roadmap only: Blend lending, BENJI, USDY, Etherfuse Stablebonds, and
+    tokenized stocks/ETFs.
+- Protected Savings remains 100% USDC. Grow is opt-in, separate, and can lose
+  value.
+- The visual should be a dense but readable transaction rail with five distinct
+  stations and a small “wallet approves” marker at every state-changing step.
 
-### 4. Live Demo — From incoming USDC to verified transaction
+### 4. Live Demo — Show the complete payday loop
 
-- Use a concise five-step run-of-show: connect, active rules, review split,
-  sign, verify hash.
-- The slide functions as a visual safety net while the live product is shown.
-- State that the core allocation is one Stellar testnet Soroban transaction;
-  Grow conversion remains separate and opt-in.
+- The slide functions as a visual run-of-show while the product is on screen:
+  connect wallet, set active on-chain rules, review and sign the split, inspect
+  Savings, optionally buy TXAUM/XLM, then open Send & Pay or a labeled ramp
+  flow.
+- Keep a compact progress rail visible in the deck so the audience always knows
+  where the demo is.
+- Open at least one Stellar Expert hash for the `distribute` transaction. If
+  timing and testnet liquidity permit, show the Grow path-payment hash too.
+- State that the core Needs/Savings/Buffer allocation is one Stellar testnet
+  Soroban transaction. Grow is a separate path payment requiring another
+  approval.
+- Ramp labels must remain explicit:
+  - SDF anchor deposit/withdrawal: Stellar testnet SEP-24 simulation.
+  - MoonPay/Transak: sandbox or provider staging only.
+  - MoneyGram: onboarding pending.
+  - No live IDR cash-in or cash-out claim.
 
-### 5. Trust and Proof — The wallet signs; the contract enforces
+### 5. Why Stellar — Each product promise maps to a real rail
 
-- Three responsibility columns: Wallet, Keeper, Contract.
-- Add repository evidence as a compact proof rail: 49 contract tests, 14 keeper
-  tests, 21 web tests, and public Stellar testnet records.
-- Keep signing authority visually dominant in the Wallet column.
-- Mention the Savings lock and replay protection without adding unsupported
-  security claims.
+- Present a product-to-protocol map, not a logo wall:
+  - USDC plus SEP-7: receive income and request payments.
+  - Horizon: detect inflows, read balances and history, fetch DEX paths.
+  - Soroban plus the USDC Stellar Asset Contract: enforce allocation, Savings
+    locks, authorization, and replay protection.
+  - Stellar Wallets Kit: connect Freighter, Albedo, or xBull and preserve user
+    signing authority.
+  - Classic path payments and Stellar DEX: convert the optional Grow slice to
+    XLM or TXAUM.
+  - SEP-1, SEP-10, and SEP-24: discover anchors, authenticate with the wallet,
+    and open hosted deposit/withdrawal flows.
+  - Soroban RPC plus the zero-key keeper: simulate and prepare unsigned
+    transactions without holding user keys.
+  - Stellar Expert: independently inspect transaction hashes.
+- Add repository evidence as a compact bottom proof rail: 49 contract tests,
+  14 keeper tests, 21 web tests, and public Stellar testnet records.
+- Keep the causal relationship visible: product capability on the left, Stellar
+  rail in the middle, user benefit or proof on the right.
 
 ### 6. Closing — Prove the loop, then bring it to Indonesia
 
@@ -87,6 +122,8 @@ Total target: 180 seconds.
   element, never unused canvas.
 - Visual vocabulary: allocation lanes, transaction rails, proof chips, rounded
   product frames, subtle grid lines, and precise connectors.
+- Dense slides should use nested grids, compact labels, and short evidence rails
+  rather than filling space with decorative shapes.
 - Avoid: generic gradients, random glass cards, decorative blobs, stock photos,
   fake dashboards, excessive icons, and unsupported metrics.
 
