@@ -7,7 +7,10 @@ test.describe("onboarding", () => {
     await expect(
       page.getByRole("heading", { name: /split freelance income before you spend it/i }),
     ).toBeVisible();
-    await page.getByRole("button", { name: /get started/i }).click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: /connect wallet/i })
+      .click();
     await expect(page).toHaveURL(/\/connect/);
     await expect(page.getByText("Connect your wallet")).toBeVisible();
     // All three supported wallets are offered (Level 2 requirement)
