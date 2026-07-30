@@ -184,11 +184,11 @@ export function Onboarding() {
             </button>
           </div>
         </Reveal>
-        <Reveal variant="up" delay={0.24}>
+        {/* <Reveal variant="up" delay={0.24}>
           <div className="muted" style={{ fontSize: 13, letterSpacing: "0.01em", marginTop: 2 }}>
             USDC · Non-custodial · Built on Stellar
           </div>
-        </Reveal>
+        </Reveal> */}
 
         <motion.div style={{ y: heroCardY, marginTop: 40, width: "100%", maxWidth: 600 }}>
           <Reveal variant="scale" delay={0.3}>

@@ -199,58 +199,6 @@ export function TopUp() {
         and the direction for Shunt's partner account.
       </p>
 
-      <section className="ramp-section" aria-labelledby="available-methods">
-        <h3 id="available-methods" className="section-title">Available for Indonesia</h3>
-        <div className="provider-status-list">
-          <div className="provider-status-row">
-            <div>
-              <strong>Alchemy Pay</strong>
-              <p className="muted">Exact-route check needed: IDR to USDC on Stellar.</p>
-            </div>
-            <span className="env-badge env-badge-sandbox">Pending capability</span>
-          </div>
-          <div className="provider-status-row">
-            <div>
-              <strong>Banxa</strong>
-              <p className="muted">Fallback on-ramp candidate after partner route lookup.</p>
-            </div>
-            <span className="env-badge env-badge-sandbox">Pending capability</span>
-          </div>
-        </div>
-      </section>
-
-      <section className="ramp-section" aria-labelledby="sandbox-methods">
-        <h3 id="sandbox-methods" className="section-title">Provider sandbox</h3>
-        <div className="provider-card">
-          <div>
-            <strong>MoonPay sandbox</strong>
-            <p className="muted">
-              Opens a signed sandbox widget. The team has seen this route blocked for the intended
-              Indonesia/Stellar USDC path, so Shunt does not present it as live.
-            </p>
-          </div>
-          <button className="btn-secondary" disabled={!address || moonpayBusy} onClick={onStartMoonPaySandbox}>
-            {moonpayBusy ? "Opening sandbox..." : "Try sandbox"}
-          </button>
-        </div>
-        <div className="provider-card">
-          <div>
-            <strong>Transak staging</strong>
-            <p className="muted">
-              Opens Transak's secure staging widget for USD card to Stellar XLM.
-              The destination wallet is supplied by Shunt and cannot be edited inside Transak.
-            </p>
-            <p className="muted" style={{ fontSize: 13, margin: "8px 0 0" }}>
-              Transak staging rejects Stellar USDC recipients, so this sandbox lane uses native
-              XLM. It proves the provider session flow, not live token settlement.
-            </p>
-          </div>
-          <button className="btn-secondary" disabled={transakBusy} onClick={onStartTransakStaging}>
-            {transakBusy ? "Opening Transak..." : "Try Transak"}
-          </button>
-        </div>
-      </section>
-
       <section className="ramp-section" aria-labelledby="developer-demo">
         <h3 id="developer-demo" className="section-title">Developer demo</h3>
         <motion.div
@@ -293,6 +241,40 @@ export function TopUp() {
           </button>
         </motion.div>
       </section>
+
+      <section className="ramp-section" aria-labelledby="sandbox-methods">
+        <h3 id="sandbox-methods" className="section-title">Provider sandbox</h3>
+        {/* <div className="provider-card">
+          <div>
+            <strong>MoonPay sandbox</strong>
+            <p className="muted">
+              Opens a signed sandbox widget. The team has seen this route blocked for the intended
+              Indonesia/Stellar USDC path, so Shunt does not present it as live.
+            </p>
+          </div>
+          <button className="btn-secondary" disabled>
+            Disabled (Region issue)
+          </button>
+        </div> */}
+        <div className="provider-card">
+          <div>
+            <strong>Transak staging</strong>
+            <p className="muted">
+              Opens Transak's secure staging widget for USD card to Stellar XLM.
+              The destination wallet is supplied by Shunt and cannot be edited inside Transak.
+            </p>
+            <p className="muted" style={{ fontSize: 13, margin: "8px 0 0" }}>
+              Transak staging rejects Stellar USDC recipients, so this sandbox lane uses native
+              XLM. It proves the provider session flow, not live token settlement.
+            </p>
+          </div>
+          <button className="btn-secondary" disabled>
+            Coming Soon (Mainnet Only)
+          </button>
+        </div>
+      </section>
+
+
 
       <section className="ramp-section" aria-labelledby="moneygram-status">
         <h3 id="moneygram-status" className="section-title">Cash access</h3>
