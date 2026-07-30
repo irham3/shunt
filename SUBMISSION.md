@@ -58,9 +58,9 @@ F4 — Auto-Split Engine: atomic distribute + manual trigger fallback. Shipped.
 F5 — Savings Vault: USDC locked in contract, timelock enforced, 10% early-withdrawal penalty goes to Buffer. Shipped.
 F6 — Dashboard: total value, lane composition, recent activity. Shipped.
 F7 — Transaction History: on-chain explorer links. Shipped.
-F8 — Off-Ramp (SEP-24): anchor-hosted cash-out to IDR/PHP, rate and fee shown before confirm. Shipped.
+F8 — Test Withdrawal (SEP-24): SDF test-anchor hosted withdrawal flow, labeled as Stellar testnet simulation. Shipped.
 F9 — IDR Value Display: forex API with 10-min cache. Shipped.
-F10 — On-Ramp / Top Up (SEP-24 deposit): fund Shunt with IDR through the anchor's hosted deposit flow without leaving the app — reuses the shipped SEP-1/10 stack. Shipped.
+F10 — Add Money (SEP-24 deposit): SDF test-anchor hosted deposit flow, labeled as Stellar testnet simulation. Live IDR on-ramp waits for an approved provider route. Shipped.
 F11 — Invest Lane (auto-DCA): a 4th split lane converts USDC→XLM via classic path payment right after each split — spot purchase, no lending, no yield products. If the DEX has no path this cycle, the slice simply stays as spendable wallet USDC — never a simulated fill. Shipped.
 F12 — Payment Request Link (SEP-7): request payment from inside Shunt via a web+stellar:pay link/QR any SEP-7 wallet can open, plus a public payer landing page; card checkout for non-crypto payers via an on-ramp partner is roadmap. Shipped.
 F13 — Savings Goals: named, on-chain sub-allocations of the Savings balance (e.g. "Emergency fund", "Wedding") via create/withdraw/rename/delete_savings_goal on ShuntVault — bookkeeping only, drawn from and released back to the same aggregate balance, no separate custody. Shipped.
@@ -167,3 +167,10 @@ What MVP explicitly is NOT:
 - No lending, no yield. Savings are held in USDC at face value — deliberately (see Business Model). The Invest lane is spot asset purchase (DCA), not a yield product.
 - The vault is unaudited. Keep real mainnet amounts trivial until a proper audit is done.
 - The keeper is centralized in this version. Mitigations: idempotency, cursor-resumed reconnects, manual trigger fallback. Decentralization comes later.
+RAMP STATUS (July 29, 2026)
+
+- Stellar split, vault, DEX, and keeper proof runs on testnet.
+- SDF SEP-24 add-money/withdrawal is a Stellar testnet simulation, not an IDR bank integration.
+- MoonPay/Transak are provider sandbox spikes unless a real route settles.
+- Alchemy Pay/Banxa become live only after their API confirms ID + IDR + USDC + Stellar + direction for Shunt.
+- MoneyGram Ramps becomes live only after allowlist/certification, Production Preview or production access, a participating location, a reference number, and matching Stellar mainnet settlement.

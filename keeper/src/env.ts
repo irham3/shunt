@@ -8,6 +8,12 @@ export interface Env {
   USDC_ISSUER: string;
   VAULT_CONTRACT_ID: string;
   WATCH_ACCOUNTS: string;
+  TRANSAK_API_KEY?: string;
+  TRANSAK_API_SECRET?: string;
+  TRANSAK_STELLAR_RECIPIENT_ADDRESS?: string;
+  TRANSAK_STELLAR_RECIPIENT_MEMO?: string;
+  MOONPAY_API_KEY?: string;
+  MOONPAY_SECRET_KEY?: string;
   /** Optional comma-separated origin allowlist for CORS. Unset ⇒ "*" (dev). */
   ALLOWED_ORIGINS?: string;
   /** Optional per-IP /trigger cap per minute (default 30). */

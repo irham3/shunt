@@ -8,9 +8,16 @@ keeper-state.json
 .agents/
 *.tsbuildinfo
 level1-objection.md
+/docs/
 
 
 # Playwright E2E
 web/e2e/.state/
 web/test-results/
 web/playwright-report/
+
+# Auto-generated ignored paths
+/.tmp/
+/.tmp-*/
+/scripts/
+/videos/

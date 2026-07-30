@@ -196,3 +196,29 @@ export async function getWithdrawStatus(
     withdrawMemoType: t.withdraw_memo_type,
   };
 }
+
+import { Memo } from "@stellar/stellar-sdk";
+
+export function buildSep24Memo(status: { withdrawMemo?: string; withdrawMemoType?: string }): Memo | null {
+  if (!status.withdrawMemo) return null;
+  switch (status.withdrawMemoType) {
+    case "text":
+      return Memo.text(status.withdrawMemo);
+    case "id":
+      return Memo.id(status.withdrawMemo);
+    case "hash":
+      return Memo.hash(status.withdrawMemo);
+    case "return":
+      return Memo.return(status.withdrawMemo);
+    default:
+      return Memo.text(status.withdrawMemo);
+  }
+}
+
+export function isSep24WithdrawReady(status: string): boolean {
+  return status === "pending_user_transfer_start";
+}
+
+export function isSep24TerminalStatus(status: string): boolean {
+  return ["completed", "expired", "error", "refunded"].includes(status);
+}

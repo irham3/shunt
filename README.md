@@ -1,3 +1,7 @@
+# Shunt
+
+> **Ramp status, July 29, 2026:** Shunt's Stellar split and vault flows run on testnet. The SDF SEP-24 flow is a labeled Stellar testnet simulation. Provider sandboxes are shown separately. A route is called live only after a licensed provider returns the exact country, fiat, asset, network, direction, order status, and matching Stellar mainnet settlement.
+
 <p align="center">
   <img src="design/hero.svg" alt="Shunt — Automated money routing" width="900">
 </p>
@@ -69,7 +73,7 @@ Shunt removes willpower. It operates as an **income router**, not a storage box.
 | Direction           | Feature                                                                                                                                                                                                | Status                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
 | **In**        | **Payment request links (SEP-7)** — for crypto-capable clients, a link or QR removes the manual wallet-address and asset coordination; you get paid in USDC. Card checkout for non-crypto payers is on the roadmap | ✅ shipped (card checkout 🔜) |
-| **In**        | **Top Up (SEP-24 deposit)** — fiat in through a supported anchor's hosted flow, lands as USDC                                                                                                     | ✅ shipped vs SDF test anchor   |
+| **In**        | **Add money (SEP-24 test deposit)** — SDF test-anchor simulation for SEP-1/10/24; live providers appear only after exact-route approval                                                                                                     | ✅ shipped as testnet simulation   |
 | **Structure** | **One-tap split** into Needs / Savings / Buffer — the three-lane allocation is atomic on-chain (Invest is a separate approved conversion)                                                                | ✅ shipped                    |
 | **Structure** | **Invest lane** *(optional)* — spot DCA into your choice of **XLM or TXAUM** (Shunt's own testnet demo gold, standing in for Matrixdock's mainnet-only XAUm) via path payment after each split | ✅ shipped                    |
 | **Structure** | **In-app Convert** — XLM ⇄ USDC swap on the Stellar DEX (live quote, slippage floor), no third party                                                                                            | ✅ shipped                    |
@@ -229,9 +233,9 @@ Both directions run on the standard Stellar anchor rails, implemented in [`web/s
 
 Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatible wallet can open — the payee never explains crypto to a client again.
 
-Rate and fee are always shown **before** confirmation.
+Provider rate and fee are shown only when a live provider quote exists. The SDF test-anchor simulation does not quote IDR or provider fees.
 
-**Pluggable to a real APAC corridor — shown, not claimed (and framed honestly).** The off-ramp is generic SEP-24, so the production corridor is *one config value* (`VITE_ANCHOR_HOME_DOMAIN`). The corridor that already connects Stellar USDC to fiat in an APAC country **today, on mainnet** is **MoneyGram Ramps** (formerly MoneyGram Access) — USDC → cash pickup, with the **Philippines a supported corridor** since the SDF launch. To be precise: MoneyGram is a *global remittance network* (400k+ locations), a legitimate fiat on/off-ramp — **not** a grassroots local-only anchor, and we don't dress it up as one. It's the real, live rail we can point at today. Run our SEP-1 discovery against it yourself — no funds, no keys:
+**Pluggable to a real corridor — shown only after provider proof.** The off-ramp architecture is generic SEP-24, but Shunt does not call a route live until the provider approves Shunt's domain/account, returns a usable flow, and the team reconciles a provider order with Stellar mainnet settlement. MoneyGram Ramps is the preferred Stellar-native cash candidate after allowlisting and Production Preview.
 
 ```bash
 node scripts/verify-anchor.mjs stellar.moneygram.com
@@ -246,7 +250,7 @@ node scripts/verify-anchor.mjs testanchor.stellar.org   # the SDF testnet anchor
 
 | Corridor | Real, named target | Status |
 | --- | --- | --- |
-| 🇵🇭 PHP (live) | **MoneyGram Access** — USDC ⇄ PHP at physical locations | Live on Stellar **mainnet** ([verified toml](https://stellar.moneygram.com/.well-known/stellar.toml)) — `VITE_ANCHOR_HOME_DOMAIN` swap only |
+| Cash route | **MoneyGram Ramps** — USDC cash-in/out at participating provider-returned locations | Pending allowlist, staging, and Production Preview evidence |
 | 🇮🇩 IDR | **IDRX** — regulated, CertiK-audited Rupiah stablecoin | Roadmap target ([idrx.co](https://home.idrx.co/en/)); Stellar availability still to confirm — *not claimed as on Stellar* |
 
 **Rupiah is the story; the Philippines is the live beachhead — we say so plainly.** Our primary target market is Indonesia (the rupiah-erosion problem the whole product is built around), but the corridor that is *live on Stellar today* is **PHP via MoneyGram** — not IDR. There is no production IDR off-ramp on Stellar yet: IDRX (a regulated rupiah stablecoin) is the target asset but its Stellar availability is unconfirmed, and MoneyGram's Indonesia payout isn't a listed Stellar corridor. So the honest go-to-market is **Philippines-first** (the rail exists) with **Indonesia next** as the IDR corridor lands. We prove the *engine and the off-ramp mechanism* live in an APAC country now; we do not claim a live rupiah cash-out we don't have.
@@ -318,7 +322,7 @@ design/                  Diagrams (animated SVG) + app screenshots
 
 |                 |                                                                                                                                                                                           |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Next**  | Wire the live corridor (MoneyGram Access, PHP) into the hosted cash-out · production IDR corridor (IDRX) · card checkout on payment links (on-ramp partner) · anchor status webhooks       |
+| **Next**  | Run Alchemy Pay/Banxa exact-route checks · complete MoneyGram Ramps allowlist and Production Preview · card checkout on payment links · anchor/provider status webhooks       |
 | **Later** | Session keys — truly hands-free splits · split + invest in one signature (AMM router) · deepen the gold (XAUm) invest path once mainnet DEX liquidity is live · native mobile · keeper decentralization |
 
 ---
