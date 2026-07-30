@@ -8,6 +8,7 @@ keeper-state.json
 .agents/
 *.tsbuildinfo
 level1-objection.md
+/docs/
 
 
 # Playwright E2E
