@@ -16,7 +16,7 @@ test.describe("SDF test-anchor protocol simulation", () => {
     await page.getByLabel(/test usdc amount/i).fill("5");
     await page.getByRole("button", { name: /^start stellar test flow$/i }).click();
 
-    await expect(page.getByText("Test deposit session created")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("heading", { name: "Test deposit session created" })).toBeVisible({ timeout: 90_000 });
     const reopen = page.getByRole("link", { name: /reopen the sdf test flow/i });
     await expect(reopen).toBeVisible();
     await expect(reopen).toHaveAttribute("href", /^https:\/\//);
@@ -52,7 +52,7 @@ test.describe("SDF test-anchor protocol simulation", () => {
     await page.getByRole("button", { name: "Continue" }).click();
 
     if (e2e.usdcAcquired) {
-      await expect(page.getByText("Test withdrawal session created")).toBeVisible({ timeout: 90_000 });
+      await expect(page.getByRole("heading", { name: "Test withdrawal session created" })).toBeVisible({ timeout: 90_000 });
       const reopen = page.getByRole("link", { name: /reopen the sdf test flow/i });
       await expect(reopen).toBeVisible();
       await expect(reopen).toHaveAttribute("href", /^https:\/\//);

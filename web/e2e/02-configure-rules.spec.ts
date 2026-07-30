@@ -52,6 +52,6 @@ test.describe("configure shunt rules", () => {
     // Real testnet round-trip: simulate → sign locally → submit → confirm.
     await expect(page.getByText("Shunt rules saved on-chain")).toBeVisible({ timeout: 90_000 });
     await expect(page.getByTestId("post-save-panel")).toBeVisible();
-    await expect(page.getByTestId("post-save-panel")).toContainText("what happens next");
+    await expect(page.getByTestId("post-save-panel")).toContainText("Next steps");
   });
 });

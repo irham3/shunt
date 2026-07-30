@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowDownLeft, ArrowUpRight, Repeat } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BanknoteArrowDown, BanknoteArrowUp, PiggyBank, Repeat, Split, TrendingUp } from "lucide-react";
 import { EXPLORER_TX, fetchRecentPayments, type ChainPayment } from "../lib/stellar";
 import { fmtUsdc, useShunt, type ActivityItem } from "../store";
 
@@ -13,14 +13,14 @@ const FILTERS = [
   { id: "offramp", label: "Off-ramp" },
 ] as const;
 
-const KIND_ICON: Record<ActivityItem["kind"], string> = {
-  split: "⑃",
-  withdraw: "↓",
-  offramp: "↗",
-  deposit: "＋",
-  invest: "📈",
-  payment: "→",
-  convert: "⇄",
+const KIND_ICON: Record<ActivityItem["kind"], React.ReactNode> = {
+  split: <Split size={17} style={{ color: "var(--color-accent-primary)" }} />,
+  withdraw: <BanknoteArrowDown size={17} style={{ color: "var(--color-bucket-savings)" }} />,
+  offramp: <ArrowUpRight size={17} style={{ color: "var(--color-bucket-needs)" }} />,
+  deposit: <BanknoteArrowUp size={17} style={{ color: "var(--color-accent-secondary)" }} />,
+  invest: <TrendingUp size={17} style={{ color: "var(--color-accent-tertiary)" }} />,
+  payment: <PiggyBank size={17} style={{ color: "var(--color-bucket-needs)" }} />,
+  convert: <Repeat size={17} style={{ color: "var(--color-accent-tertiary)" }} />,
 };
 
 /** One row in the merged feed — local app events + real Horizon transfers. */
@@ -72,7 +72,7 @@ export function Activity() {
         a.amountXlm !== undefined
           ? `${a.amountXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`
           : `${fmtUsdc(a.amountUsdc ?? 0)} USDC`,
-      icon: <span style={{ fontSize: 18 }}>{KIND_ICON[a.kind]}</span>,
+      icon: KIND_ICON[a.kind],
       txHash: a.txHash,
       at: a.at,
     }));
@@ -138,7 +138,7 @@ export function Activity() {
         <p className="muted" data-testid="activity-empty">
           {chainLoaded || activity.length > 0
             ? "No transactions for this filter yet."
-            : "Loading on-chain history…"}
+            : "Loading on-chain history"}
         </p>
       )}
 
@@ -165,7 +165,7 @@ export function Activity() {
                     <>
                       {" · "}
                       <a href={EXPLORER_TX(a.txHash)} target="_blank" rel="noreferrer" style={{ color: "var(--color-accent-secondary)" }}>
-                        on-chain ↗
+                        On-chain
                       </a>
                     </>
                   )}

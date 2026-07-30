@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import { ArrowDownUp } from "lucide-react";
+import { ArrowDownUp, CheckCircle2, CircleDollarSign, Clock3, Tag } from "lucide-react";
 import { authenticate, startWithdraw, ANCHOR_HOME_DOMAIN, getAnchorInfo, AnchorAssetInfo } from "../lib/anchor";
 import {
   sendXlmPayment,
@@ -396,7 +396,7 @@ export function SendPay() {
   if (cvResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>⇄</div>
+        <ArrowDownUp size={48} style={{ color: "var(--color-accent-tertiary)", margin: "0 auto" }} />
         <h2>Conversion Successful</h2>
         <p className="muted">
           Converted {cvAmount} {cvFrom} → ≈{" "}
@@ -429,7 +429,7 @@ export function SendPay() {
   if (payReqResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>✅</div>
+        <CheckCircle2 size={48} style={{ color: "var(--color-accent-primary)", margin: "0 auto" }} />
         <h2>Request paid</h2>
         <p className="muted">
           Delivered {payReqResult.amount} {payReqResult.asset} — converted and sent from your USDC in one
@@ -461,7 +461,7 @@ export function SendPay() {
   if (settleResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>🏷️</div>
+        <Tag size={48} style={{ color: "var(--color-accent-secondary)", margin: "0 auto" }} />
         <h2>Settled locally</h2>
         <p className="muted">
           Spent {settleAmount} USDC → ≈{" "}
@@ -494,7 +494,7 @@ export function SendPay() {
   if (submitted) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>⏳</div>
+        <Clock3 size={48} style={{ color: "var(--color-accent-secondary)", margin: "0 auto" }} />
         <h2>Test withdrawal session created</h2>
         <p className="muted">
           The SDF test anchor opened a SEP-24 withdrawal session for {fmtUsdc(usdc)} test USDC at{" "}
@@ -515,7 +515,7 @@ export function SendPay() {
   if (xlmResult) {
     return (
       <div className="screen" style={{ justifyContent: "center", textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>✅</div>
+        <CircleDollarSign size={48} style={{ color: "var(--color-accent-primary)", margin: "0 auto" }} />
         <h2>Transaction Successful</h2>
         <p className="muted">
           Sent {xlmResult.amount} {xlmResult.asset} to {xlmResult.dest.slice(0, 8)}…{xlmResult.dest.slice(-6)}

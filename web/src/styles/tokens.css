@@ -112,6 +112,15 @@ button {
   min-height: var(--tap-target);
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 3px;
+}
+
 /* Buttons are used on <button>, <a> and <Link> alike. Anchors don't get the
    button element's min-height, so without these shared rules link-buttons
    collapsed to bare text height (cramped, uncentered). Keep every .btn-* the

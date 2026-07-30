@@ -11,7 +11,7 @@
  * anchor once verified on Stellar.
  */
 import { signTxXdr } from "./signer";
-import { NETWORK_PASSPHRASE } from "./stellar";
+import { NETWORK_PASSPHRASE } from "./stellar-config";
 
 export const ANCHOR_HOME_DOMAIN =
   import.meta.env.VITE_ANCHOR_HOME_DOMAIN ?? "testanchor.stellar.org";
@@ -98,7 +98,11 @@ export async function authenticate(account: string): Promise<string> {
   
   const challengeUrl = new URL(webAuthEndpoint);
   challengeUrl.searchParams.set("account", account);
-  if (WALLET_HOME_DOMAIN) {
+  // The SDF test anchor rejects Shunt's production wallet home domain. For the
+  // testnet simulation lane, omit it and let the anchor issue its standard
+  // SEP-10 challenge. Real provider routes can still pass the configured
+  // wallet domain once that provider supports it.
+  if (WALLET_HOME_DOMAIN && ANCHOR_HOME_DOMAIN !== "testanchor.stellar.org") {
     challengeUrl.searchParams.set("home_domain", WALLET_HOME_DOMAIN);
   }
 
