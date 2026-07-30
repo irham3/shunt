@@ -1021,6 +1021,74 @@ input[type="number"]:focus {
   border-radius: 12px 12px 0 0;
 }
 
+/* Ecosystem Partner Marquee Section */
+.lp-marquee-section {
+  width: 100%;
+  background: #000000;
+  padding: 56px 0 64px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lp-marquee-header {
+  font-family: 'Inter', var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  margin-bottom: 36px;
+  text-transform: uppercase;
+}
+
+/* Constrained Marquee Container with Left & Right Gradient Mask Fade */
+.lp-marquee-container {
+  position: relative;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, #000 20%, #000 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 20%, #000 80%, transparent 100%);
+}
+
+.lp-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 64px;
+  width: max-content;
+  animation: marqueeRightToLeft 50s linear infinite;
+}
+
+.lp-marquee-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.lp-marquee-logo {
+  height: 42px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+  /* 100% Pure White Monochrome for all logos */
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+/* Smooth Right to Left Marquee Infinite Scroll */
+@keyframes marqueeRightToLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .lp-btn-secondary-dark {
   display: inline-flex;
   align-items: center;

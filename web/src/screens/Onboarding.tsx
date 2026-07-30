@@ -116,6 +116,18 @@ const RISING_PARTICLES = Array.from({ length: 32 }).map((_, i) => ({
   color: i % 4 === 0 ? "#ffffff" : i % 2 === 0 ? "#cdf14a" : "#a3e635",
 }));
 
+const MARQUEE_LOGOS = [
+  { name: "Stellar", src: "/images/marquee/stellar.png" },
+  { name: "Soroban", src: "/images/marquee/soroban.png" },
+  { name: "Settle Network", src: "/images/marquee/settle.png" },
+  { name: "Freighter", src: "/images/marquee/freighter.png" },
+  { name: "Albedo", src: "/images/marquee/albedo.png" },
+  { name: "WalletConnect", src: "/images/marquee/walletconnect.png" },
+  { name: "MoneyGram", src: "/images/marquee/moneygram.png" },
+  { name: "USDC", src: "/images/marquee/usdc.png" },
+  { name: "Rust", src: "/images/marquee/rust.png" },
+];
+
 export const Onboarding: React.FC = () => {
   const nav = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -300,7 +312,27 @@ export const Onboarding: React.FC = () => {
         </section>
       </div>
 
-      {/* Trust marquee — commented out for now */}
+      {/* 2. Ecosystem Partner Marquee */}
+      <section className="lp-marquee-section">
+        <div className="lp-marquee-header">
+          Built on World-Class Stellar Infrastructure
+        </div>
+        <div className="lp-marquee-container">
+          <div className="lp-marquee-track">
+            {[...Array(2)].flatMap((_, dup) =>
+              MARQUEE_LOGOS.map((logo) => (
+                <div key={`${dup}-${logo.name}`} className="lp-marquee-item">
+                  <img
+                    src={logo.src}
+                    alt={logo.name}
+                    className="lp-marquee-logo"
+                  />
+                </div>
+              )),
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* 2. Problem → outcome */}
       <section id="why" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
