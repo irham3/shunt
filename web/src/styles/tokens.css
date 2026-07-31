@@ -1312,6 +1312,145 @@ input[type="number"]:focus {
     transform: scaleY(-1) translateY(8px) rotate(-4deg);
   }
 }
+
+/* Why Shunt 2-Column Section */
+.lp-why-section {
+  padding: 96px 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lp-why-container {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  max-width: 1160px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  .lp-why-container {
+    flex-direction: column;
+    gap: 40px;
+  }
+}
+
+.lp-why-content {
+  flex: 1 1 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.lp-why-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: clamp(30px, 3.8vw, 44px);
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.lp-why-desc {
+  font-family: 'Inter', var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  max-width: 540px;
+}
+
+/* 2x2 Highlights Grid */
+.lp-why-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .lp-why-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lp-why-point-card {
+  background: rgba(18, 20, 16, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.lp-why-point-card:hover {
+  border-color: rgba(205, 241, 74, 0.35);
+  transform: translateY(-2px);
+}
+
+.lp-why-point-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-why-point-icon {
+  font-size: 20px;
+  color: #cdf14a;
+  flex-shrink: 0;
+}
+
+.lp-why-point-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.lp-why-point-desc {
+  font-family: 'Inter', var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+}
+
+/* Right Column Image Frame */
+.lp-why-image-wrap {
+  flex: 1 1 480px;
+  width: 100%;
+}
+
+.lp-why-image-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(18, 20, 16, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-why-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .lp-btn-secondary-dark:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.28);

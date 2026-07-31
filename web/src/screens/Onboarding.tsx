@@ -161,6 +161,29 @@ const HOW_STEPS = [
   },
 ];
 
+const WHY_POINTS = [
+  {
+    icon: "ph-shield-check",
+    title: "100% Non-Custodial",
+    desc: "Your keys, your crypto. No central sign-up, bank custody, or custodial risk.",
+  },
+  {
+    icon: "ph-lock-key",
+    title: "Soroban Vault Lock",
+    desc: "Smart contract timelock on Stellar that enforces true saving discipline.",
+  },
+  {
+    icon: "ph-currency-circle-dollar",
+    title: "USDC Inflation Defense",
+    desc: "Protect your hard-earned salary against local currency depreciation.",
+  },
+  {
+    icon: "ph-lightning",
+    title: "One-Tap Payday Split",
+    desc: "No tedious math or manual transfers—allocate your entire income in seconds.",
+  },
+];
+
 export const Onboarding: React.FC = () => {
   const nav = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -367,31 +390,46 @@ export const Onboarding: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. Problem → outcome */}
-      <section id="why" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
-        <Reveal variant="blur">
-          <h2 style={{ fontSize: "var(--text-h1)", margin: 0, textAlign: "center" }}>Why people use it</h2>
-        </Reveal>
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          {PROBLEM_OUTCOME.map((row, i) => (
-            <Reveal
-              key={row.problem}
-              variant={i % 2 === 0 ? "left" : "right"}
-              delay={i * 0.05}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                padding: "18px 22px",
-                borderBottom: i < PROBLEM_OUTCOME.length - 1 ? "1px solid var(--color-border-subtle)" : "none",
-                flexWrap: "wrap",
-              }}
-            >
-              <span className="muted" style={{ fontSize: 14, flex: "1 1 220px" }}>{row.problem}</span>
-              <i className="ph ph-arrow-right" style={{ color: "var(--color-accent-primary)", flexShrink: 0 }} />
-              <span style={{ fontSize: 14, fontWeight: 600, flex: "1 1 220px" }}>{row.outcome}</span>
+      {/* 2. Why People Use It — Split Layout with Image Frame & 2x2 Highlights */}
+      <section id="why" className="lp-section lp-why-section">
+        <div className="lp-why-container">
+          {/* Left Column: Badge, Title, Subtitle, and 2x2 Highlights Grid */}
+          <div className="lp-why-content">
+            <Reveal variant="blur" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-start" }}>
+              <div className="lp-hero-badge">
+                <i className="ph ph-sparkle" style={{ color: "#cdf14a" }} />
+                <span>Why Shunt</span>
+              </div>
+              <h2 className="lp-why-title">Why People Choose Shunt for Automated Wealth</h2>
+              <p className="lp-why-desc">
+                Managing payday salary manually leads to un-saved funds and currency depreciation. Shunt automates your financial allocation on-chain the moment income arrives.
+              </p>
             </Reveal>
-          ))}
+
+            {/* 2x2 Key Points Grid */}
+            <div className="lp-why-grid">
+              {WHY_POINTS.map((pt, i) => (
+                <Reveal key={pt.title} variant="up" delay={i * 0.08} className="lp-why-point-card">
+                  <div className="lp-why-point-header">
+                    <i className={`ph ${pt.icon} lp-why-point-icon`} />
+                    <h3 className="lp-why-point-title">{pt.title}</h3>
+                  </div>
+                  <p className="lp-why-point-desc">{pt.desc}</p>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column: Preview Image Frame */}
+          <Reveal variant="scale" delay={0.2} className="lp-why-image-wrap">
+            <div className="lp-why-image-card">
+              <img
+                src="/images/whyshunt/whyshunt.png"
+                alt="Why People Choose Shunt"
+                className="lp-why-img"
+              />
+            </div>
+          </Reveal>
         </div>
       </section>
 
