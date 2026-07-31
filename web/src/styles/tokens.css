@@ -1488,17 +1488,28 @@ input[type="number"]:focus {
 .lp-loop-diagram-card {
   position: relative;
   width: 100%;
-  background: rgba(13, 16, 21, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: url('/images/smartallocations/smartallocations.png') center/cover no-repeat, rgba(18, 20, 16, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 28px;
   padding: 36px 40px;
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 0;
   box-sizing: border-box;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.lp-diagram-circuit-texture {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
 @media (max-width: 960px) {
@@ -1515,41 +1526,44 @@ input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+  z-index: 3;
 }
 
 .lp-diagram-brand {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
 }
 
 .lp-diagram-logo {
   font-family: 'Inter Tight', var(--font-heading);
-  font-size: 42px;
+  font-size: 46px;
   font-weight: 700;
-  color: #ffffff;
+  color: #F5F7FA;
   margin: 0;
   letter-spacing: -0.03em;
   line-height: 1;
 }
 
-.lp-diagram-fork-icon {
-  font-size: 24px;
-  color: #cdf14a;
+.lp-diagram-fork-symbol {
+  font-size: 38px;
+  color: #D8F15A;
+  line-height: 1;
 }
 
 .lp-diagram-headline {
   font-family: 'Inter Tight', var(--font-heading);
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
   margin: 6px 0 0;
 }
 
 .lp-diagram-sub {
   font-family: 'Inter', var(--font-body);
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.85);
   margin: 0;
   line-height: 1.45;
 }
@@ -1558,20 +1572,23 @@ input[type="number"]:focus {
 .lp-diagram-center {
   position: relative;
   flex: 1 1 300px;
-  height: 240px;
+  align-self: stretch;
+  min-height: 290px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-right: 0;
+  z-index: 2;
 }
 
 .lp-diagram-usdc-label {
   position: absolute;
-  top: 92px;
+  top: 130px;
   left: 45px;
   font-family: 'Inter', var(--font-body);
   font-size: 12px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: #8A93A3;
   letter-spacing: 0.02em;
   pointer-events: none;
 }
@@ -1588,6 +1605,8 @@ input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: relative;
+  z-index: 3;
 }
 
 @media (max-width: 960px) {
@@ -1599,22 +1618,80 @@ input[type="number"]:focus {
 }
 
 .lp-diagram-lane-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(18, 20, 16, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .lp-diagram-lane-card:hover {
-  background: rgba(255, 255, 255, 0.06);
-  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
 }
+
+/* Subtle, Thin Glow Effect on Dot Arrival (4.8s Cycle at t=75%) */
+@keyframes cardPulseNeeds {
+  0%, 70%, 100% {
+    border-color: rgba(116, 189, 246, 0.22);
+    background: rgba(18, 20, 16, 0.85);
+    box-shadow: 0 0 0 rgba(116, 189, 246, 0);
+  }
+  75%, 88% {
+    border-color: rgba(116, 189, 246, 0.75);
+    background: rgba(116, 189, 246, 0.1);
+    box-shadow: 0 0 10px rgba(116, 189, 246, 0.35);
+  }
+}
+
+@keyframes cardPulseSavings {
+  0%, 70%, 100% {
+    border-color: rgba(216, 241, 90, 0.22);
+    background: rgba(18, 20, 16, 0.85);
+    box-shadow: 0 0 0 rgba(216, 241, 90, 0);
+  }
+  75%, 88% {
+    border-color: rgba(216, 241, 90, 0.75);
+    background: rgba(216, 241, 90, 0.1);
+    box-shadow: 0 0 10px rgba(216, 241, 90, 0.35);
+  }
+}
+
+@keyframes cardPulseBuffer {
+  0%, 70%, 100% {
+    border-color: rgba(225, 158, 36, 0.22);
+    background: rgba(18, 20, 16, 0.85);
+    box-shadow: 0 0 0 rgba(225, 158, 36, 0);
+  }
+  75%, 88% {
+    border-color: rgba(225, 158, 36, 0.75);
+    background: rgba(225, 158, 36, 0.1);
+    box-shadow: 0 0 10px rgba(225, 158, 36, 0.35);
+  }
+}
+
+@keyframes cardPulseInvest {
+  0%, 70%, 100% {
+    border-color: rgba(160, 139, 247, 0.22);
+    background: rgba(18, 20, 16, 0.85);
+    box-shadow: 0 0 0 rgba(160, 139, 247, 0);
+  }
+  75%, 88% {
+    border-color: rgba(160, 139, 247, 0.75);
+    background: rgba(160, 139, 247, 0.1);
+    box-shadow: 0 0 10px rgba(160, 139, 247, 0.35);
+  }
+}
+
+.lp-card-pulse-needs { animation: cardPulseNeeds 4.8s linear infinite; }
+.lp-card-pulse-savings { animation: cardPulseSavings 4.8s linear infinite; }
+.lp-card-pulse-buffer { animation: cardPulseBuffer 4.8s linear infinite; }
+.lp-card-pulse-invest { animation: cardPulseInvest 4.8s linear infinite; }
 
 .lp-diagram-lane-header {
   display: flex;

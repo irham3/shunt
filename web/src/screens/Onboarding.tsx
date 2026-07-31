@@ -446,58 +446,106 @@ export const Onboarding: React.FC = () => {
 
         <Reveal variant="scale" delay={0.12} style={{ width: "100%", maxWidth: 1140, margin: "0 auto" }}>
           <div className="lp-loop-diagram-card">
-            {/* Left Hub: Shunt Identity */}
+            {/* Subtle Circuit Texture */}
+            <svg className="lp-diagram-circuit-texture" viewBox="0 0 900 250" preserveAspectRatio="none">
+              <g stroke="rgba(255,255,255,0.06)" strokeWidth="1" fill="none">
+                <path d="M 40,220 H 180 V 200" />
+                <path d="M 860,30 H 740 V 52" />
+                <circle cx="180" cy="196" r="3" fill="rgba(255,255,255,0.12)" />
+                <circle cx="740" cy="56" r="3" fill="rgba(255,255,255,0.12)" />
+              </g>
+            </svg>
+
+            {/* Left Brand Identity */}
             <div className="lp-diagram-left">
               <div className="lp-diagram-brand">
                 <h3 className="lp-diagram-logo">Shunt</h3>
-                <i className="ph ph-git-fork lp-diagram-fork-icon" />
+                <span className="lp-diagram-fork-symbol">⑃</span>
               </div>
               <h4 className="lp-diagram-headline">Automated money routing.</h4>
               <p className="lp-diagram-sub">Non-custodial USDC autopilot on Stellar</p>
             </div>
 
-            {/* Middle: Interactive Animated SVG Flow Diagram */}
+            {/* Middle SVG Flow & Branch Connectors with H 350 straight tails */}
             <div className="lp-diagram-center">
-              <span className="lp-diagram-usdc-label">USDC in</span>
-              <svg viewBox="0 0 300 240" className="lp-diagram-svg" preserveAspectRatio="none">
-                {/* Input line */}
-                <line x1="10" y1="120" x2="130" y2="120" stroke="rgba(255, 255, 255, 0.25)" strokeWidth="2.5" />
+              <svg viewBox="0 0 350 290" className="lp-diagram-svg" preserveAspectRatio="none">
+                <defs>
+                  <filter id="shuntGlow" x="-80%" y="-80%" width="260%" height="260%">
+                    <feGaussianBlur stdDeviation="3.5" result="b"/>
+                    <feMerge>
+                      <feMergeNode in="b"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                  <path id="laneIn" d="M 10,145 H 155"/>
+                  <path id="laneA" d="M 155,145 C 215,145 215,42 265,42 H 350"/>
+                  <path id="laneB" d="M 155,145 C 215,145 215,114 265,114 H 350"/>
+                  <path id="laneC" d="M 155,145 C 215,145 215,182 265,182 H 350"/>
+                  <path id="laneD" d="M 155,145 C 215,145 215,246 265,246 H 350"/>
+                </defs>
 
-                {/* Moving white dot on input line */}
-                <circle r="4" fill="#ffffff">
-                  <animate attributeName="cx" values="10;130" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="cy" values="120;120" dur="2s" repeatCount="indefinite" />
+                {/* USDC in Label placed tightly right above input cable */}
+                <g fontSize="12" fontWeight="500" fill="#8A93A3">
+                  <text x="45" y="132">USDC in</text>
+                </g>
+
+                {/* Dim Background Circuit Lanes */}
+                <g fill="none" strokeLinecap="round">
+                  <use href="#laneIn" stroke="#2a3648" strokeWidth="3"/>
+                  <use href="#laneA" stroke="#23394d" strokeWidth="3"/>
+                  <use href="#laneB" stroke="#3a4022" strokeWidth="3"/>
+                  <use href="#laneC" stroke="#3d2f16" strokeWidth="3"/>
+                  <use href="#laneD" stroke="#2e2a4a" strokeWidth="3"/>
+                </g>
+
+                {/* Split Node with pulsing animation on handoff at 37.5% cycle */}
+                <circle cx="155" cy="145" r="9" fill="#0B0F14" stroke="#D8F15A" strokeWidth="2.5" filter="url(#shuntGlow)">
+                  <animate attributeName="r" values="8;8;11;8;8" keyTimes="0;0.375;0.44;0.55;1" dur="4.8s" repeatCount="indefinite"/>
                 </circle>
 
-                {/* Center glowing junction node */}
-                <circle cx="130" cy="120" r="7.5" fill="#0d0f0c" stroke="#cdf14a" strokeWidth="3" />
+                {/* Incoming Pulse Dot (0% -> 37.5%) */}
+                <circle r="5" fill="#F5F7FA" filter="url(#shuntGlow)">
+                  <animateMotion dur="4.8s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1" keyTimes="0;0.375;1">
+                    <mpath href="#laneIn"/>
+                  </animateMotion>
+                  <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.04;0.33;0.375;1" dur="4.8s" repeatCount="indefinite"/>
+                </circle>
 
-                {/* 4 Spline Curves */}
-                <path d="M 130 120 C 210 120, 210 25, 290 25" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeOpacity="0.8" />
-                <path d="M 130 120 C 210 120, 210 88, 290 88" fill="none" stroke="#a3e635" strokeWidth="2.5" strokeOpacity="0.8" />
-                <path d="M 130 120 C 210 120, 210 152, 290 152" fill="none" stroke="#f97316" strokeWidth="2.5" strokeOpacity="0.8" />
-                <path d="M 130 120 C 210 120, 210 215, 290 215" fill="none" stroke="#c084fc" strokeWidth="2.5" strokeOpacity="0.8" />
+                {/* 4 Outgoing Branch Pulses (37.5% -> 75%) */}
+                <circle r="4.5" fill="#74BDF6" filter="url(#shuntGlow)">
+                  <animateMotion dur="4.8s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.375;0.75;1">
+                    <mpath href="#laneA"/>
+                  </animateMotion>
+                  <animate attributeName="opacity" values="0;0;1;1;1;0" keyTimes="0;0.375;0.42;0.75;0.82;1" dur="4.8s" repeatCount="indefinite"/>
+                </circle>
 
-                {/* Animated dots traveling along each of the 4 curves */}
-                <circle r="3.5" fill="#38bdf8">
-                  <animateMotion path="M 130 120 C 210 120, 210 25, 290 25" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+                <circle r="4.5" fill="#D8F15A" filter="url(#shuntGlow)">
+                  <animateMotion dur="4.8s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.375;0.75;1">
+                    <mpath href="#laneB"/>
+                  </animateMotion>
+                  <animate attributeName="opacity" values="0;0;1;1;1;0" keyTimes="0;0.375;0.42;0.75;0.82;1" dur="4.8s" repeatCount="indefinite"/>
                 </circle>
-                <circle r="3.5" fill="#a3e635">
-                  <animateMotion path="M 130 120 C 210 120, 210 88, 290 88" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+
+                <circle r="4.5" fill="#E19E24" filter="url(#shuntGlow)">
+                  <animateMotion dur="4.8s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.375;0.75;1">
+                    <mpath href="#laneC"/>
+                  </animateMotion>
+                  <animate attributeName="opacity" values="0;0;1;1;1;0" keyTimes="0;0.375;0.42;0.75;0.82;1" dur="4.8s" repeatCount="indefinite"/>
                 </circle>
-                <circle r="3.5" fill="#f97316">
-                  <animateMotion path="M 130 120 C 210 120, 210 152, 290 152" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
-                </circle>
-                <circle r="3.5" fill="#c084fc">
-                  <animateMotion path="M 130 120 C 210 120, 210 215, 290 215" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+
+                <circle r="4.5" fill="#A08BF7" filter="url(#shuntGlow)">
+                  <animateMotion dur="4.8s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.375;0.75;1">
+                    <mpath href="#laneD"/>
+                  </animateMotion>
+                  <animate attributeName="opacity" values="0;0;1;1;1;0" keyTimes="0;0.375;0.42;0.75;0.82;1" dur="4.8s" repeatCount="indefinite"/>
                 </circle>
               </svg>
             </div>
 
-            {/* Right Side: 4 Interactive Lane Cards with Percentages and Descriptions */}
+            {/* Right Side: 4 Interactive Lane Cards with Synchronized Glow Pulse */}
             <div className="lp-diagram-right">
               {LANES.map((l) => (
-                <div key={l.id} className="lp-diagram-lane-card" style={{ borderColor: `${l.color}50` }}>
+                <div key={l.id} className={`lp-diagram-lane-card lp-card-pulse-${l.id}`}>
                   <div className="lp-diagram-lane-header">
                     <div className="lp-diagram-lane-title-group">
                       <span className="lp-diagram-dot" style={{ backgroundColor: l.color, boxShadow: `0 0 8px ${l.color}` }} />
