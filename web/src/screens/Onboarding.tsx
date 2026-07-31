@@ -624,37 +624,118 @@ export const Onboarding: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. Proof / stats strip */}
-      <section id="proof" className="lp-section" style={{ padding: "48px 24px" }}>
-        <Reveal variant="up" className="card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 20, padding: 32 }}>
-          {STATS.map((s, i) => (
-            <Reveal key={s.label} variant="scale" delay={i * 0.1}>
-              <StatCard stat={s} />
-            </Reveal>
-          ))}
-        </Reveal>
-      </section>
-
-      {/* 6. Fees — service fees, never interest */}
-      <section className="lp-section" style={{ padding: "24px 24px 64px" }}>
-        <Reveal variant="blur" className="card" style={{ padding: 28 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16, alignItems: "baseline" }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 18 }}>Fees, never interest</h3>
-              <p className="muted" style={{ margin: "6px 0 0", fontSize: 13, maxWidth: 360 }}>
-                No lending, no yield products, no cut of your savings.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
-              {FEES.map((f, i) => (
-                <Reveal key={f.label} variant="right" delay={0.1 + i * 0.08} style={{ minWidth: 120 }}>
-                  <div className="numeric" style={{ fontWeight: 700, fontSize: 19, color: "var(--color-accent-primary)" }}>{f.rate}</div>
-                  <div className="muted" style={{ fontSize: 12 }}>{f.label}</div>
-                </Reveal>
-              ))}
-            </div>
+      {/* 5. Verified Protocol Metrics & Transparent Fee Schedule (Bento Grid) */}
+      <section id="proof" className="lp-section lp-proof-section">
+        <Reveal variant="blur" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginBottom: 40 }}>
+          <div className="lp-hero-badge">
+            <i className="ph ph-shield-check" style={{ color: "#D8F15A" }} />
+            <span>Proof & Transparency</span>
           </div>
+          <h2 className="lp-proof-title">Verified Metrics & Transparent Fees</h2>
+          <p className="lp-proof-subtitle">
+            Zero hidden cuts, no lending lockups, and no yield risks. Fully transparent on Stellar.
+          </p>
         </Reveal>
+
+        {/* Bento Grid */}
+        <div className="lp-bento-grid">
+          {/* Bento 1: Service Fee */}
+          <Reveal variant="up" delay={0.05}>
+            <div className="lp-bento-card">
+              <div className="lp-bento-header">
+                <div className="lp-bento-icon-box">
+                  <i className="ph ph-receipt" style={{ color: "#D8F15A", fontSize: 22 }} />
+                </div>
+                <span className="lp-bento-tag">Low Cost</span>
+              </div>
+              <div>
+                <div className="lp-bento-val">
+                  <AnimatedNumber value={STATS[0].value} decimals={STATS[0].decimals} suffix={STATS[0].suffix} />
+                </div>
+                <h3 className="lp-bento-title">Service Fee (Blended)</h3>
+                <p className="lp-bento-desc">Shunt's transparent protocol service fee.</p>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Bento 2: Unit Tests Passed */}
+          <Reveal variant="up" delay={0.1}>
+            <div className="lp-bento-card">
+              <div className="lp-bento-header">
+                <div className="lp-bento-icon-box">
+                  <i className="ph ph-code" style={{ color: "#D8F15A", fontSize: 22 }} />
+                </div>
+                <span className="lp-bento-tag">On-Chain</span>
+              </div>
+              <div>
+                <div className="lp-bento-val">
+                  <AnimatedNumber value={STATS[1].value} decimals={STATS[1].decimals} suffix={STATS[1].suffix} />
+                </div>
+                <h3 className="lp-bento-title">Soroban Unit Tests</h3>
+                <p className="lp-bento-desc">Formally verified smart contracts on Stellar.</p>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Bento 3: Early-Exit Penalty */}
+          <Reveal variant="up" delay={0.15}>
+            <div className="lp-bento-card">
+              <div className="lp-bento-header">
+                <div className="lp-bento-icon-box">
+                  <i className="ph ph-piggy-bank" style={{ color: "#D8F15A", fontSize: 22 }} />
+                </div>
+                <span className="lp-bento-tag">Discipline</span>
+              </div>
+              <div>
+                <div className="lp-bento-val">
+                  <AnimatedNumber value={STATS[2].value} decimals={STATS[2].decimals} suffix={STATS[2].suffix} />
+                </div>
+                <h3 className="lp-bento-title">Early-Exit Penalty</h3>
+                <p className="lp-bento-desc">Automatically routed to your Emergency Buffer.</p>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Bento 4 (Span 1): Fees, Never Interest Feature Card */}
+          <Reveal variant="up" delay={0.2}>
+            <div className="lp-bento-card lp-bento-card-feature">
+              <div className="lp-bento-header">
+                <div className="lp-bento-icon-box">
+                  <i className="ph ph-shield-star" style={{ color: "#D8F15A", fontSize: 22 }} />
+                </div>
+                <span className="lp-bento-tag">Zero Risk</span>
+              </div>
+              <div>
+                <h3 className="lp-bento-title" style={{ fontSize: 22 }}>Fees, Never Interest</h3>
+                <p className="lp-bento-desc" style={{ marginTop: 8, fontSize: 13, lineHeight: 1.55 }}>
+                  No lending, no yield products, no cut of your savings. 100% non-custodial capital protection.
+                </p>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Bento 5 (Span 2): Fee Matrix Grid */}
+          <Reveal variant="up" delay={0.25} style={{ gridColumn: "span 2" }} className="lp-bento-span-2-wrap">
+            <div className="lp-bento-card lp-bento-card-span-2">
+              <div className="lp-bento-header" style={{ marginBottom: 14 }}>
+                <div>
+                  <h3 className="lp-bento-title" style={{ fontSize: 18 }}>Transparent Fee Breakdown</h3>
+                  <p className="lp-bento-desc" style={{ fontSize: 12 }}>Pay-as-you-go. No recurring monthly subscriptions.</p>
+                </div>
+                <span className="lp-bento-tag">On-Chain Rates</span>
+              </div>
+
+              <div className="lp-bento-fee-matrix">
+                {FEES.map((f) => (
+                  <div key={f.label} className="lp-bento-fee-tile">
+                    <div className="lp-bento-fee-rate">{f.rate}</div>
+                    <div className="lp-bento-fee-label">{f.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
       </section>
 
       {/* 7. Call To Action (CTA) Section with call-to-actions.png background */}

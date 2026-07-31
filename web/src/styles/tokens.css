@@ -2076,6 +2076,195 @@ input[type="number"]:focus {
   .lp-float { animation: none; }
 }
 
+/* Unified Proof & Transparency Master Section */
+.lp-proof-section {
+  padding: 64px clamp(16px, 4vw, 24px) 80px;
+}
+
+.lp-proof-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 700;
+  color: #F5F7FA;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.lp-proof-subtitle {
+  font-family: 'Inter', var(--font-body);
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 520px;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* Bento Grid Layout for #proof */
+.lp-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+  .lp-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-bento-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-bento-span-2-wrap {
+    grid-column: span 1 !important;
+  }
+}
+
+/* Individual Bento Card */
+.lp-bento-card {
+  height: 100%;
+  background: rgba(18, 20, 16, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.lp-bento-card:hover {
+  border-color: rgba(216, 241, 90, 0.35);
+  transform: translateY(-4px);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.6);
+}
+
+.lp-bento-card-span-2 {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lp-bento-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lp-bento-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(216, 241, 90, 0.1);
+  border: 1px solid rgba(216, 241, 90, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-bento-val {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 42px;
+  font-weight: 700;
+  color: #D8F15A;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.lp-bento-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.lp-bento-desc {
+  font-family: 'Inter', var(--font-body);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
+
+/* Feature Bento Card (Fees, Never Interest) */
+.lp-bento-card-feature {
+  background: linear-gradient(145deg, rgba(216, 241, 90, 0.06) 0%, rgba(18, 20, 16, 0.85) 100%);
+  border: 1px solid rgba(216, 241, 90, 0.2);
+}
+
+.lp-bento-tag {
+  font-family: 'Inter', var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: #D8F15A;
+  background: rgba(216, 241, 90, 0.12);
+  border: 1px solid rgba(216, 241, 90, 0.25);
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Fee Matrix Grid Inside Span 2 Bento Card */
+.lp-bento-fee-matrix {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .lp-bento-fee-matrix {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-bento-fee-matrix {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lp-bento-fee-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.lp-bento-fee-tile:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(216, 241, 90, 0.3);
+}
+
+.lp-bento-fee-rate {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: #D8F15A;
+  line-height: 1;
+}
+
+.lp-bento-fee-label {
+  font-family: 'Inter', var(--font-body);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
 /* Call To Action Section */
 .lp-cta-section {
   padding: 80px 24px 100px;
