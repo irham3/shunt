@@ -657,19 +657,46 @@ export const Onboarding: React.FC = () => {
         </Reveal>
       </section>
 
-      {/* 7. Bottom CTA */}
-      <section className="lp-section" style={{ textAlign: "center", padding: "48px 24px 96px", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
-        <Reveal variant="scale">
-          <h2 style={{ fontSize: "var(--text-h1)", margin: 0 }}>Set it once. Confirm at payday.</h2>
-        </Reveal>
-        <Reveal variant="scale" delay={0.12}>
-          <button
-            className="btn-primary lp-btn-primary-glow"
-            style={{ width: "auto", fontSize: 16, padding: "14px 28px", height: "auto", borderRadius: 30, display: "inline-flex", alignItems: "center", gap: 8 }}
-            onClick={() => nav("/connect")}
-          >
-            Launch App <i className="ph ph-arrow-right" />
-          </button>
+      {/* 7. Call To Action (CTA) Section with call-to-actions.png background */}
+      <section className="lp-section lp-cta-section">
+        <Reveal variant="scale" style={{ width: "100%", maxWidth: 1140, margin: "0 auto" }}>
+          <div className="lp-cta-card">
+            {/* Top Pill Badge */}
+            <Reveal variant="blur" delay={0.02}>
+              <div className="lp-hero-badge">
+                <span className="lp-badge-tag">Get Started Today</span>
+                <span>Automated Payday Autopilot on Stellar</span>
+              </div>
+            </Reveal>
+
+            {/* Headline */}
+            <Reveal variant="blur" delay={0.08}>
+              <h2 className="hero-title" style={{ fontSize: "clamp(34px, 4.2vw, 56px)" }}>
+                Ready to Automate
+                <br />
+                Your Payday Wealth?
+              </h2>
+            </Reveal>
+
+            {/* Concise Subtitle */}
+            <Reveal variant="up" delay={0.14}>
+              <p className="hero-subtitle" style={{ maxWidth: 480 }}>
+                Set your split rules once and let Shunt automate your income allocation on-chain every payday.
+              </p>
+            </Reveal>
+
+            {/* Single Primary Action Button */}
+            <Reveal variant="up" delay={0.2}>
+              <button
+                className="lp-btn-olive"
+                style={{ padding: "14px 32px", fontSize: 16, height: "auto", borderRadius: 30, marginTop: 8 }}
+                onClick={() => nav("/connect")}
+              >
+                <span>Launch App</span>
+                <i className="ph ph-arrow-right" />
+              </button>
+            </Reveal>
+          </div>
         </Reveal>
       </section>
 

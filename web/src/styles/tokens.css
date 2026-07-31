@@ -2076,6 +2076,40 @@ input[type="number"]:focus {
   .lp-float { animation: none; }
 }
 
+/* Call To Action Section */
+.lp-cta-section {
+  padding: 80px 24px 100px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lp-cta-card {
+  position: relative;
+  width: 100%;
+  background: url('/images/call-to-actions/call-to-actions.png') center/cover no-repeat, rgba(18, 20, 16, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 32px;
+  padding: 80px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+  box-sizing: border-box;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .lp-cta-card {
+    padding: 56px 20px;
+    gap: 16px;
+    border-radius: 24px;
+  }
+}
+
 .ramp-section {
   display: flex;
   flex-direction: column;
