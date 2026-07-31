@@ -1025,7 +1025,8 @@ input[type="number"]:focus {
 .lp-marquee-section {
   width: 100%;
   background: #000000;
-  padding: 56px 0 64px;
+  padding: 64px 0 72px;
+  margin-top: 40px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -1111,11 +1112,12 @@ input[type="number"]:focus {
 
 /* How Our Process Works Section */
 .lp-how-section {
-  padding: 96px 24px;
+  padding: 64px 24px 48px;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 56px;
+  gap: 48px;
 }
 
 .lp-how-title {
@@ -1315,7 +1317,8 @@ input[type="number"]:focus {
 
 /* Why Shunt 2-Column Section */
 .lp-why-section {
-  padding: 96px 24px;
+  padding: 64px 24px 48px;
+  margin-top: 0;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1451,6 +1454,274 @@ input[type="number"]:focus {
   object-fit: cover;
   display: block;
 }
+
+/* One App The Whole Loop Section */
+.lp-loop-section {
+  padding: 64px 24px 48px;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lp-loop-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.lp-loop-subtitle {
+  font-family: 'Inter', var(--font-body);
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  max-width: 560px;
+}
+
+/* Interactive Money Flow Routing Diagram Card */
+.lp-loop-diagram-card {
+  position: relative;
+  width: 100%;
+  background: rgba(13, 16, 21, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 36px 40px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  box-sizing: border-box;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 960px) {
+  .lp-loop-diagram-card {
+    flex-direction: column;
+    padding: 28px 24px;
+    gap: 36px;
+  }
+}
+
+/* Left Hub Section */
+.lp-diagram-left {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-diagram-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-diagram-logo {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 42px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.lp-diagram-fork-icon {
+  font-size: 24px;
+  color: #cdf14a;
+}
+
+.lp-diagram-headline {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 19px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 6px 0 0;
+}
+
+.lp-diagram-sub {
+  font-family: 'Inter', var(--font-body);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Center SVG Flow Diagram */
+.lp-diagram-center {
+  position: relative;
+  flex: 1 1 300px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-diagram-usdc-label {
+  position: absolute;
+  top: 92px;
+  left: 45px;
+  font-family: 'Inter', var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.lp-diagram-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Right Side: 4 Interactive Cards */
+.lp-diagram-right {
+  flex: 0 0 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .lp-diagram-left,
+  .lp-diagram-right {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
+.lp-diagram-lane-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+}
+
+.lp-diagram-lane-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateX(4px);
+}
+
+.lp-diagram-lane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lp-diagram-lane-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-diagram-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lp-diagram-lane-name {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.lp-diagram-lane-pct {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.lp-diagram-lane-desc {
+  font-family: 'Inter', var(--font-body);
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+}
+
+.lp-lane-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
+}
+
+.lp-lane-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  pointer-events: none;
+}
+
+.lp-lane-rule {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  width: 44px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+}
+
+.lp-lane-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.lp-lane-name {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 19px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.lp-lane-pct {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.lp-lane-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.lp-lane-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lp-lane-desc {
+  font-family: 'Inter', var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
 .lp-btn-secondary-dark:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.28);
@@ -1468,7 +1739,7 @@ input[type="number"]:focus {
 .lp-section {
   max-width: var(--landing-max);
   margin: 0 auto;
-  padding: 0 clamp(16px, 4vw, 24px);
+  padding: 64px clamp(16px, 4vw, 24px) 48px;
   width: 100%;
   box-sizing: border-box;
   scroll-margin-top: 84px;

@@ -433,29 +433,84 @@ export const Onboarding: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. The loop: four lanes — de-templated, no icon-in-a-box */}
-      <section id="loop" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
-        <Reveal variant="up" style={{ textAlign: "center" }}>
-          <h2 style={{ fontSize: "var(--text-h1)", margin: 0 }}>One app, the whole loop</h2>
-          <p className="muted" style={{ fontSize: 16, marginTop: 8 }}>Money in, structured on-chain, out to your bank.</p>
+      {/* 3. The loop: Interactive Money Flow Branching Diagram Card */}
+      <section id="loop" className="lp-section lp-loop-section">
+        <Reveal variant="blur" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <div className="lp-hero-badge">
+            <i className="ph ph-sparkle" style={{ color: "#cdf14a" }} />
+            <span>Smart Allocations</span>
+          </div>
+          <h2 className="lp-loop-title">One App, The Whole Loop</h2>
+          <p className="lp-loop-subtitle">Money in, structured on-chain, out to your bank.</p>
         </Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-          {LANES.map((l, i) => (
-            /* Reveal (transform) lives on the wrapper so framer-motion never
-               fights the CSS cursor-tilt transform on .lp-lane-card. */
-            <Reveal key={l.id} variant="scale" delay={i * 0.1} style={{ display: "flex" }}>
-              <div className="lp-lane-card" onMouseMove={spotlight} onMouseLeave={resetTilt} style={{ flex: 1 }}>
-                <div className="lp-lane-glow" style={{ background: `radial-gradient(120px 80px at 30% 0%, ${l.color}33, transparent)` }} />
-                <div className="lp-lane-rule" style={{ background: l.color }} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <h3 style={{ margin: 0, fontSize: 17 }}>{l.name}</h3>
-                  <span className="numeric" style={{ fontWeight: 700, fontSize: 22, color: l.color }}>{l.pct}%</span>
-                </div>
-                <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>{l.desc}</p>
+
+        <Reveal variant="scale" delay={0.12} style={{ width: "100%", maxWidth: 1140, margin: "0 auto" }}>
+          <div className="lp-loop-diagram-card">
+            {/* Left Hub: Shunt Identity */}
+            <div className="lp-diagram-left">
+              <div className="lp-diagram-brand">
+                <h3 className="lp-diagram-logo">Shunt</h3>
+                <i className="ph ph-git-fork lp-diagram-fork-icon" />
               </div>
-            </Reveal>
-          ))}
-        </div>
+              <h4 className="lp-diagram-headline">Automated money routing.</h4>
+              <p className="lp-diagram-sub">Non-custodial USDC autopilot on Stellar</p>
+            </div>
+
+            {/* Middle: Interactive Animated SVG Flow Diagram */}
+            <div className="lp-diagram-center">
+              <span className="lp-diagram-usdc-label">USDC in</span>
+              <svg viewBox="0 0 300 240" className="lp-diagram-svg" preserveAspectRatio="none">
+                {/* Input line */}
+                <line x1="10" y1="120" x2="130" y2="120" stroke="rgba(255, 255, 255, 0.25)" strokeWidth="2.5" />
+
+                {/* Moving white dot on input line */}
+                <circle r="4" fill="#ffffff">
+                  <animate attributeName="cx" values="10;130" dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="cy" values="120;120" dur="2s" repeatCount="indefinite" />
+                </circle>
+
+                {/* Center glowing junction node */}
+                <circle cx="130" cy="120" r="7.5" fill="#0d0f0c" stroke="#cdf14a" strokeWidth="3" />
+
+                {/* 4 Spline Curves */}
+                <path d="M 130 120 C 210 120, 210 25, 290 25" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeOpacity="0.8" />
+                <path d="M 130 120 C 210 120, 210 88, 290 88" fill="none" stroke="#a3e635" strokeWidth="2.5" strokeOpacity="0.8" />
+                <path d="M 130 120 C 210 120, 210 152, 290 152" fill="none" stroke="#f97316" strokeWidth="2.5" strokeOpacity="0.8" />
+                <path d="M 130 120 C 210 120, 210 215, 290 215" fill="none" stroke="#c084fc" strokeWidth="2.5" strokeOpacity="0.8" />
+
+                {/* Animated dots traveling along each of the 4 curves */}
+                <circle r="3.5" fill="#38bdf8">
+                  <animateMotion path="M 130 120 C 210 120, 210 25, 290 25" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+                </circle>
+                <circle r="3.5" fill="#a3e635">
+                  <animateMotion path="M 130 120 C 210 120, 210 88, 290 88" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+                </circle>
+                <circle r="3.5" fill="#f97316">
+                  <animateMotion path="M 130 120 C 210 120, 210 152, 290 152" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+                </circle>
+                <circle r="3.5" fill="#c084fc">
+                  <animateMotion path="M 130 120 C 210 120, 210 215, 290 215" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
+                </circle>
+              </svg>
+            </div>
+
+            {/* Right Side: 4 Interactive Lane Cards with Percentages and Descriptions */}
+            <div className="lp-diagram-right">
+              {LANES.map((l) => (
+                <div key={l.id} className="lp-diagram-lane-card" style={{ borderColor: `${l.color}50` }}>
+                  <div className="lp-diagram-lane-header">
+                    <div className="lp-diagram-lane-title-group">
+                      <span className="lp-diagram-dot" style={{ backgroundColor: l.color, boxShadow: `0 0 8px ${l.color}` }} />
+                      <span className="lp-diagram-lane-name">{l.name}</span>
+                    </div>
+                    <span className="lp-diagram-lane-pct" style={{ color: l.color }}>{l.pct}%</span>
+                  </div>
+                  <p className="lp-diagram-lane-desc">{l.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       {/* 4. How Our Process Works: 5-step interactive card grid */}
