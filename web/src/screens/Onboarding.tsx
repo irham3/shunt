@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { motion, useInView, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Lenis from "lenis";
@@ -126,6 +126,39 @@ const MARQUEE_LOGOS = [
   { name: "MoneyGram", src: "/images/marquee/moneygram.png" },
   { name: "USDC", src: "/images/marquee/usdc.png" },
   { name: "Rust", src: "/images/marquee/rust.png" },
+];
+
+const HOW_STEPS = [
+  {
+    step: 1,
+    title: "Connect Non-Custodial Wallet",
+    desc: "Link Freighter, Albedo, or xBull in one click. No sign-up, no custody, 100% self-sovereign.",
+    image: "/images/step/step1.png",
+  },
+  {
+    step: 2,
+    title: "Configure Custom Split Rules",
+    desc: "Set percentage rules for Needs, Savings, Buffer, and Invest saved directly on-chain.",
+    image: "/images/step/step2.png",
+  },
+  {
+    step: 3,
+    title: "Central Dashboard & Actions",
+    desc: "Access your balance hub with instant Top Up, Request links, Send & Pay, or Convert tools.",
+    image: "/images/step/step3.png",
+  },
+  {
+    step: 4,
+    title: "Income Lands in Seconds",
+    desc: "Payment links, top-ups, or client transfers are detected automatically in real-time.",
+    image: "/images/step/step4.png",
+  },
+  {
+    step: 5,
+    title: "One-Tap Atomic Auto-Split",
+    desc: "Review the breakdown and sign once funds settle into your smart contract lanes atomically.",
+    image: "/images/step/step5.png",
+  },
 ];
 
 export const Onboarding: React.FC = () => {
@@ -387,24 +420,66 @@ export const Onboarding: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. How it works: 5-step timeline */}
-      <section id="how" className="lp-section" style={{ padding: "72px 24px", display: "flex", flexDirection: "column", gap: 36 }}>
-        <Reveal variant="blur">
-          <h2 style={{ fontSize: "var(--text-h1)", margin: 0, textAlign: "center" }}>How it works</h2>
+      {/* 4. How Our Process Works: 5-step interactive card grid */}
+      <section id="how" className="lp-section lp-how-section">
+        <Reveal variant="blur" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <div className="lp-hero-badge">
+            <i className="ph ph-sparkle" style={{ color: "#cdf14a" }} />
+            <span>How it works</span>
+          </div>
+          <h2 className="lp-how-title">How Our Process Works</h2>
         </Reveal>
-        <div style={{ maxWidth: 600, margin: "0 auto", width: "100%" }}>
-          {STEPS.map((s, i) => (
-            <Reveal key={s.title} variant="left" delay={i * 0.1} className="lp-step">
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <StepDot n={i + 1} />
-                {i < STEPS.length - 1 && <div className="lp-step-line" />}
-              </div>
-              <div style={{ paddingBottom: 28 }}>
-                <h3 style={{ margin: "6px 0 4px", fontSize: 17 }}>{s.title}</h3>
-                <p className="muted" style={{ margin: 0, fontSize: 13 }}>{s.body}</p>
-              </div>
-            </Reveal>
-          ))}
+
+        <div className="lp-how-grid">
+          {/* Top Row: Steps 1, 2, 3 */}
+          <div className="lp-how-row lp-how-row-3">
+            {HOW_STEPS.slice(0, 3).map((s, i) => (
+              <Reveal key={s.step} variant="scale" delay={i * 0.1} className="lp-how-card-wrap">
+                <div className="lp-how-card">
+                  <div className="lp-how-img-box">
+                    <img src={s.image} alt={s.title} className="lp-how-img" />
+                    <div className="lp-how-num-badge">
+                      <span>{s.step}</span>
+                    </div>
+                  </div>
+                  <div className="lp-how-card-content">
+                    <h3 className="lp-how-card-title">{s.title}</h3>
+                    <p className="lp-how-card-desc">{s.desc}</p>
+                  </div>
+                </div>
+                {i < 2 && (
+                  <div className={`lp-how-arrow-connector ${i === 0 ? "lp-how-arrow-top" : "lp-how-arrow-bottom"}`} aria-hidden>
+                    <img src="/images/step/arrow-curve.png" alt="" className="lp-how-arrow-img" />
+                  </div>
+                )}
+              </Reveal>
+            ))}
+          </div>
+
+          {/* Bottom Row: Steps 4, 5 */}
+          <div className="lp-how-row lp-how-row-2">
+            {HOW_STEPS.slice(3, 5).map((s, i) => (
+              <Reveal key={s.step} variant="scale" delay={(i + 3) * 0.1} className="lp-how-card-wrap">
+                <div className="lp-how-card">
+                  <div className="lp-how-img-box">
+                    <img src={s.image} alt={s.title} className="lp-how-img" />
+                    <div className="lp-how-num-badge">
+                      <span>{s.step}</span>
+                    </div>
+                  </div>
+                  <div className="lp-how-card-content">
+                    <h3 className="lp-how-card-title">{s.title}</h3>
+                    <p className="lp-how-card-desc">{s.desc}</p>
+                  </div>
+                </div>
+                {i === 0 && (
+                  <div className="lp-how-arrow-connector lp-how-arrow-top" aria-hidden>
+                    <img src="/images/step/arrow-curve.png" alt="" className="lp-how-arrow-img" />
+                  </div>
+                )}
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 

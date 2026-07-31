@@ -1108,6 +1108,210 @@ input[type="number"]:focus {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
 }
+
+/* How Our Process Works Section */
+.lp-how-section {
+  padding: 96px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+
+.lp-how-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.lp-how-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.lp-how-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.lp-how-card-wrap {
+  position: relative;
+  flex: 1 1 280px;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .lp-how-row {
+    flex-direction: column;
+    align-items: center;
+  }
+  .lp-how-card-wrap {
+    width: 100%;
+    max-width: 400px;
+  }
+  .lp-how-arrow-connector {
+    top: auto !important;
+    bottom: -32px !important;
+    right: 50% !important;
+    transform: translateX(50%) rotate(90deg) !important;
+  }
+}
+
+/* Step Card matching reference image */
+.lp-how-card {
+  background: rgba(18, 20, 16, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.lp-how-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Image container inside step card — Full image, no dots */
+.lp-how-img-box {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  border-radius: 16px;
+  background: transparent;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.lp-how-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+}
+
+/* Step Number Badge at bottom center of image box */
+.lp-how-num-badge {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #5a6810 0%, #3e480a 100%);
+  border: 2px solid #121410;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 0 16px rgba(90, 104, 16, 0.6);
+  z-index: 5;
+}
+
+.lp-how-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 12px 10px 10px;
+}
+
+.lp-how-card-title {
+  font-family: 'Inter Tight', var(--font-heading);
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+}
+
+.lp-how-card-desc {
+  font-family: 'Inter', var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Curved connector arrow overlapping between cards */
+.lp-how-arrow-connector {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Arrow positioned at top (Card 1 -> Card 2, Card 4 -> Card 5) */
+.lp-how-arrow-top {
+  right: -44px;
+  top: 10px;
+  animation: arrowFloatTop 3.4s ease-in-out infinite;
+}
+
+/* Arrow positioned at bottom (Card 2 -> Card 3) */
+.lp-how-arrow-bottom {
+  right: -44px;
+  bottom: 80px;
+  animation: arrowFloatBottom 3.4s ease-in-out infinite;
+}
+
+.lp-how-arrow-img {
+  width: 68px;
+  height: auto;
+  opacity: 0.95;
+  filter: brightness(0) invert(1) drop-shadow(0 6px 18px rgba(0, 0, 0, 0.9));
+}
+
+/* Smooth floating & gentle swaying animations for arrows */
+@keyframes arrowFloatTop {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(4deg);
+  }
+}
+
+@keyframes arrowFloatBottom {
+  0%, 100% {
+    transform: scaleY(-1) translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: scaleY(-1) translateY(8px) rotate(-4deg);
+  }
+}
 .lp-btn-secondary-dark:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.28);
