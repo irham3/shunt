@@ -68,7 +68,7 @@ export function Home() {
               ${fmtUsdc(totalReserves)} <span style={{ fontSize: 20, fontWeight: 700, color: "#8c9099" }}>USDC</span>
             </div>
             <p style={{ fontSize: 14, color: "#8c9099", marginTop: 8, maxWidth: 540, lineHeight: 1.5 }}>
-              Your incoming payments are automatically intercepted and routed into deterministic reserve buckets before reaching your spendable wallet.
+              Incoming payments route automatically to your reserves before reaching your wallet.
             </p>
           </div>
 

@@ -96,7 +96,7 @@ export function PolicyEditor() {
             Programmable Income Routing
           </h1>
           <p style={{ fontSize: 14, color: "#8c9099", marginTop: 6, maxWidth: 620, lineHeight: 1.5 }}>
-            Configure your deterministic waterfall allocation engine. Incoming payments are split dynamically across protected on-chain reserves before reaching your primary wallet.
+            Define your routing waterfall. Deposits distribute automatically across on-chain reserves before reaching your wallet.
           </p>
         </div>
 
@@ -346,7 +346,7 @@ export function PolicyEditor() {
               </div>
               <div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Emergency Reserve Lane</h3>
-                <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Priority refill up to target balance; zero timelock for instant access.</p>
+                <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Fills first. No timelock.</p>
               </div>
             </div>
             <span style={{ background: "#191a1e", color: "#cdf14a", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, border: "1px solid #282a2f" }}>
@@ -408,7 +408,7 @@ export function PolicyEditor() {
               </div>
               <div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Obligation Reserve Lane</h3>
-                <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Dedicated reserve for tax withholding or recurring payroll with cooldown security.</p>
+                <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>For taxes and payroll. Includes withdrawal cooldown.</p>
               </div>
             </div>
             <span style={{ background: "#191a1e", color: "#8c9099", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, border: "1px solid #282a2f" }}>
@@ -470,7 +470,7 @@ export function PolicyEditor() {
               </div>
               <div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Goal Lots Reserve Lane</h3>
-                <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Creates independent timelocked storage lots per deposit for disciplined laddered wealth.</p>
+                <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Timelocked savings per deposit.</p>
               </div>
             </div>
             <span style={{ background: "#191a1e", color: "#8c9099", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, border: "1px solid #282a2f" }}>
@@ -531,7 +531,7 @@ export function PolicyEditor() {
             </div>
             <div>
               <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Spendable Pool Destination</h3>
-              <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Residual dollars (plus arithmetic rounding remainders) transfer automatically to this address.</p>
+              <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>Residuals transfer automatically to this address.</p>
             </div>
           </div>
 

@@ -55,7 +55,7 @@ export function SavingsVault() {
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", margin: 0 }}>Emergency Reserve</h2>
               </div>
               <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>
-                Liquid cash reserve. Available for instant withdrawal without timelocks or penalties.
+                Instant liquid buffer. No withdrawal cooldowns.
               </p>
             </div>
 
@@ -115,7 +115,7 @@ export function SavingsVault() {
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", margin: 0 }}>Obligation Reserve</h2>
               </div>
               <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>
-                Requires an on-chain cooldown request ({Math.round(v2Policy.obligationCooldownSeconds / 86400)} days) before execution to protect tax and contractual allocations.
+                For upcoming liabilities. {Math.round(v2Policy.obligationCooldownSeconds / 86400)}-day cooldown prevents impulsive spending.
               </p>
             </div>
 
@@ -226,7 +226,7 @@ export function SavingsVault() {
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", margin: 0 }}>Timelocked Goal Lots ({v2GoalLots.filter(l => !l.claimed).length} Active)</h2>
               </div>
               <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>
-                Incoming distributions create individual lots locked for {Math.round(v2Policy.goalLockSeconds / 86400)} days. Available to claim upon maturity.
+                Time-locked value ({Math.round(v2Policy.goalLockSeconds / 86400)} days). Claim upon maturity.
               </p>
             </div>
 

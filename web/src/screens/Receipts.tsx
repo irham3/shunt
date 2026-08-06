@@ -62,7 +62,7 @@ export function Receipts() {
           Payment Receipts
         </h1>
         <p style={{ fontSize: 14, color: "#8c9099", marginTop: 6, maxWidth: 640 }}>
-          Review finalized execution records for routed invoices and deposits. Verify value distributions and export structured settlement histories for accounting.
+          Review finalized execution records. Verify value distributions and export logs.
         </p>
       </header>
 

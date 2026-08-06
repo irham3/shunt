@@ -81,7 +81,7 @@ export function PayerCheckout() {
             Payment Settled & Routed
           </h2>
           <p style={{ fontSize: 14, color: "#8c9099", marginBottom: 28 }}>
-            The protocol distributed the deposit across the recipient's reserve pools in a single transaction.
+            Deposit successfully distributed across recipient reserves.
           </p>
 
           <div style={{ background: "#0c0d0f", border: "1px solid #1a1b20", borderRadius: 12, padding: 24, marginBottom: 28, textAlign: "left", fontFamily: "monospace" }}>
@@ -191,8 +191,8 @@ export function PayerCheckout() {
               </div>
               <p style={{ fontSize: 12, color: "#8c9099", margin: 0, lineHeight: 1.4 }}>
                 {isVersionMatch
-                  ? `This invoice binds to revision #${v2Policy.version} of the recipient's routing rules. Any unauthorized change to allocation percentages rejects the transaction.`
-                  : "WARNING: The recipient updated their routing splits after invoice creation. Execution is blocked for payer protection."}
+                  ? `Invoice bound to revision #${v2Policy.version}. Allocation changes will reject the transaction.`
+                  : "Recipient updated routing splits. Execution blocked."}
               </p>
             </div>
           </div>
@@ -205,7 +205,7 @@ export function PayerCheckout() {
                 On-Chain Routing Preview
               </h2>
               <p style={{ fontSize: 13, color: "#8c9099", marginBottom: 20 }}>
-                Estimated deposit distribution across recipient pools for ${fmtUsdc(amountInput)} USDC:
+                Estimated distribution for ${fmtUsdc(amountInput)} USDC:
               </p>
 
               {/* Breakdown Table */}
