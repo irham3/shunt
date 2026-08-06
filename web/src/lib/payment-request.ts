@@ -1,3 +1,5 @@
+import { Keypair } from "@stellar/stellar-sdk";
+
 /**
  * Shunt v2 Payment Request specifications and helpers (PRD §8.1 & §9.3).
  *
@@ -18,7 +20,7 @@ export interface PaymentRequest {
   expectedPolicyVersion: number;
   /** Unix timestamp (milliseconds) when this payment request expires */
   expiresAt: number;
-  /** Optional cryptographic signature or HMAC to verify authenticity */
+  /** Optional cryptographic signature to verify authenticity */
   signature?: string;
 }
 
@@ -45,6 +47,67 @@ export function generateRequestId(): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+/**
+ * Builds a canonical message buffer for a payment request to be signed.
+ * Incorporates network passphrase and critical fields to prevent replay or mutation.
+ */
+export function buildCanonicalPayload(req: PaymentRequest): Uint8Array {
+  const network = "Test SDF Network ; September 2015";
+  const payloadStr = JSON.stringify({
+    n: network,
+    i: req.id,
+    r: req.recipient,
+    a: req.amount,
+    v: req.expectedPolicyVersion,
+    e: req.expiresAt,
+    m: req.memo || "",
+  });
+  return new TextEncoder().encode(payloadStr);
+}
+
+/**
+ * Buffer-to-base64 helper for browser compatibility
+ */
+function uint8ToBase64(u8: Uint8Array): string {
+  let b = "";
+  for (let i = 0; i < u8.byteLength; i++) b += String.fromCharCode(u8[i]);
+  return btoa(b);
+}
+function base64ToUint8(b64: string): Uint8Array {
+  const b = atob(b64);
+  const u8 = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) u8[i] = b.charCodeAt(i);
+  return u8;
+}
+
+/**
+ * Signs a payment request cryptographically using an Ed25519 secret key.
+ */
+export function signPaymentRequest(req: PaymentRequest, secretKey: string): PaymentRequest {
+  const kp = Keypair.fromSecret(secretKey);
+  const payload = buildCanonicalPayload(req);
+  const signatureBytes = kp.sign(Buffer.from(payload)); // stellar-sdk expects Buffer
+  return {
+    ...req,
+    signature: uint8ToBase64(new Uint8Array(signatureBytes)),
+  };
+}
+
+/**
+ * Verifies the Ed25519 signature of a payment request.
+ */
+export function verifyPaymentRequestSignature(req: PaymentRequest, publicKey: string): boolean {
+  if (!req.signature) return false;
+  try {
+    const kp = Keypair.fromPublicKey(publicKey);
+    const payload = buildCanonicalPayload(req);
+    const sigBytes = base64ToUint8(req.signature);
+    return kp.verify(Buffer.from(payload), Buffer.from(sigBytes));
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -108,6 +171,9 @@ export function validatePaymentRequest(req: PaymentRequest): { valid: boolean; r
   }
   if (Date.now() > req.expiresAt) {
     return { valid: false, reason: "Payment request has expired" };
+  }
+  if (req.signature && !verifyPaymentRequestSignature(req, req.recipient)) {
+    return { valid: false, reason: "Cryptographic signature is invalid or forged" };
   }
   return { valid: true };
 }
