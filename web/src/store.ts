@@ -3,6 +3,64 @@ import { persist } from "zustand/middleware";
 import { vaultGetSavings, vaultGetBufferCredit, vaultGetLockUntil, vaultGetGoals, vaultGetUnallocatedSavings, vaultGetRules, type Goal as ChainGoal } from "./lib/vault";
 import { fetchAccountBalances } from "./lib/stellar";
 import { createRampActivity } from "./lib/ramp-activity";
+import type { PaymentReceipt } from "./lib/payment-request";
+
+export interface V2Policy {
+  owner: string;
+  spendDestination: string;
+  emergencyTarget: number; // in USDC
+  emergencyTopupBps: number;
+  obligationBps: number;
+  obligationCooldownSeconds: number;
+  goalBps: number;
+  goalLockSeconds: number;
+  version: number;
+  active: boolean;
+}
+
+export interface V2BucketBalances {
+  emergency: number; // in USDC
+  obligation: number;
+  goalTotal: number;
+  spendable: number;
+}
+
+export interface V2GoalLot {
+  lotId: number;
+  amountUsdc: number;
+  createdAt: number;
+  unlockAt: number;
+  claimed: boolean;
+}
+
+export interface V2ObligationWithdrawal {
+  withdrawalId: number;
+  amountUsdc: number;
+  createdAt: number;
+  executeAfter: number;
+}
+
+export function computeWaterfallAllocation(
+  gross: number,
+  emergencyBalance: number,
+  emergencyTarget: number,
+  emergencyTopupBps: number,
+  obligationBps: number,
+  goalBps: number
+) {
+  const gap = Math.max(0, emergencyTarget - emergencyBalance);
+  const cap = (gross * emergencyTopupBps) / 10000;
+  const emergency = Math.min(gap, cap);
+
+  const afterEmergency = gross - emergency;
+  const obligation = (afterEmergency * obligationBps) / 10000;
+
+  const afterObligation = afterEmergency - obligation;
+  const goal = (afterObligation * goalBps) / 10000;
+
+  const spendable = Math.max(0, gross - emergency - obligation - goal);
+  return { gross, emergency, obligation, goal, spendable };
+}
 
 /**
  * Single source of truth for allocation rules (DESIGN.md §5.1):
@@ -154,6 +212,21 @@ interface ShuntState {
   showToast: (msg: string) => void;
   clearToast: () => void;
   syncFromChain: (address: string) => Promise<void>;
+
+  // V2 Router state & methods (PRD §8 & §9)
+  v2Policy: V2Policy;
+  v2Balances: V2BucketBalances;
+  v2GoalLots: V2GoalLot[];
+  v2ObligationWithdrawal: V2ObligationWithdrawal | null;
+  v2Receipts: PaymentReceipt[];
+  setV2Policy: (patch: Partial<V2Policy>) => void;
+  executeV2Route: (payer: string, grossUsdc: number, requestId: string, memo?: string) => PaymentReceipt;
+  withdrawV2Emergency: (amountUsdc: number) => void;
+  requestV2ObligationWithdrawal: (amountUsdc: number) => number;
+  cancelV2ObligationWithdrawal: (withdrawalId: number) => void;
+  executeV2ObligationWithdrawal: (withdrawalId: number) => void;
+  claimV2GoalLots: (lotIds: number[]) => void;
+  addV2Receipt: (receipt: PaymentReceipt) => void;
 }
 
 const EXTRA_COLORS = ["var(--color-bucket-extra-1)", "var(--color-bucket-extra-2)", "#818cf8", "#34d399", "#f87171"];
@@ -194,6 +267,39 @@ export const useShunt = create<ShuntState>()(
       splitsSinceEscalation: 0,
       activity: [],
       toast: null,
+
+      // V2 Defaults
+      v2Policy: {
+        owner: "",
+        spendDestination: "",
+        emergencyTarget: 1000,
+        emergencyTopupBps: 3000,
+        obligationBps: 1000,
+        obligationCooldownSeconds: 86400,
+        goalBps: 2000,
+        goalLockSeconds: 90 * 86400,
+        version: 1,
+        active: true,
+      },
+      v2Balances: { emergency: 500, obligation: 150, goalTotal: 400, spendable: 1250 },
+      v2GoalLots: [
+        {
+          lotId: 101,
+          amountUsdc: 250,
+          createdAt: Date.now() - 30 * 86400 * 1000,
+          unlockAt: Date.now() + 60 * 86400 * 1000,
+          claimed: false,
+        },
+        {
+          lotId: 102,
+          amountUsdc: 150,
+          createdAt: Date.now() - 95 * 86400 * 1000,
+          unlockAt: Date.now() - 5 * 86400 * 1000,
+          claimed: false,
+        },
+      ],
+      v2ObligationWithdrawal: null,
+      v2Receipts: [],
 
       setAddress: (address) => set({ address, rulesSavedOnChain: false }),
       setWalletId: (walletId) => set({ walletId }),
@@ -706,11 +812,233 @@ export const useShunt = create<ShuntState>()(
           console.warn("Failed to sync from chain (not deployed or RPC error)", e);
         }
       },
+
+      setV2Policy: (patch) => {
+        const prev = get().v2Policy;
+        set({
+          v2Policy: {
+            ...prev,
+            ...patch,
+            version: prev.version + 1,
+          },
+          toast: "Income routing policy updated successfully (v" + (prev.version + 1) + ")",
+        });
+      },
+
+      executeV2Route: (payer, grossUsdc, requestId, _memo) => {
+        const { v2Policy, v2Balances, v2GoalLots } = get();
+        const alloc = computeWaterfallAllocation(
+          grossUsdc,
+          v2Balances.emergency,
+          v2Policy.emergencyTarget,
+          v2Policy.emergencyTopupBps,
+          v2Policy.obligationBps,
+          v2Policy.goalBps
+        );
+
+        const newBalances = {
+          emergency: v2Balances.emergency + alloc.emergency,
+          obligation: v2Balances.obligation + alloc.obligation,
+          goalTotal: v2Balances.goalTotal + alloc.goal,
+          spendable: v2Balances.spendable + alloc.spendable,
+        };
+
+        const nextLots = [...v2GoalLots];
+        if (alloc.goal > 0) {
+          nextLots.push({
+            lotId: Date.now(),
+            amountUsdc: alloc.goal,
+            createdAt: Date.now(),
+            unlockAt: Date.now() + v2Policy.goalLockSeconds * 1000,
+            claimed: false,
+          });
+        }
+
+        const receipt: PaymentReceipt = {
+          requestId,
+          payer,
+          recipient: v2Policy.owner || get().address || "G_RECIP",
+          gross: String(alloc.gross),
+          emergency: String(alloc.emergency),
+          obligation: String(alloc.obligation),
+          goal: String(alloc.goal),
+          spendable: String(alloc.spendable),
+          policyVersion: v2Policy.version,
+          timestamp: Date.now(),
+          txHash: "0x" + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10),
+        };
+
+        set({
+          v2Balances: newBalances,
+          v2GoalLots: nextLots,
+          v2Receipts: [receipt, ...get().v2Receipts],
+          activity: [
+            {
+              id: requestId,
+              kind: "split",
+              title: `Routed ${grossUsdc} USDC from ${payer.slice(0, 4)}...`,
+              amountUsdc: grossUsdc,
+              at: new Date().toISOString(),
+              txHash: receipt.txHash,
+            },
+            ...get().activity,
+          ],
+          toast: `Payment of ${grossUsdc} USDC routed cleanly across reserves!`,
+        });
+
+        return receipt;
+      },
+
+      withdrawV2Emergency: (amountUsdc) => {
+        const balances = get().v2Balances;
+        if (amountUsdc > balances.emergency) {
+          set({ toast: "Insufficient Emergency reserve balance!" });
+          return;
+        }
+        set({
+          v2Balances: {
+            ...balances,
+            emergency: balances.emergency - amountUsdc,
+            spendable: balances.spendable + amountUsdc,
+          },
+          activity: [
+            {
+              id: "em-" + Date.now(),
+              kind: "withdraw",
+              title: `Withdrew ${amountUsdc} USDC from Emergency reserve`,
+              amountUsdc,
+              at: new Date().toISOString(),
+              bucket: "buffer",
+            },
+            ...get().activity,
+          ],
+          toast: `Withdrew ${amountUsdc} USDC instantly from Emergency reserve`,
+        });
+      },
+
+      requestV2ObligationWithdrawal: (amountUsdc) => {
+        const balances = get().v2Balances;
+        if (amountUsdc > balances.obligation) {
+          set({ toast: "Insufficient Obligation reserve balance!" });
+          return 0;
+        }
+        const wid = Date.now();
+        set({
+          v2ObligationWithdrawal: {
+            withdrawalId: wid,
+            amountUsdc,
+            createdAt: Date.now(),
+            executeAfter: Date.now() + get().v2Policy.obligationCooldownSeconds * 1000,
+          },
+          toast: `Obligation withdrawal requested. Cooldown period started.`,
+        });
+        return wid;
+      },
+
+      cancelV2ObligationWithdrawal: (_withdrawalId) => {
+        set({
+          v2ObligationWithdrawal: null,
+          toast: `Pending obligation withdrawal cancelled.`,
+        });
+      },
+
+      executeV2ObligationWithdrawal: (_withdrawalId) => {
+        const req = get().v2ObligationWithdrawal;
+        if (!req) return;
+        if (Date.now() < req.executeAfter) {
+          set({ toast: "Cooldown period has not elapsed yet!" });
+          return;
+        }
+        const balances = get().v2Balances;
+        set({
+          v2Balances: {
+            ...balances,
+            obligation: balances.obligation - req.amountUsdc,
+            spendable: balances.spendable + req.amountUsdc,
+          },
+          v2ObligationWithdrawal: null,
+          activity: [
+            {
+              id: "ob-" + Date.now(),
+              kind: "withdraw",
+              title: `Executed Obligation withdrawal (${req.amountUsdc} USDC)`,
+              amountUsdc: req.amountUsdc,
+              at: new Date().toISOString(),
+              bucket: "needs",
+            },
+            ...get().activity,
+          ],
+          toast: `Obligation withdrawal of ${req.amountUsdc} USDC executed successfully!`,
+        });
+      },
+
+      claimV2GoalLots: (lotIds) => {
+        let totalClaimed = 0;
+        const now = Date.now();
+        const nextLots = get().v2GoalLots.map((lot) => {
+          if (lotIds.includes(lot.lotId) && !lot.claimed && now >= lot.unlockAt) {
+            totalClaimed += lot.amountUsdc;
+            return { ...lot, claimed: true };
+          }
+          return lot;
+        });
+
+        if (totalClaimed === 0) {
+          set({ toast: "No matured goal lots ready to claim." });
+          return;
+        }
+
+        const balances = get().v2Balances;
+        set({
+          v2Balances: {
+            ...balances,
+            goalTotal: Math.max(0, balances.goalTotal - totalClaimed),
+            spendable: balances.spendable + totalClaimed,
+          },
+          v2GoalLots: nextLots,
+          activity: [
+            {
+              id: "claim-" + Date.now(),
+              kind: "withdraw",
+              title: `Claimed matured goal lots (${totalClaimed} USDC)`,
+              amountUsdc: totalClaimed,
+              at: new Date().toISOString(),
+              bucket: "savings",
+            },
+            ...get().activity,
+          ],
+          toast: `Successfully claimed ${totalClaimed} USDC from matured goal lots!`,
+        });
+      },
+      addV2Receipt: (receipt) => {
+        set({ v2Receipts: [receipt, ...get().v2Receipts] });
+      },
     }),
     {
       name: "shunt-store",
-      version: 8,
+      version: 9,
       migrate: (persisted: any, version) => {
+        if (version < 9 && persisted) {
+          persisted.v2Policy = persisted.v2Policy ?? {
+            owner: persisted.address || "",
+            spendDestination: "",
+            emergencyTarget: 1000,
+            emergencyTopupBps: 3000,
+            obligationBps: 1000,
+            obligationCooldownSeconds: 86400,
+            goalBps: 2000,
+            goalLockSeconds: 90 * 86400,
+            version: 1,
+            active: true,
+          };
+          persisted.v2Balances = persisted.v2Balances ?? { emergency: 500, obligation: 150, goalTotal: 400, spendable: 1250 };
+          persisted.v2GoalLots = persisted.v2GoalLots ?? [
+            { lotId: 101, amountUsdc: 250, createdAt: Date.now() - 30 * 86400 * 1000, unlockAt: Date.now() + 60 * 86400 * 1000, claimed: false },
+            { lotId: 102, amountUsdc: 150, createdAt: Date.now() - 95 * 86400 * 1000, unlockAt: Date.now() - 5 * 86400 * 1000, claimed: false }
+          ];
+          persisted.v2ObligationWithdrawal = persisted.v2ObligationWithdrawal ?? null;
+          persisted.v2Receipts = persisted.v2Receipts ?? [];
+        }
         if (version < 1 && persisted) {
           if (Array.isArray(persisted.buckets) && !persisted.buckets.some((b: any) => b.id === "invest")) {
             persisted.buckets = [

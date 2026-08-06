@@ -3,9 +3,10 @@ import { NavLink } from "react-router-dom";
 import { useShunt } from "../store";
 
 const TABS = [
-  { to: "/home", label: "Home", icon: "ph-house" },
-  { to: "/shunt", label: "Shunt", icon: "ph-arrows-split" },
-  { to: "/activity", label: "Activity", icon: "ph-receipt" },
+  { to: "/home", label: "Dashboard", icon: "ph-house" },
+  { to: "/shunt", label: "Policy", icon: "ph-sliders-horizontal" },
+  { to: "/savings", label: "Vault", icon: "ph-vault" },
+  { to: "/receipts", label: "Receipts", icon: "ph-shield-check" },
 ];
 
 /** Savings keeps its richer vault screen; every other lane → its detail. */

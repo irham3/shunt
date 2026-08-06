@@ -1,695 +1,300 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Clock, LockKeyhole, Plus, Pencil, Trash2, Target, UnlockKeyhole } from "lucide-react";
-import { getIdrRate } from "../lib/rates";
-import { vaultWithdrawSavings, vaultWithdrawBuffer, vaultCreateGoal, vaultWithdrawFromGoal, vaultRenameGoal, vaultDeleteGoal } from "../lib/vault";
-import { fmtIdr, fmtUsdc, totalPct, useShunt, type SavingsGoal } from "../store";
-import { formatError } from "../lib/stellar";
-import { AnimatedNumber } from "../components/AnimatedNumber";
-import { ProgressRing } from "../components/ProgressRing";
+import React, { useState } from "react";
+import { useShunt, fmtUsdc } from "../store";
 
-const PENALTY_PCT = 10; // must match PENALTY_BPS in the contract
-
-/** Quick-pick ladder rungs for a goal's own unlock date (independent of the
- *  aggregate lock — DESIGN.md laddered-timelocks). "No lock" is genuinely
- *  useful (a flexible sub-vault with zero penalty exposure), not a placeholder. */
-const GOAL_LOCK_OPTIONS = [
-  { label: "No lock", secs: 0 },
-  { label: "30 days", secs: 30 * 86400 },
-  { label: "90 days", secs: 90 * 86400 },
-  { label: "1 year", secs: 365 * 86400 },
-  { label: "2 years", secs: 2 * 365 * 86400 },
-];
-
-/** Desktop layout: balance + growth chart left, lock status + withdraw right. */
 export function SavingsVault() {
-  const {
-    address,
-    balances,
-    buckets,
-    bufferCredit,
-    lockUntil,
-    lockSecs,
-    activity,
-    withdrawSavings,
-    withdrawBufferCredit,
-    showToast,
-    goals,
-    unallocatedSavings,
-    setGoalTarget,
-    syncFromChain,
-  } = useShunt();
-  const [ccy, setCcy] = useState<"USD" | "IDR">("USD");
-  const [idr, setIdr] = useState(18000);
-  const [stale, setStale] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const v2Balances = useShunt((s) => s.v2Balances);
+  const v2Policy = useShunt((s) => s.v2Policy);
+  const v2GoalLots = useShunt((s) => s.v2GoalLots);
+  const v2ObligationWithdrawal = useShunt((s) => s.v2ObligationWithdrawal);
 
-  useEffect(() => {
-    getIdrRate().then((r) => {
-      setIdr(r.rate);
-      setStale(r.stale);
-    });
-  }, []);
+  const withdrawV2Emergency = useShunt((s) => s.withdrawV2Emergency);
+  const requestV2ObligationWithdrawal = useShunt((s) => s.requestV2ObligationWithdrawal);
+  const cancelV2ObligationWithdrawal = useShunt((s) => s.cancelV2ObligationWithdrawal);
+  const executeV2ObligationWithdrawal = useShunt((s) => s.executeV2ObligationWithdrawal);
+  const claimV2GoalLots = useShunt((s) => s.claimV2GoalLots);
 
-  useEffect(() => {
-    if (address) syncFromChain(address);
-  }, [address, syncFromChain]);
+  // Modal / form states
+  const [emergencyAmount, setEmergencyAmount] = useState<string>("100");
+  const [obligationAmount, setObligationAmount] = useState<string>("100");
 
-  const locked = lockUntil * 1000 > Date.now();
-  const balance = balances.savings;
+  const now = Date.now();
+  const maturedLots = v2GoalLots.filter((l) => !l.claimed && now >= l.unlockAt);
+  const activeLots = v2GoalLots.filter((l) => !l.claimed && now < l.unlockAt);
+  const claimedLots = v2GoalLots.filter((l) => l.claimed);
 
-  // Share of each past split that went to Savings — from the actual rules,
-  // not a hardcoded 25%.
-  const savingsShare = useMemo(() => {
-    const pct = buckets.filter((b) => b.kind === "savings").reduce((s, b) => s + b.pct, 0);
-    return totalPct(buckets) > 0 ? pct / 100 : 0.25;
-  }, [buckets]);
-
-  const chart = useMemo(() => {
-    // savings growth series derived from split/deposit activity
-    const pts = activity
-      .filter((a) => a.kind === "split" || a.kind === "deposit")
-      .slice()
-      .reverse()
-      .reduce<number[]>((acc, a) => {
-        const amt = a.amountUsdc ?? 0;
-        const savingsPart = a.kind === "split" ? amt * savingsShare : amt;
-        acc.push((acc[acc.length - 1] ?? 0) + savingsPart);
-        return acc;
-      }, []);
-    return pts.length >= 2 ? pts : [0, balance];
-  }, [activity, balance, savingsShare]);
-
-  const path = useMemo(() => {
-    const max = Math.max(...chart, 1);
-    const pts = chart.map((v, i) => `${(i / (chart.length - 1)) * 300},${90 - (v / max) * 80}`);
-    return { line: `M ${pts.join(" L ")}`, area: `M 0,90 L ${pts.join(" L ")} L 300,90 Z` };
-  }, [chart]);
-
-  async function onWithdraw() {
-    const usdc = Number(amount);
-    // Cap at UNALLOCATED, not the total vault balance: `withdraw_savings`
-    // on-chain only checks against the aggregate, not against what's
-    // earmarked in goals — so a withdrawal here could otherwise silently
-    // drain funds a goal is counting on, leaving get_unallocated_savings
-    // negative and a later withdraw_from_goal failing with
-    // InsufficientSavings out of nowhere. Move earmarked money via each
-    // goal's own Withdraw instead.
-    if (!usdc || usdc <= 0 || usdc > unallocatedSavings) {
-      setErr(
-        unallocatedSavings < balance
-          ? `Invalid amount or exceeds unallocated (${fmtUsdc(unallocatedSavings)} USDC) — the rest is earmarked in goals below.`
-          : "Invalid amount or exceeds balance.",
-      );
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    const penalty = locked ? (usdc * PENALTY_PCT) / 100 : 0;
-    try {
-      if (address) await vaultWithdrawSavings(address, usdc);
-      withdrawSavings(usdc, penalty);
-      showToast(penalty > 0 ? `Withdrawn — ${fmtUsdc(penalty)} USDC penalty → Buffer` : "Savings withdrawn");
-      setAmount("");
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) setErr(`On-chain call failed (${formatted})`);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const handleClaimAllMatured = () => {
+    const ids = maturedLots.map((l) => l.lotId);
+    claimV2GoalLots(ids);
+  };
 
   return (
-    <div className="screen screen-wide">
-      <header>
-        <h2 style={{ margin: 0 }}>Savings Vault</h2>
-        <p className="muted" style={{ margin: "2px 0 0", fontSize: 14 }}>
-          Held in hard value — resistant to rupiah depreciation.
+    <main className="vault-screen" style={{ padding: "28px 20px", maxWidth: 1040, margin: "0 auto", paddingBottom: 120 }}>
+      {/* Header */}
+      <header style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <span style={{ background: "#101112", color: "#cdf14a", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, border: "1px solid #1c1d20" }}>
+            Programmable Withdrawals
+          </span>
+        </div>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f4f5f6", margin: 0, fontFamily: "var(--font-heading)" }}>
+          Reserve Vault & Cooldowns
+        </h1>
+        <p style={{ fontSize: 14, color: "#8c9099", marginTop: 6, maxWidth: 640 }}>
+          Manage protected reserve balances. Emergency reserves remain accessible immediately, while obligation and goal vaults enforce on-chain timelock controls.
         </p>
       </header>
 
-      <div className="split-cols">
-        <div className="col-main">
-          <div style={{ display: "flex", gap: 8 }}>
-            {(["USD", "IDR"] as const).map((c) => (
-              <button key={c} className={`chip${ccy === c ? " active" : ""}`} onClick={() => setCcy(c)}>
-                {c}
-              </button>
-            ))}
-            {/* This toggle would show the Savings balance re-denominated in
-                grams of gold (a display conversion, like USD/IDR above) — it
-                is NOT the same feature as the Invest lane's XLM/Gold picker
-                (Configure Shunt), which is already live. Worded to avoid
-                implying gold itself is unavailable in Shunt. */}
-            <button className="chip" disabled title="Gold-denominated display is planned. You can invest into gold today via the Invest lane in Configure Shunt." style={{ opacity: 0.4, display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Clock size={14} /> Gold display planned
-            </button>
+      {/* Grid of 3 Reserve Sections */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        {/* Section 1: Emergency Reserve Instant Withdraw */}
+        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #1c1d20", paddingBottom: 20, marginBottom: 20 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <i className="ph-fill ph-shield-check" style={{ color: "#cdf14a", fontSize: 24 }} />
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", margin: 0 }}>Emergency Reserve</h2>
+              </div>
+              <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>
+                Liquid cash reserve. Available for instant withdrawal without timelocks or penalties.
+              </p>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 12, color: "#8c9099", textTransform: "uppercase", fontWeight: 700 }}>Available Balance</span>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#cdf14a", fontFamily: "monospace" }}>
+                ${fmtUsdc(v2Balances.emergency)} USDC
+              </div>
+            </div>
           </div>
 
-          <div>
-            <div className="numeric" style={{ fontSize: "clamp(34px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.1 }} data-testid="vault-balance">
-              {ccy === "USD" ? (
-                <>
-                  <AnimatedNumber value={balance} decimals={2} />{" "}
-                  <span style={{ fontSize: 20, color: "var(--color-text-secondary)" }}>USDC</span>
-                </>
-              ) : (
-                fmtIdr(balance * idr)
-              )}
+          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8c9099", marginBottom: 6 }}>
+                Withdrawal Amount ($ USDC)
+              </label>
+              <input
+                type="number"
+                value={emergencyAmount}
+                onChange={(e) => setEmergencyAmount(e.target.value)}
+                placeholder="0"
+                style={{ width: "100%", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 12, padding: "12px 16px", color: "#f4f5f6", fontSize: 16, fontWeight: 700, fontFamily: "monospace", outline: "none" }}
+              />
             </div>
-            {ccy === "IDR" && (
-              <div className="muted" style={{ fontSize: 12 }}>
-                Display rate {stale ? "(fallback, may be outdated)" : "real-time"} — funds stay in USDC, so
-                this number moves only because the rupiah does. That's the point: your savings don't erode
-                even as {fmtIdr(idr)}/USD keeps climbing.
-                {/* Honest gap, verified not assumed: checked Reflector's live testnet
-                    oracle (assets() call) directly — it carries crypto/CEX pairs
-                    only (BTC, ETH, XLM, EURC, …), no IDR/PHP feed exists there to
-                    wire in. This stays a REST forex rate until a real IDR oracle
-                    ships on Stellar. */}
+
+            <button
+              onClick={() => {
+                const amt = Number(emergencyAmount);
+                if (amt <= 0) return;
+                withdrawV2Emergency(amt);
+              }}
+              disabled={Number(emergencyAmount) <= 0 || Number(emergencyAmount) > v2Balances.emergency}
+              style={{
+                marginTop: 22,
+                padding: "14px 28px",
+                borderRadius: 12,
+                background: Number(emergencyAmount) <= 0 || Number(emergencyAmount) > v2Balances.emergency ? "#191a1e" : "#cdf14a",
+                color: Number(emergencyAmount) <= 0 || Number(emergencyAmount) > v2Balances.emergency ? "#52555e" : "#0a0c07",
+                fontWeight: 800,
+                fontSize: 14,
+                border: Number(emergencyAmount) <= 0 || Number(emergencyAmount) > v2Balances.emergency ? "1px solid #282a2f" : "none",
+                cursor: Number(emergencyAmount) <= 0 || Number(emergencyAmount) > v2Balances.emergency ? "not-allowed" : "pointer",
+                transition: "opacity 0.2s ease",
+              }}
+            >
+              Withdraw to Wallet &rarr;
+            </button>
+          </div>
+        </section>
+
+        {/* Section 2: Obligation Reserve with Cooldown */}
+        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #1c1d20", paddingBottom: 20, marginBottom: 20 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <i className="ph-fill ph-hourglass-high" style={{ color: "#cdf14a", fontSize: 24 }} />
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", margin: 0 }}>Obligation Reserve</h2>
+              </div>
+              <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>
+                Requires an on-chain cooldown request ({Math.round(v2Policy.obligationCooldownSeconds / 86400)} days) before execution to protect tax and contractual allocations.
+              </p>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 12, color: "#8c9099", textTransform: "uppercase", fontWeight: 700 }}>Available Obligation</span>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#f4f5f6", fontFamily: "monospace" }}>
+                ${fmtUsdc(v2Balances.obligation)} USDC
+              </div>
+            </div>
+          </div>
+
+          {v2ObligationWithdrawal ? (
+            /* Pending Cooldown Card */
+            <div style={{ background: "#0c0d0f", border: "1px solid #1c1d20", borderRadius: 16, padding: 22 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <span style={{ color: "#f4f5f6", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                    <i className="ph-fill ph-timer" style={{ color: "#cdf14a" }} />
+                    Cooldown Timer Active (Req #{v2ObligationWithdrawal.withdrawalId.toString().slice(0, 8)})
+                  </span>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#f4f5f6", fontFamily: "monospace", marginTop: 4 }}>
+                    ${fmtUsdc(v2ObligationWithdrawal.amountUsdc)} USDC
+                  </div>
+                </div>
+
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 12, color: "#8c9099", fontWeight: 600 }}>Status:</span>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: now >= v2ObligationWithdrawal.executeAfter ? "#cdf14a" : "#f4f5f6" }}>
+                    {now >= v2ObligationWithdrawal.executeAfter ? "Ready for Execution" : `Unlocks ${new Date(v2ObligationWithdrawal.executeAfter).toLocaleString()}`}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => cancelV2ObligationWithdrawal(v2ObligationWithdrawal.withdrawalId)}
+                  style={{ padding: "10px 20px", borderRadius: 10, background: "#191a1e", color: "#f4f5f6", border: "1px solid #282a2f", fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "opacity 0.2s ease" }}
+                >
+                  Cancel Request
+                </button>
+                <button
+                  onClick={() => executeV2ObligationWithdrawal(v2ObligationWithdrawal.withdrawalId)}
+                  disabled={now < v2ObligationWithdrawal.executeAfter}
+                  style={{
+                    padding: "10px 22px",
+                    borderRadius: 10,
+                    background: now < v2ObligationWithdrawal.executeAfter ? "#191a1e" : "#cdf14a",
+                    color: now < v2ObligationWithdrawal.executeAfter ? "#52555e" : "#0a0c07",
+                    border: now < v2ObligationWithdrawal.executeAfter ? "1px solid #282a2f" : "none",
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: now < v2ObligationWithdrawal.executeAfter ? "not-allowed" : "pointer",
+                    transition: "opacity 0.2s ease",
+                  }}
+                >
+                  {now < v2ObligationWithdrawal.executeAfter ? "Cooldown Not Elapsed" : "Execute Withdrawal"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Request Form */
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8c9099", marginBottom: 6 }}>
+                  Request Cooldown Release ($ USDC)
+                </label>
+                <input
+                  type="number"
+                  value={obligationAmount}
+                  onChange={(e) => setObligationAmount(e.target.value)}
+                  placeholder="0"
+                  style={{ width: "100%", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 12, padding: "12px 16px", color: "#f4f5f6", fontSize: 16, fontWeight: 700, fontFamily: "monospace", outline: "none" }}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  const amt = Number(obligationAmount);
+                  if (amt <= 0) return;
+                  requestV2ObligationWithdrawal(amt);
+                }}
+                disabled={Number(obligationAmount) <= 0 || Number(obligationAmount) > v2Balances.obligation}
+                style={{
+                  marginTop: 22,
+                  padding: "14px 28px",
+                  borderRadius: 12,
+                  background: Number(obligationAmount) <= 0 || Number(obligationAmount) > v2Balances.obligation ? "#191a1e" : "#cdf14a",
+                  color: Number(obligationAmount) <= 0 || Number(obligationAmount) > v2Balances.obligation ? "#52555e" : "#0a0c07",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  border: Number(obligationAmount) <= 0 || Number(obligationAmount) > v2Balances.obligation ? "1px solid #282a2f" : "none",
+                  cursor: Number(obligationAmount) <= 0 || Number(obligationAmount) > v2Balances.obligation ? "not-allowed" : "pointer",
+                  transition: "opacity 0.2s ease",
+                }}
+              >
+                Start Cooldown Request &rarr;
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Section 3: Timelocked Goal Lots */}
+        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #1c1d20", paddingBottom: 20, marginBottom: 20 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <i className="ph-fill ph-lock-key" style={{ color: "#cdf14a", fontSize: 24 }} />
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", margin: 0 }}>Timelocked Goal Lots ({v2GoalLots.filter(l => !l.claimed).length} Active)</h2>
+              </div>
+              <p style={{ fontSize: 13, color: "#8c9099", margin: 0 }}>
+                Incoming distributions create individual lots locked for {Math.round(v2Policy.goalLockSeconds / 86400)} days. Available to claim upon maturity.
+              </p>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 12, color: "#8c9099", textTransform: "uppercase", fontWeight: 700 }}>Total Goal Lots</span>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#f4f5f6", fontFamily: "monospace" }}>
+                ${fmtUsdc(v2Balances.goalTotal)} USDC
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#8c9099" }}>
+              Matured Lots Ready to Claim: <span style={{ color: "#cdf14a" }}>{maturedLots.length} lot(s)</span>
+            </span>
+            {maturedLots.length > 0 && (
+              <button
+                onClick={handleClaimAllMatured}
+                style={{ padding: "10px 22px", borderRadius: 12, background: "#cdf14a", color: "#0a0c07", fontWeight: 800, fontSize: 13, border: "none", cursor: "pointer", transition: "opacity 0.2s ease" }}
+              >
+                Claim Matured Lots (${fmtUsdc(maturedLots.reduce((a, b) => a + b.amountUsdc, 0))})
+              </button>
+            )}
+          </div>
+
+          {/* Lot List Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+            {v2GoalLots.filter(l => !l.claimed).map((lot) => {
+              const isMatured = now >= lot.unlockAt;
+              return (
+                <div key={lot.lotId} style={{ background: "#0c0d0f", border: isMatured ? "1px solid #cdf14a" : "1px solid #1c1d20", borderRadius: 14, padding: 18, position: "relative" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#8c9099", fontFamily: "monospace" }}>Lot #{lot.lotId.toString().slice(-6)}</span>
+                    <span style={{ background: isMatured ? "#101112" : "#191a1e", color: isMatured ? "#cdf14a" : "#8c9099", border: isMatured ? "1px solid #cdf14a" : "1px solid #282a2f", padding: "2px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                      {isMatured ? "Matured (Ready)" : "Timelocked"}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#f4f5f6", fontFamily: "monospace", marginBottom: 8 }}>
+                    ${fmtUsdc(lot.amountUsdc)} <span style={{ fontSize: 13, color: "#8c9099" }}>USDC</span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "#8c9099" }}>
+                    <div>Created: {new Date(lot.createdAt).toLocaleDateString()}</div>
+                    <div style={{ color: isMatured ? "#cdf14a" : "#8c9099", fontWeight: 600, marginTop: 4 }}>
+                      Unlock: {new Date(lot.unlockAt).toLocaleDateString()} ({isMatured ? "Unlocked" : "Pending"})
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {v2GoalLots.filter(l => !l.claimed).length === 0 && (
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "30px", background: "#0c0d0f", border: "1px solid #1c1d20", borderRadius: 14, color: "#8c9099" }}>
+                No active lots. Incoming routed payments will generate timelocked positions.
               </div>
             )}
           </div>
 
-          <SavingsGoals
-            address={address}
-            goals={goals}
-            unallocated={unallocatedSavings}
-            aggregateLockSecs={lockSecs}
-            onSetGoalTarget={setGoalTarget}
-            onRefresh={() => address && syncFromChain(address)}
-            onWithdrawn={withdrawSavings}
-            showToast={showToast}
-          />
-
-          <div className="card">
-            <div className="muted" style={{ fontSize: 13, marginBottom: 8 }}>Savings growth</div>
-            <svg viewBox="0 0 300 100" width="100%" height="130" preserveAspectRatio="none" aria-label="Savings growth chart">
-              <path d={path.area} fill="var(--color-accent-primary)" opacity="0.12" />
-              <path d={path.line} fill="none" stroke="var(--color-accent-primary)" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="col-side">
-          <div
-            className="card"
-            style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `3px solid ${locked ? "var(--color-bucket-needs)" : "var(--color-accent-primary)"}` }}
-          >
-            {locked ? (
-              <LockKeyhole size={22} style={{ color: "var(--color-bucket-needs)", flexShrink: 0 }} />
-            ) : (
-              <UnlockKeyhole size={22} style={{ color: "var(--color-accent-primary)", flexShrink: 0 }} />
-            )}
-            <span style={{ fontSize: 14 }}>
-              {locked ? (
-                <>
-                  Locked until <strong>{new Date(lockUntil * 1000).toLocaleDateString("en-US")}</strong>
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    Early withdrawal costs a {PENALTY_PCT}% penalty — it goes to Buffer, not lost.
-                  </div>
-                </>
-              ) : (
-                "Unlocked — withdraw freely without penalty."
-              )}
-            </span>
-          </div>
-
-          <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <input
-              type="number"
-              placeholder={`Amount in USDC (up to ${fmtUsdc(unallocatedSavings)} unallocated)`}
-              value={amount}
-              min={0}
-              max={unallocatedSavings}
-              onChange={(e) => setAmount(e.target.value)}
-              aria-label="Withdrawal amount"
-            />
-            {unallocatedSavings < balance && (
-              <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                {fmtUsdc(balance - unallocatedSavings)} USDC is earmarked in goals below — withdraw that from the goal itself.
-              </p>
-            )}
-            <button className="btn-secondary" disabled={busy || unallocatedSavings <= 0} onClick={onWithdraw}>
-              {busy ? "Processing…" : "Withdraw"}
-            </button>
-          </div>
-          {err && (
-            <p role="alert" className="muted" style={{ fontSize: 13, margin: 0 }}>
-              {err}
-            </p>
-          )}
-
-          {bufferCredit > 0 && (
-            <BufferCreditCard
-              address={address}
-              credit={bufferCredit}
-              onWithdrawn={withdrawBufferCredit}
-              showToast={showToast}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Buffer credit — 10% early-exit penalties, parked in the vault, never locked.
-// ---------------------------------------------------------------------------
-
-function BufferCreditCard({
-  address,
-  credit,
-  onWithdrawn,
-  showToast,
-}: {
-  address: string | null;
-  credit: number;
-  /** Records the payout in lane bookkeeping + activity and re-syncs from chain. */
-  onWithdrawn: (amount: number) => void;
-  showToast: (msg: string) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function onWithdrawCredit() {
-    if (!address) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await vaultWithdrawBuffer(address, credit);
-      onWithdrawn(credit);
-      showToast("Buffer credit withdrawn to your wallet");
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) setErr(`On-chain call failed (${formatted})`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div
-      className="card"
-      style={{ display: "flex", flexDirection: "column", gap: 8, borderLeft: "3px solid var(--color-bucket-buffer)" }}
-      data-testid="buffer-credit-card"
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>Buffer credit</span>
-        <span className="numeric" style={{ fontWeight: 700 }}>
-          <AnimatedNumber value={credit} decimals={2} /> USDC
-        </span>
-      </div>
-      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        Early-withdrawal penalties land here — yours, in the vault, never locked.
-      </p>
-      <button className="btn-secondary" disabled={busy} onClick={onWithdrawCredit} data-testid="withdraw-buffer-credit">
-        {busy ? "Processing…" : "Withdraw to wallet"}
-      </button>
-      {err && (
-        <p role="alert" className="muted" style={{ fontSize: 12, margin: 0 }}>
-          {err}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Savings goals — named sub-allocations of the balance above.
-// ---------------------------------------------------------------------------
-
-function SavingsGoals({
-  address,
-  goals,
-  unallocated,
-  aggregateLockSecs,
-  onSetGoalTarget,
-  onRefresh,
-  onWithdrawn,
-  showToast,
-}: {
-  address: string | null;
-  goals: SavingsGoal[];
-  unallocated: number;
-  /** The shared aggregate lock duration (Configure Shunt's "Savings timelock")
-   *  — used as the default pick for a new goal's own ladder rung, so a goal
-   *  created without touching the picker behaves like it always did. */
-  aggregateLockSecs: number;
-  onSetGoalTarget: (id: number, target: number | undefined) => void;
-  onRefresh: () => void;
-  /** Records a goal withdrawal in lane bookkeeping + activity (store.withdrawSavings). */
-  onWithdrawn: (amount: number, penalty: number) => void;
-  showToast: (msg: string) => void;
-}) {
-  const [showCreate, setShowCreate] = useState(false);
-  const [newLabel, setNewLabel] = useState("");
-  const [newAmount, setNewAmount] = useState("");
-  const [newLockSecs, setNewLockSecs] = useState(aggregateLockSecs);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function onCreate() {
-    if (!address) return;
-    const usdc = Number(newAmount);
-    if (!newLabel.trim()) {
-      setErr("Give the goal a name.");
-      return;
-    }
-    if (!usdc || usdc <= 0 || usdc > unallocated) {
-      setErr(`Invalid amount or exceeds unallocated (${fmtUsdc(unallocated)} USDC).`);
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    try {
-      await vaultCreateGoal(address, newLabel.trim(), usdc, newLockSecs);
-      showToast(`Goal "${newLabel.trim()}" created`);
-      setNewLabel("");
-      setNewAmount("");
-      setNewLockSecs(aggregateLockSecs);
-      setShowCreate(false);
-      onRefresh();
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) setErr(`On-chain call failed (${formatted})`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }} data-testid="savings-goals-card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Labeled sub-vaults</div>
-          <div className="muted" style={{ fontSize: 12 }}>
-            Name slices of your savings for what they're for — stored on-chain.
-          </div>
-        </div>
-        <span className="muted numeric" style={{ fontSize: 13, whiteSpace: "nowrap" }} data-testid="unallocated-savings">
-          <AnimatedNumber value={unallocated} decimals={2} /> USDC free
-        </span>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {goals.map((g) => (
-          <GoalRow
-            key={g.id}
-            address={address}
-            goal={g}
-            onSetTarget={(t) => onSetGoalTarget(g.id, t)}
-            onRefresh={onRefresh}
-            onWithdrawn={onWithdrawn}
-            showToast={showToast}
-          />
-        ))}
-      </AnimatePresence>
-
-      {!showCreate ? (
-        <button
-          className="btn-ghost"
-          onClick={() => setShowCreate(true)}
-          style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
-          data-testid="new-goal-button"
-        >
-          <Plus size={16} /> New label — e.g. Dana darurat, Umroh, Laptop
-        </button>
-      ) : (
-        <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10, border: "1px solid var(--color-accent-primary)" }}>
-          <input
-            type="text"
-            placeholder="Label (e.g. Emergency fund, Umroh, Laptop)"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            maxLength={64}
-            data-testid="goal-name-input"
-          />
-          <input
-            type="number"
-            placeholder={`Amount (up to ${fmtUsdc(unallocated)} USDC unallocated)`}
-            value={newAmount}
-            min={0}
-            onChange={(e) => setNewAmount(e.target.value)}
-            data-testid="goal-amount-input"
-          />
-          <div>
-            <label className="muted" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
-              Lock duration — laddered, independent of your other goals
-            </label>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {GOAL_LOCK_OPTIONS.map((o) => (
-                <button
-                  key={o.secs}
-                  type="button"
-                  className={`chip${newLockSecs === o.secs ? " active" : ""}`}
-                  onClick={() => setNewLockSecs(o.secs)}
-                  data-testid={`goal-lock-${o.secs}`}
-                >
-                  {o.label}
-                </button>
-              ))}
+          {claimedLots.length > 0 && (
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #1c1d20", fontSize: 13, color: "#8c9099" }}>
+              <i className="ph-fill ph-check-circle" style={{ color: "#cdf14a", marginRight: 6 }} />
+              {claimedLots.length} lot(s) previously claimed ($
+              {fmtUsdc(claimedLots.reduce((a, b) => a + b.amountUsdc, 0))} USDC total).
             </div>
-            <p className="muted" style={{ fontSize: 11, margin: "6px 0 0" }}>
-              {newLockSecs === 0
-                ? "No lock — withdraw this goal anytime, no penalty."
-                : `Early withdrawal from this goal costs ${PENALTY_PCT}% until its own unlock date — other goals aren't affected.`}
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-secondary" onClick={() => { setShowCreate(false); setErr(null); }}>
-              Cancel
-            </button>
-            <button className="btn-primary" disabled={busy} onClick={onCreate} data-testid="create-goal-button">
-              {busy ? "Creating…" : "Create label"}
-            </button>
-          </div>
-        </div>
-      )}
-      {err && (
-        <p role="alert" className="muted" style={{ fontSize: 13, margin: 0 }}>
-          {err}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function GoalRow({
-  address,
-  goal,
-  onSetTarget,
-  onRefresh,
-  onWithdrawn,
-  showToast,
-}: {
-  address: string | null;
-  goal: SavingsGoal;
-  onSetTarget: (target: number | undefined) => void;
-  onRefresh: () => void;
-  onWithdrawn: (amount: number, penalty: number) => void;
-  showToast: (msg: string) => void;
-}) {
-  const [mode, setMode] = useState<"idle" | "withdraw" | "rename" | "target">("idle");
-  const [amount, setAmount] = useState("");
-  const [label, setLabel] = useState(goal.label);
-  const [target, setTarget] = useState(goal.target ? String(goal.target) : "");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const progress = goal.target && goal.target > 0 ? goal.amountUsdc / goal.target : undefined;
-  // This goal's OWN laddered lock — independent of the aggregate Savings
-  // lock, and of every sibling goal's lock.
-  const goalLocked = goal.unlockAt * 1000 > Date.now();
-
-  async function onWithdraw() {
-    if (!address) return;
-    const usdc = Number(amount);
-    if (!usdc || usdc <= 0 || usdc > goal.amountUsdc) {
-      setErr("Invalid amount or exceeds this goal's balance.");
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    try {
-      await vaultWithdrawFromGoal(address, goal.id, usdc);
-      // Record it like any savings withdrawal: activity entry + the payout
-      // credited to spendable bookkeeping (also re-syncs from chain).
-      onWithdrawn(usdc, goalLocked ? (usdc * PENALTY_PCT) / 100 : 0);
-      showToast(goalLocked ? `Withdrawn — ${PENALTY_PCT}% penalty → Buffer` : "Withdrawn from goal");
-      setMode("idle");
-      setAmount("");
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) setErr(`On-chain call failed (${formatted})`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRename() {
-    if (!address || !label.trim()) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await vaultRenameGoal(address, goal.id, label.trim());
-      showToast("Goal renamed");
-      setMode("idle");
-      onRefresh();
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) setErr(`On-chain call failed (${formatted})`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onDelete() {
-    if (!address) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await vaultDeleteGoal(address, goal.id);
-      showToast(`"${goal.label}" deleted — funds released to unallocated`);
-      onRefresh();
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) setErr(`On-chain call failed (${formatted})`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function onSaveTarget() {
-    const t = Number(target);
-    onSetTarget(t > 0 ? t : undefined);
-    setMode("idle");
-  }
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.25 }}
-      style={{ overflow: "hidden" }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "10px 0",
-          borderTop: "1px solid #1f2732",
-        }}
-      >
-        {progress !== undefined ? (
-          <ProgressRing progress={progress} size={44} strokeWidth={4}>
-            <span style={{ fontSize: 10, fontWeight: 700 }}>{Math.round(progress * 100)}%</span>
-          </ProgressRing>
-        ) : (
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: "var(--color-bg-elevated)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Target size={18} className="muted" />
-          </div>
-        )}
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {goal.label}
-          </div>
-          <div className="numeric muted" style={{ fontSize: 13 }} aria-label={`${goal.label} balance`}>
-            <AnimatedNumber value={goal.amountUsdc} decimals={2} /> USDC
-            {goal.target ? ` of ${fmtUsdc(goal.target)}` : ""}
-          </div>
-          {/* This goal's own laddered lock — may differ from every sibling
-              goal and from the aggregate Savings lock shown up top. */}
-          <div className="muted" style={{ fontSize: 11, marginTop: 2 }} data-testid={`goal-lock-status-${goal.id}`}>
-            {goalLocked
-              ? `Locked until ${new Date(goal.unlockAt * 1000).toLocaleDateString("en-US")}`
-              : "Unlocked, no penalty"}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button className="chip" aria-label={`Rename ${goal.label}`} onClick={() => setMode(mode === "rename" ? "idle" : "rename")}>
-            <Pencil size={14} />
-          </button>
-          <button className="chip" aria-label={`Set target for ${goal.label}`} onClick={() => setMode(mode === "target" ? "idle" : "target")}>
-            <Target size={14} />
-          </button>
-          <button className="chip" aria-label={`Withdraw from ${goal.label}`} onClick={() => setMode(mode === "withdraw" ? "idle" : "withdraw")}>
-            Withdraw
-          </button>
-          <button className="chip" aria-label={`Delete ${goal.label}`} onClick={onDelete} disabled={busy}>
-            <Trash2 size={14} />
-          </button>
-        </div>
+          )}
+        </section>
       </div>
-
-      {mode === "withdraw" && (
-        <div style={{ display: "flex", gap: 8, paddingBottom: 10 }}>
-          <input
-            type="number"
-            placeholder="Amount in USDC"
-            value={amount}
-            min={0}
-            onChange={(e) => setAmount(e.target.value)}
-            aria-label={`${goal.label} withdrawal amount`}
-          />
-          <button className="btn-secondary" disabled={busy} onClick={onWithdraw} style={{ width: "auto", padding: "0 20px" }}>
-            {busy ? "…" : "Go"}
-          </button>
-        </div>
-      )}
-      {mode === "rename" && (
-        <div style={{ display: "flex", gap: 8, paddingBottom: 10 }}>
-          <input
-            type="text"
-            value={label}
-            maxLength={64}
-            onChange={(e) => setLabel(e.target.value)}
-            aria-label="New goal name"
-          />
-          <button className="btn-secondary" disabled={busy} onClick={onRename} style={{ width: "auto", padding: "0 20px" }}>
-            {busy ? "…" : "Save"}
-          </button>
-        </div>
-      )}
-      {mode === "target" && (
-        <div style={{ display: "flex", gap: 8, paddingBottom: 10 }}>
-          <input
-            type="number"
-            placeholder="Target amount (display only, not enforced)"
-            value={target}
-            min={0}
-            onChange={(e) => setTarget(e.target.value)}
-            aria-label={`Target for ${goal.label}`}
-          />
-          <button className="btn-secondary" onClick={onSaveTarget} style={{ width: "auto", padding: "0 20px" }}>
-            Save
-          </button>
-        </div>
-      )}
-      {err && (
-        <p role="alert" className="muted" style={{ fontSize: 12, margin: "0 0 10px" }}>
-          {err}
-        </p>
-      )}
-    </motion.div>
+    </main>
   );
 }

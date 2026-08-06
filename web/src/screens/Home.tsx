@@ -1,521 +1,374 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AllocationBar } from "../components/AllocationBar";
-import { getIdrRate, getXlmUsdRate } from "../lib/rates";
-import { fetchPending, manualTrigger, randomTxHash, type PendingSplit } from "../lib/keeper";
-import {
-  fundWithFriendbot,
-  fetchLatestSplitEvent,
-  addUsdcTrustline,
-  convertXlmToUsdc,
-  quoteConversion,
-  NETWORK,
-  formatError,
-} from "../lib/stellar";
-import { resolveRulesNotSet } from "../lib/vault";
-import { fmtIdr, fmtUsdc, useShunt } from "../store";
-import { BentoGrid, BentoCard } from "../components/BentoGrid";
-import { AnimatedNumber } from "../components/AnimatedNumber";
-import { Lock, Wallet, ArrowUpRight, ShieldCheck, SlidersHorizontal } from "lucide-react";
-
-/** Balance denominations the user can flip between (README: XLM + USDC live side by side). */
-type AssetView = "USDC" | "XLM" | "IDR";
+import { useShunt, fmtUsdc } from "../store";
+import { generateRequestId } from "../lib/payment-request";
 
 export function Home() {
   const nav = useNavigate();
-  const {
-    address,
-    buckets,
-    balances,
-    investXlmHeld,
-    investGoldHeld,
-    investWalletUsdc,
-    activity,
-    xlmBalance,
-    usdcBalance,
-    usdcTrustline,
-    bufferCredit,
-    bufferTarget,
-    goals,
-    rulesSavedOnChain,
-    refreshWallet,
-    showToast,
-  } = useShunt();
-  const [view, setView] = useState<AssetView>("XLM");
-  const [idr, setIdr] = useState<number | null>(null);
-  const [xlmUsd, setXlmUsd] = useState<number | null>(null);
-  const [pending, setPending] = useState<PendingSplit[]>([]);
-  const [fundingBot, setFundingBot] = useState(false);
-  const [enablingUsdc, setEnablingUsdc] = useState(false);
-  const [fundingUsdc, setFundingUsdc] = useState(false);
-  const [splittingNow, setSplittingNow] = useState(false);
-  const [lastEventCursor, setLastEventCursor] = useState<string>("");
+  const address = useShunt((s) => s.address);
+  const v2Policy = useShunt((s) => s.v2Policy);
+  const v2Balances = useShunt((s) => s.v2Balances);
+  const v2GoalLots = useShunt((s) => s.v2GoalLots);
+  const executeV2Route = useShunt((s) => s.executeV2Route);
+  const activity = useShunt((s) => s.activity);
 
-  const walletUsdc = Number(usdcBalance ?? 0);
-  const walletXlm = Number(xlmBalance ?? 0);
-  // Real money, real places: wallet USDC (Horizon) + vault savings + buffer
-  // credit (contract). All three are on-chain reads — no bookkeeping here.
-  const totalUsdc = walletUsdc + balances.savings + bufferCredit;
+  const [isSimulating, setIsSimulating] = useState(false);
 
-  // USDC sitting in the wallet that no lane has claimed yet (e.g. a direct
-  // transfer the keeper hasn't offered to split). Heuristic over the local
-  // lane bookkeeping — shown with a one-tap "Split now" escape hatch.
-  // investWalletUsdc = invest slices recorded at a reference rate whose USDC
-  // never left the wallet; without it every simulated DCA immediately
-  // re-flags its own slice as "unsplit".
-  const unsplitUsdc = Math.max(0, walletUsdc - balances.needs - balances.buffer - investWalletUsdc);
+  const totalReserves =
+    v2Balances.emergency + v2Balances.obligation + v2Balances.goalTotal + v2Balances.spendable;
 
-  useEffect(() => {
-    getIdrRate().then((r) => setIdr(r.rate));
-    getXlmUsdRate().then((r) => setXlmUsd(r.rate));
-  }, []);
-
-  // Refresh real wallet balances (XLM + USDC in one call) on mount + every 15s
-  useEffect(() => {
-    if (!address) return;
-    refreshWallet(address);
-    const t = setInterval(() => refreshWallet(address), 15000);
-    return () => clearInterval(t);
-  }, [address, refreshWallet]);
-
-  // poll keeper for detected inflows awaiting one-tap approval
-  useEffect(() => {
-    if (!address) return;
-    const tick = () => fetchPending(address).then(setPending);
-    tick();
-    const t = setInterval(tick, 8000);
-    return () => clearInterval(t);
-  }, [address]);
-
-  // Real-time Soroban Event Integration (Level 2 Blue Belt requirement)
-  useEffect(() => {
-    if (!address) return;
-    const tick = async () => {
-      const latest = await fetchLatestSplitEvent(lastEventCursor);
-      if (latest && latest.cursor !== lastEventCursor) {
-        setLastEventCursor(latest.cursor);
-        if (lastEventCursor !== "") {
-          showToast(`Real-time: New contract event detected (Split/Withdraw)`);
-        }
-        useShunt.getState().syncFromChain(address);
-        useShunt.getState().refreshWallet(address);
-      }
-    };
-    // Also sync on initial mount
-    useShunt.getState().syncFromChain(address);
-    const t = setInterval(tick, 5000);
-    return () => clearInterval(t);
-  }, [address, lastEventCursor, showToast]);
-
-  const bucketBalance = (id: string) => {
-    const b = buckets.find((x) => x.id === id);
-    if (!b) return 0;
-    const kindTotal = balances[b.kind as keyof typeof balances] || 0;
-    const kindPct = buckets.filter((x) => x.kind === b.kind).reduce((s, x) => s + x.pct, 0);
-    return kindPct > 0 ? kindTotal * (b.pct / kindPct) : 0;
+  const handleQuickTestPayment = (amount: number) => {
+    setIsSimulating(true);
+    setTimeout(() => {
+      executeV2Route(
+        "GA_TEST_INFLOW_CLIENT_WALLET",
+        amount,
+        generateRequestId(),
+        `Demo Inflow of ${amount} USDC`
+      );
+      setIsSimulating(false);
+    }, 400);
   };
 
-  const bucketNote = (kind: string) =>
-    kind === "savings" ? "in vault · locked" : kind === "invest" ? "DCA cost basis" : "in wallet";
-
-  async function onFundbot() {
-    if (!address) return;
-    setFundingBot(true);
-    try {
-      await fundWithFriendbot(address);
-      await refreshWallet(address);
-      showToast("Funded with 10,000 testnet XLM!");
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) showToast(`Friendbot error: ${formatted}`);
-    } finally {
-      setFundingBot(false);
-    }
-  }
-
-  async function onEnableUsdc() {
-    if (!address) return;
-    setEnablingUsdc(true);
-    try {
-      await addUsdcTrustline(address);
-      await refreshWallet(address);
-      showToast("USDC enabled — this wallet can now receive USDC");
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) showToast(formatted);
-    } finally {
-      setEnablingUsdc(false);
-    }
-  }
-
-  async function onFundUsdc() {
-    if (!address) return;
-    setFundingUsdc(true);
-    try {
-      // Find out how much 1000 XLM yields in USDC on testnet
-      const quote = await quoteConversion("xlm-usdc", "1000");
-      if (!quote) {
-        throw new Error("No DEX liquidity to swap XLM for USDC on testnet right now.");
-      }
-
-      const hash = await convertXlmToUsdc(address, "1000", (quote.amount * 0.95).toFixed(7), quote.path);
-      if (hash) {
-        await refreshWallet(address);
-        showToast(`Swapped 1000 XLM for ~${quote.amount.toFixed(2)} testnet USDC!`);
-      }
-    } catch (e) {
-      const formatted = formatError(e);
-      if (formatted) showToast(`Funding error: ${formatted}`);
-    } finally {
-      setFundingUsdc(false);
-    }
-  }
-
-  /** One-tap split for wallet USDC no lane has claimed (direct transfers). */
-  async function onSplitNow() {
-    if (!address || unsplitUsdc <= 0) return;
-    if (!rulesSavedOnChain) {
-      showToast("Please configure and save your allocation rules first.");
-      nav("/shunt");
-      return;
-    }
-    setSplittingNow(true);
-    try {
-      const syntheticHash = randomTxHash();
-      // Threshold auto-refill: prioritize whatever's short of the on-chain
-      // buffer_target before the normal % split applies to the rest.
-      const shortfall = Math.max(0, bufferTarget - balances.buffer);
-      const p = await manualTrigger(address, unsplitUsdc.toFixed(7), syntheticHash, true, 3, shortfall > 0 ? shortfall.toFixed(7) : undefined);
-      if (p && !p.xdr && p.error) {
-        if (p.error.includes("#3") || p.error.includes("RulesNotSet")) {
-          const { reallyMissing, message } = await resolveRulesNotSet(address);
-          if (reallyMissing) {
-            useShunt.setState({ rulesSavedOnChain: false });
-            nav("/shunt");
-          }
-          showToast(message);
-        } else {
-          showToast(`Keeper error: ${p.error.slice(0, 120)}`);
-        }
-        return;
-      }
-      nav("/confirm", {
-        state: p ?? { account: address, amount: unsplitUsdc.toFixed(7), txHash: syntheticHash, xdr: null },
-      });
-    } finally {
-      setSplittingNow(false);
-    }
-  }
-
-  const headline = useMemo(() => {
-    switch (view) {
-      case "USDC":
-        return {
-          value: totalUsdc,
-          decimals: 2,
-          unit: "USDC",
-          sub: idr ? `≈ ${fmtIdr(totalUsdc * idr)} · display rate only, funds stay in USDC` : "…",
-        };
-      case "XLM":
-        return {
-          value: walletXlm,
-          decimals: 2,
-          unit: "XLM",
-          sub: xlmUsd ? `≈ ${fmtUsdc(walletXlm * xlmUsd)} USDC · native balance (${NETWORK})` : "…",
-        };
-      case "IDR":
-        return {
-          value: idr ? totalUsdc * idr : 0,
-          decimals: 0,
-          unit: "IDR",
-          sub: "Display conversion of your USDC total — nothing is held in rupiah",
-        };
-    }
-  }, [view, totalUsdc, walletXlm, idr, xlmUsd]);
+  // Find next unlocking lot
+  const activeLots = v2GoalLots.filter((l) => !l.claimed);
+  const nextUnlock = activeLots.length > 0
+    ? new Date(Math.min(...activeLots.map((l) => l.unlockAt))).toLocaleDateString()
+    : "No locked lots";
 
   return (
-    <div className="screen screen-wide">
-      <motion.header
-        className="card"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        data-testid="total-balance-card"
+    <main className="home-v2-screen" style={{ padding: "28px 20px", maxWidth: 1100, margin: "0 auto", paddingBottom: 120 }}>
+      {/* Top Banner: Total Net Reserves */}
+      <header
+        style={{
+          background: "#101112",
+          border: "1px solid #1c1d20",
+          borderRadius: 24,
+          padding: "32px 36px",
+          marginBottom: 32,
+          position: "relative",
+          boxShadow: "0 12px 36px rgba(0, 0, 0, 0.4)",
+        }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <div className="muted" style={{ fontSize: 13 }}>Total balance</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {(["XLM", "USDC", "IDR"] as const).map((c) => (
-              <button
-                key={c}
-                className={`chip${view === c ? " active" : ""}`}
-                onClick={() => setView(c)}
-                data-testid={`asset-toggle-${c.toLowerCase()}`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div
-          className="numeric"
-          style={{ fontSize: "clamp(34px, 5vw, 46px)", fontWeight: 700, lineHeight: 1.15, marginTop: 6 }}
-          data-testid="total-balance-value"
-        >
-          {view === "IDR" ? (
-            <>Rp<AnimatedNumber value={headline.value} decimals={0} locale="id-ID" /></>
-          ) : (
-            <>
-              <AnimatedNumber value={headline.value} decimals={headline.decimals} />{" "}
-              <span style={{ fontSize: 20, color: "var(--color-text-secondary)" }}>{headline.unit}</span>
-            </>
-          )}
-        </div>
-        <div className="muted" style={{ fontSize: 13 }}>{headline.sub}</div>
-
-        {/* On-chain breakdown — every row is a live Horizon/contract read */}
-        <div style={{ marginTop: 14, borderTop: "1px solid #1f2732", paddingTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-          {[
-            { label: "Wallet USDC · spendable", value: walletUsdc, unit: "USDC", testid: "row-wallet-usdc" },
-            { label: "Vault savings · locked by code", value: balances.savings, unit: "USDC", testid: "row-vault-savings" },
-            ...(bufferCredit > 0
-              ? [{ label: "Buffer credit · in vault", value: bufferCredit, unit: "USDC", testid: "row-buffer-credit" }]
-              : []),
-            { label: `XLM · native (${NETWORK})`, value: walletXlm, unit: "XLM", testid: "row-wallet-xlm" },
-          ].map((r) => (
-            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }} data-testid={r.testid}>
-              <span className="muted">{r.label}</span>
-              <span className="numeric">
-                <AnimatedNumber value={r.value} decimals={2} /> {r.unit}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <span style={{ background: "#191a1e", color: "#cdf14a", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 99, border: "1px solid #282a2f" }}>
+                &bull; Shunt Router v2 Active
+              </span>
+              <span style={{ fontSize: 13, color: "#8c9099", fontWeight: 600 }}>
+                Policy v{v2Policy.version} Deployed
               </span>
             </div>
-          ))}
-        </div>
 
-        {/* Onboarding gaps surfaced where the money is — not buried in Settings */}
-        {walletXlm === 0 && NETWORK === "testnet" && (
-          <button
-            className="btn-secondary"
-            style={{ fontSize: 13, marginTop: 12 }}
-            disabled={fundingBot}
-            onClick={onFundbot}
-            data-testid="friendbot-button"
-          >
-            {fundingBot ? "Funding…" : "Fund with Friendbot (testnet XLM)"}
-          </button>
-        )}
-        {!usdcTrustline && (
-          <button
-            className="btn-secondary"
-            style={{ fontSize: 13, marginTop: 12, borderColor: "var(--color-accent-primary)", color: "var(--color-accent-primary)" }}
-            disabled={enablingUsdc}
-            onClick={onEnableUsdc}
-          >
-            {enablingUsdc ? "Enabling..." : "Enable USDC (requires XLM)"}
-          </button>
-        )}
-        {usdcTrustline && NETWORK === "testnet" && walletUsdc < 500 && walletXlm > 1000 && (
-          <button
-            className="btn-secondary"
-            style={{ fontSize: 13, marginTop: 12 }}
-            disabled={fundingUsdc}
-            onClick={onFundUsdc}
-            data-testid="swap-xlm-usdc"
-          >
-            {fundingUsdc ? "Swapping..." : "Swap 1000 XLM for testnet USDC"}
-          </button>
-        )}
-      </motion.header>
-
-      {/* First-run nudge: new users now land on Home, so guide them to set rules. */}
-      {!rulesSavedOnChain && (
-        <Link
-          to="/shunt"
-          className="card"
-          style={{ border: "1px solid var(--color-accent-primary)", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 12 }}
-          data-testid="setup-rules-nudge"
-        >
-          <SlidersHorizontal size={20} style={{ color: "var(--color-accent-primary)", flexShrink: 0 }} />
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontWeight: 600, display: "block" }}>Set your split rules</span>
-            <span className="muted" style={{ fontSize: 12 }}>
-              Decide how each income divides into your lanes — then every payday auto-splits in one tap.
+            <span style={{ fontSize: 13, textTransform: "uppercase", fontWeight: 700, color: "#71757f", letterSpacing: "0.05em" }}>
+              Total Programmable Reserve Net Value
             </span>
-          </span>
-          <span className="numeric" style={{ color: "var(--color-accent-primary)" }}>→</span>
-        </Link>
-      )}
-
-      {/* Quick actions: the in/out loop lives one tap from Home (F11/F13/F8) */}
-      <section style={{ display: "flex", gap: 8 }}>
-        {[
-          { to: "/topup", icon: "ph-download-simple", label: "Top Up" },
-          { to: "/request", icon: "ph-link", label: "Request" },
-          { to: "/send", icon: "ph-paper-plane-right", label: "Send & Pay" },
-          { to: "/send?tab=convert", icon: "ph-swap", label: "Convert" },
-        ].map((a) => (
-          <Link
-            key={a.to}
-            to={a.to}
-            className="card"
-            style={{ flex: 1, textAlign: "center", textDecoration: "none", color: "inherit", padding: "12px 4px" }}
-          >
-            <i className={`ph ${a.icon}`} style={{ fontSize: 24 }} />
-            <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600 }}>{a.label}</div>
-          </Link>
-        ))}
-      </section>
-
-      {pending.length > 0 && (
-        <div
-          className="card"
-          style={{ border: "1px solid var(--color-accent-primary)", textAlign: "left" }}
-          data-testid="income-detected-banner"
-        >
-          <strong style={{ color: "var(--color-accent-primary)" }}>
-            {pending.length === 1 ? "Income detected!" : `${pending.length} incomes detected!`}
-          </strong>
-          <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-            {pending.length === 1
-              ? `${pending[0].amount} USDC landed — tap to approve the split.`
-              : `${fmtUsdc(pending.reduce((s, p) => s + Number(p.amount), 0))} USDC total — split them all in one go, or review individually.`
-            }
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="btn-primary"
-              style={{ flex: 1 }}
-              onClick={() => nav("/confirm", { state: pending.length === 1 ? pending[0] : pending })}
-              data-testid="split-all-button"
-            >
-              {pending.length === 1 ? "Approve split" : `Split all ${pending.length}`}
-            </button>
-            {pending.length > 1 && (
-              <button
-                className="btn-secondary"
-                style={{ flex: 0, whiteSpace: "nowrap", width: "auto", padding: "0 16px" }}
-                onClick={() => nav("/confirm", { state: pending[0] })}
-              >
-                Review 1st
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {pending.length === 0 && rulesSavedOnChain && unsplitUsdc >= 0.01 && (
-        <motion.div
-          className="card"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ border: "1px solid var(--color-accent-secondary)", display: "flex", alignItems: "center", gap: 12 }}
-          data-testid="unsplit-banner"
-        >
-          <Wallet size={20} style={{ color: "var(--color-accent-secondary)", flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>
-              {fmtUsdc(unsplitUsdc)} USDC unallocated
+            <div style={{ fontSize: 44, fontWeight: 900, color: "#f4f5f6", letterSpacing: "-0.03em", fontFamily: "var(--font-heading)", marginTop: 4 }}>
+              ${fmtUsdc(totalReserves)} <span style={{ fontSize: 20, fontWeight: 700, color: "#8c9099" }}>USDC</span>
             </div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              Split this balance across your lanes.
-            </div>
-          </div>
-          <button
-            className="btn-secondary"
-            style={{ width: "auto", padding: "0 16px", fontSize: 13 }}
-            disabled={splittingNow}
-            onClick={onSplitNow}
-            data-testid="split-now-button"
-          >
-            {splittingNow ? "Preparing…" : "Split now"}
-          </button>
-        </motion.div>
-      )}
-
-      {/* Desktop: allocation + buckets left, activity right. Mobile: stacked. */}
-      <div className="split-cols home-dashboard">
-        <div className="col-main">
-          <section className="card">
-            <AllocationBar buckets={buckets} />
-          </section>
-
-          <BentoGrid className="bucket-grid">
-            {buckets.map((b, i) => (
-              <BentoCard key={b.id} delay={i * 0.1} className="bucket-card">
-                <Link
-                  to={b.id === "savings" ? "/savings" : `/lane/${b.id}`}
-                  className="bucket-card-link"
-                  data-testid={`bucket-card-${b.id}`}
-                >
-                  <span className="bucket-card-accent" aria-hidden style={{ background: b.color }} />
-                  <span
-                    className="bucket-card-icon"
-                    aria-hidden
-                    style={{ color: b.color }}
-                  >
-                    {b.kind === "savings" ? <Lock size={20} /> : b.kind === "invest" ? <ArrowUpRight size={20} /> : <Wallet size={20} />}
-                  </span>
-                  <span className="bucket-card-copy">
-                    <span className="bucket-card-title">{b.name}</span>
-                    <span className="muted bucket-card-meta">{b.pct}% of each income · {bucketNote(b.kind)}</span>
-                  </span>
-                  <span className="numeric bucket-card-balance">
-                    <AnimatedNumber value={bucketBalance(b.id)} decimals={2} />{" "}
-                    <span className="muted bucket-card-unit">USDC</span>
-                    {b.id === "invest" && (investXlmHeld > 0 || investGoldHeld > 0) && (
-                      <span className="muted bucket-card-detail">
-                        {[
-                          investXlmHeld > 0 && `${investXlmHeld.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`,
-                          investGoldHeld > 0 && `${investGoldHeld.toLocaleString("en-US", { maximumFractionDigits: 4 })} TXAUM`,
-                        ].filter(Boolean).join(" + ")} held
-                      </span>
-                    )}
-                    {b.id === "savings" && goals.length > 0 && (
-                      <span className="muted bucket-card-detail">
-                        <ShieldCheck size={11} style={{ verticalAlign: "-1px" }} />{" "}
-                        {goals.slice(0, 2).map((g) => g.label).join(" · ")}
-                        {goals.length > 2 ? ` +${goals.length - 2}` : ""}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              </BentoCard>
-            ))}
-          </BentoGrid>
-        </div>
-
-        <section className="col-side card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>Recent activity</h3>
-            <Link to="/activity" className="muted" style={{ fontSize: 13 }}>All →</Link>
-          </div>
-          {activity.length === 0 ? (
-            <p className="muted" style={{ fontSize: 14, margin: 0 }}>
-              No activity yet. Your first USDC income will show up here.
+            <p style={{ fontSize: 14, color: "#8c9099", marginTop: 8, maxWidth: 540, lineHeight: 1.5 }}>
+              Your incoming payments are automatically intercepted and routed into deterministic reserve buckets before reaching your spendable wallet.
             </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {activity.slice(0, 5).map((a, i) => (
-                <motion.div
-                  key={a.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                  style={{ padding: "11px 0", borderBottom: "1px solid #1f2732", display: "flex", justifyContent: "space-between", gap: 12 }}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#8c9099", textAlign: "right" }}>
+              Quick Test Inflows (Simulate Atomic Split)
+            </span>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[500, 1500, 5000].map((amt) => (
+                <button
+                  key={amt}
+                  disabled={isSimulating}
+                  onClick={() => handleQuickTestPayment(amt)}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 12,
+                    background: isSimulating ? "#191a1e" : "#cdf14a",
+                    color: isSimulating ? "#52555e" : "#0a0c07",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    border: "none",
+                    cursor: isSimulating ? "not-allowed" : "pointer",
+                    transition: "opacity 0.15s ease",
+                  }}
                 >
-                  <span style={{ fontSize: 14, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</span>
-                  <span className="numeric muted">
-                    {a.amountXlm !== undefined
-                      ? `${a.amountXlm.toLocaleString("en-US", { maximumFractionDigits: 2 })} XLM`
-                      : `${fmtUsdc(a.amountUsdc ?? 0)} USDC`}
-                  </span>
-                </motion.div>
+                  +{amt} USDC
+                </button>
               ))}
             </div>
-          )}
-        </section>
+            <span style={{ fontSize: 11, color: "#626670", textAlign: "right", fontStyle: "normal" }}>
+              Watch reserve cards update atomically via waterfall formula
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* Quick Navigation Action Hub */}
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 36 }}>
+        <Link
+          to="/shunt"
+          style={{
+            background: "#101112",
+            border: "1px solid #1c1d20",
+            borderRadius: 16,
+            padding: "20px",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            transition: "border-color 0.2s ease",
+          }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <i className="ph-fill ph-sliders-horizontal" style={{ color: "#f4f5f6", fontSize: 22 }} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Policy Editor</h4>
+            <span style={{ fontSize: 12, color: "#8c9099" }}>Configure waterfall rules & ratios</span>
+          </div>
+        </Link>
+
+        <Link
+          to="/pay"
+          style={{
+            background: "#101112",
+            border: "1px solid #1c1d20",
+            borderRadius: 16,
+            padding: "20px",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            transition: "border-color 0.2s ease",
+          }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <i className="ph-fill ph-paper-plane-right" style={{ color: "#f4f5f6", fontSize: 22 }} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Payer Checkout</h4>
+            <span style={{ fontSize: 12, color: "#8c9099" }}>Accountless public pay link</span>
+          </div>
+        </Link>
+
+        <Link
+          to="/savings"
+          style={{
+            background: "#101112",
+            border: "1px solid #1c1d20",
+            borderRadius: 16,
+            padding: "20px",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            transition: "border-color 0.2s ease",
+          }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <i className="ph-fill ph-vault" style={{ color: "#f4f5f6", fontSize: 22 }} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Withdrawal Vault</h4>
+            <span style={{ fontSize: 12, color: "#8c9099" }}>Claim lots & manage cooldowns</span>
+          </div>
+        </Link>
+
+        <Link
+          to="/receipts"
+          style={{
+            background: "#101112",
+            border: "1px solid #1c1d20",
+            borderRadius: 16,
+            padding: "20px",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            transition: "border-color 0.2s ease",
+          }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <i className="ph-fill ph-shield-check" style={{ color: "#f4f5f6", fontSize: 22 }} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#f4f5f6", margin: 0 }}>Audit Receipts</h4>
+            <span style={{ fontSize: 12, color: "#8c9099" }}>Verify split conservation proof</span>
+          </div>
+        </Link>
+      </section>
+
+      {/* BentoGrid Reserve Breakdown */}
+      <h2 style={{ fontSize: 20, fontWeight: 800, color: "#f4f5f6", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+        <i className="ph-fill ph-circles-four" style={{ color: "#cdf14a" }} />
+        Programmable Reserve Buckets (Bento Overview)
+      </h2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 40 }}>
+        {/* Bento 1: Emergency Reserve */}
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
+                Tier 1 Reserve
+              </span>
+              <i className="ph-fill ph-shield-warning" style={{ color: "#8c9099", fontSize: 22 }} />
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: "0 0 6px" }}>Emergency Reserve</h3>
+            <div style={{ fontSize: 32, fontWeight: 900, color: "#f4f5f6", fontFamily: "monospace" }}>
+              ${fmtUsdc(v2Balances.emergency)}
+            </div>
+            <p style={{ fontSize: 12, color: "#8c9099", marginTop: 8 }}>
+              Target: ${fmtUsdc(v2Policy.emergencyTarget)} &bull; {v2Balances.emergency >= v2Policy.emergencyTarget ? "Fully Stocked" : "Replenishing"}
+            </p>
+          </div>
+          <button
+            onClick={() => nav("/savings")}
+            style={{ marginTop: 20, padding: "10px 14px", borderRadius: 10, background: "#191a1e", color: "#f4f5f6", border: "1px solid #282a2f", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          >
+            Instant Emergency Access
+          </button>
+        </div>
+
+        {/* Bento 2: Obligation & Tax Reserve */}
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
+                Tier 2 Reserve
+              </span>
+              <i className="ph-fill ph-scales" style={{ color: "#8c9099", fontSize: 22 }} />
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: "0 0 6px" }}>Obligations & Taxes</h3>
+            <div style={{ fontSize: 32, fontWeight: 900, color: "#f4f5f6", fontFamily: "monospace" }}>
+              ${fmtUsdc(v2Balances.obligation)}
+            </div>
+            <p style={{ fontSize: 12, color: "#8c9099", marginTop: 8 }}>
+              Allocates {v2Policy.obligationBps / 100}% of post-emergency inflows &bull; {Math.round(v2Policy.obligationCooldownSeconds / 86400)}d Cooldown
+            </p>
+          </div>
+          <button
+            onClick={() => nav("/savings")}
+            style={{ marginTop: 20, padding: "10px 14px", borderRadius: 10, background: "#191a1e", color: "#f4f5f6", border: "1px solid #282a2f", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          >
+            Manage Cooldown Withdrawals
+          </button>
+        </div>
+
+        {/* Bento 3: Timelocked Goal Lots */}
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
+                Tier 3 Reserve
+              </span>
+              <i className="ph-fill ph-lock-key" style={{ color: "#8c9099", fontSize: 22 }} />
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: "0 0 6px" }}>Timelocked Goal Lots</h3>
+            <div style={{ fontSize: 32, fontWeight: 900, color: "#f4f5f6", fontFamily: "monospace" }}>
+              ${fmtUsdc(v2Balances.goalTotal)}
+            </div>
+            <p style={{ fontSize: 12, color: "#8c9099", marginTop: 8 }}>
+              {activeLots.length} Active Lots &bull; Next unlock: {nextUnlock}
+            </p>
+          </div>
+          <button
+            onClick={() => nav("/savings")}
+            style={{ marginTop: 20, padding: "10px 14px", borderRadius: 10, background: "#191a1e", color: "#f4f5f6", border: "1px solid #282a2f", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          >
+            Claim Matured Goal Lots
+          </button>
+        </div>
+
+        {/* Bento 4: Spendable Wallet Pool */}
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
+                Residual Pool
+              </span>
+              <i className="ph-fill ph-wallet" style={{ color: "#8c9099", fontSize: 22 }} />
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: "0 0 6px" }}>Spendable Wallet Pool</h3>
+            <div style={{ fontSize: 32, fontWeight: 900, color: "#f4f5f6", fontFamily: "monospace" }}>
+              ${fmtUsdc(v2Balances.spendable)}
+            </div>
+            <p style={{ fontSize: 12, color: "#8c9099", marginTop: 8 }}>
+              Available immediately in primary wallet ({v2Policy.spendDestination.slice(0, 10)}...)
+            </p>
+          </div>
+          <button
+            onClick={() => nav("/send")}
+            style={{ marginTop: 20, padding: "10px 14px", borderRadius: 10, background: "#191a1e", color: "#f4f5f6", border: "1px solid #282a2f", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          >
+            Send & Pay USDC
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Recent Routing & Split Activity */}
+      <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#f4f5f6", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <i className="ph-fill ph-pulse" style={{ color: "#cdf14a" }} />
+            Recent Automated Router Events
+          </h3>
+          <Link to="/activity" style={{ color: "#cdf14a", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+            View All History &rarr;
+          </Link>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {activity.slice(0, 4).map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "14px 18px",
+                background: "#0c0d0f",
+                borderRadius: 12,
+                border: "1px solid #18191d",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 10,
+                    background: "#191a1e",
+                    border: "1px solid #282a2f",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#f4f5f6",
+                    fontSize: 20,
+                  }}
+                >
+                  <i className={`ph-fill ${item.kind === "split" ? "ph-arrows-split" : "ph-arrow-down-left"}`} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#f4f5f6" }}>{item.title}</div>
+                  <div style={{ fontSize: 12, color: "#8c9099" }}>{new Date(item.at).toLocaleString()}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: item.kind === "split" ? "#cdf14a" : "#f4f5f6", fontFamily: "monospace" }}>
+                ${item.amountUsdc} USDC
+              </div>
+            </div>
+          ))}
+
+          {activity.length === 0 && (
+            <div style={{ textAlign: "center", padding: "24px 0", color: "#8c9099", fontSize: 13 }}>
+              No recent automated routing splits yet. Tap a "Quick Test Inflows" button above to test real-time waterfall calculations!
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }

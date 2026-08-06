@@ -187,10 +187,10 @@ export function Settings() {
 
       <section
         className="card"
-        style={{ background: "linear-gradient(135deg, #141a21, #1a2330)" }}
+        style={{ background: "#101112", border: "1px solid #1c1d20" }}
       >
         <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-          <Smartphone size={17} /> Install as an app
+          <Smartphone size={17} style={{ color: "#cdf14a" }} /> Install as an app
         </div>
         <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>
           Open your browser menu → "Add to Home Screen" for the full PWA experience.
@@ -198,7 +198,7 @@ export function Settings() {
       </section>
 
       <div className="muted" style={{ textAlign: "center", fontSize: 12 }}>
-        Shunt v0.1.0 — non-custodial, built on Stellar
+        Shunt Protocol — non-custodial, built on Stellar Soroban
       </div>
 
       <AnimatePresence>
