@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import worker from "./index";
 import { getDurableCursor, setDurableCursor, listIndexedEvents, pollSorobanContractEvents } from "./indexer";
 
@@ -40,6 +40,24 @@ describe("Shunt v2 Durable Event Indexer", () => {
       HORIZON_URL: "https://horizon-testnet.stellar.org",
       SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org",
     };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        result: {
+          latestLedger: 999999,
+          events: [
+            {
+              id: "00001-00001",
+              type: "contract",
+              contractId: "CC_TEST_CONTRACT",
+              ledger: "999998",
+              ledgerClosedAt: new Date().toISOString()
+            }
+          ]
+        }
+      })
+    }) as any;
   });
 
   it("returns default cursor '0' when no cursor in storage", async () => {
