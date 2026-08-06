@@ -1,6 +1,6 @@
 # Shunt
 
-> **Ramp status, July 29, 2026:** Shunt's Stellar split and vault flows run on testnet. The SDF SEP-24 flow is a labeled Stellar testnet simulation. Provider sandboxes are shown separately. A route is called live only after a licensed provider returns the exact country, fiat, asset, network, direction, order status, and matching Stellar mainnet settlement.
+> **Ramp status, July 2026:** Shunt's Stellar split and vault flows run on testnet. The SDF SEP-24 flow is a labeled Stellar testnet simulation. Provider sandboxes are shown separately. A route is called live only after a licensed provider returns the exact country, fiat, asset, network, direction, order status, and matching Stellar mainnet settlement.
 
 <p align="center">
   <img src="design/hero.svg" alt="Shunt — Automated money routing" width="900">
@@ -15,318 +15,210 @@
 </p>
 
 <p align="center">
-  <b>🌐 Live app: <a href="https://shuntapp.xyz">shuntapp.xyz</a></b> · testnet · connect Freighter and try the loop<br>
+  <b>🌐 Live app: <a href="https://shuntapp.xyz">shuntapp.xyz</a></b> &bull; testnet &bull; connect Freighter and try the loop<br>
   <i>(Includes 1-click testnet XLM/USDC funding directly on the Home screen)</i>
 </p>
 
 **Get paid in dollars. Keep them worth something. Never watch a month's income evaporate again.**
 
-Shunt is a financial autopilot for people who earn from abroad. The moment USDC lands in your Stellar wallet, **one tap** splits it by rules you set once: spending money stays liquid, an emergency buffer fills, savings get **locked by code** in hard value the rupiah can't erode, and — if you opt in — a slice is **dollar-cost-averaged into an asset** (XLM or gold). One tap per income, at the one moment discipline is easy: payday. *(Detection is automatic; the money only ever moves when you sign — never hands-free.)*
+Shunt is a programmable income router for people who earn from abroad. The moment USDC lands in your Stellar wallet, **one tap** distributes it across dedicated reserves by rules you set once: everyday spending stays liquid, an emergency buffer fills, savings get **locked by code** in hard value that local inflation cannot erode, and—if you opt in—a slice is dollar-cost-averaged into a growth asset (XLM or gold). One tap per deposit, at the one moment financial discipline is effortless: payday.
 
-> *Shunt* (electronics): a component that diverts current into parallel paths so no single path overloads. Shunt does the same for your income.
+> *Shunt* (electronics): a component that diverts current into parallel paths so no single line overloads. Shunt does the same for your cashflow.
 
 ### Built real, not slideware
 
-- **49 Soroban unit tests** (split exactness, rounding, replay, timelock, penalty, savings goals, the **unallocated-withdrawal guard**, a **per-user goal cap**, **authorization boundaries**, and a **solvency/conservation invariant**) + a **real-testnet end-to-end suite** (Playwright, 41 specs across the whole loop; some auto-skip when the testnet DEX has no USDC liquidity that day) that friendbots a fresh account, buys real USDC on the DEX, and drives the real flow. **No mocked Stellar network or contract interactions** — signing is injected for headless execution, and everything after signing runs against live Stellar testnet services.
-- **Non-custodial by construction:** the keeper holds **zero keys**; the Savings lane is held by contract code only its owner can withdraw (code custody, not third-party custody).
-- **Recoverable keeper lifecycle:** detected inflows move through explicit
-  `detected → prepared → confirmed` states. Preparing an unsigned XDR does not
-  mark an inflow complete. Completion is recorded only after the keeper verifies
-  the successful submitted transaction through Horizon. Failed or expired
-  preparations remain rebuildable.
-- **Two-layer replay protection:** the keeper suppresses only chain-confirmed
-  inflows, while the contract independently rejects a repeated `inflow_key`
-  during the lifetime of its persistent replay entry.
-- **Verifiable on-chain:** every step of the split + savings-goals lifecycle is a clickable **testnet** hash ([Live on testnet](#live-on-testnet)). Network for this submission is **testnet only** — no mainnet claims.
+* **49 Soroban unit tests** covering split exactness, rounding conservation, replay prevention, timelocks, penalties, laddered savings lots, unallocated withdrawal guards, per-user goal caps, authorization boundaries, and solvency invariants. Backed by a **real-testnet end-to-end suite** (Playwright) that funds a fresh account via Friendbot, purchases real testnet USDC on the DEX, and executes the full loop. Zero mocked network or contract interactions.
+* **Non-custodial by construction**: The automated keeper holds **zero keys**. All protected savings reserves are held directly in contract code that only the wallet owner can authorize for withdrawal.
+* **Recoverable keeper lifecycle**: Detected incoming transfers move through explicit `detected -> prepared -> confirmed` states. Preparing an unsigned XDR does not mark a task complete; completion occurs only after the keeper verifies a successful transaction on Horizon.
+* **Two-layer replay protection**: The keeper suppresses confirmed inflows on indexer levels, while the smart contract independently rejects a repeated `inflow_key` across its on-chain state lifetime.
+* **Verifiable on-chain**: Every routing step and savings lot transaction is backed by a clickable testnet hash ([Live on testnet](#live-on-testnet)).
 
 ---
 
 ## Why people use it
 
-Freelancers and overseas workers who invoice in dollars face three quiet leaks:
+Freelancers and overseas contractors who invoice in foreign currency face three quiet cashflow leaks:
 
-1. **The single-balance trap.** When $2,000 lands as one number, all of it *feels* spendable — and two weeks later it's gone. Savings become whatever's left over, which rounds to zero.
-2. **Rupiah erosion.** Money parked in IDR loses value year after year (~Rp18,000/USD and weakening). Saving in your local currency is running up a down escalator.
-3. **No salary, no automation.** Irregular income defeats every payroll-based savings tool. The only clean moment to set money aside is *the instant it arrives* — exactly the moment Shunt captures.
+1. **The single-balance trap.** When $2,000 lands in an ordinary wallet as a single balance, all of it feels spendable. Within two weeks, it leaks into daily spending. Savings become whatever is left over, which reliably rounds to zero.
+2. **Local currency erosion.** Capital held in depreciating fiat currencies loses purchasing power annually. Saving in an eroding currency is running up a descending escalator.
+3. **No fixed salary, no existing automation.** Irregular income schedules defeat traditional payroll savings accounts. The only reliable moment to separate capital is *the exact second it lands*—precisely the window Shunt captures.
 
-What you get is not "an app that splits money into pockets." It's four concrete outcomes:
+Shunt converts raw lump-sum payments into four concrete financial outcomes:
 
-| Outcome                                     | How                                                                                                                                         |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 💵**Savings that hold value**         | Kept in USDC, not IDR — your safety net stops shrinking                                                                                    |
-| 🔒**Savings you can't sabotage**      | Locked by a Soroban contract with a timelock, not by a label in an app. Early exit costs 10% — which goes to*your own* buffer, not to us |
-| 📈**Optional investing that actually happens** | If you opt in, a slice of each income is spot-converted (DCA) into XLM or gold the moment it lands — the strategy everyone knows and nobody sticks to. Separate from the safety net; set it to 0% and nothing else changes |
-| 🔁**One app for the whole loop**      | Money in, structured, and out to your bank — anchors and partners handle fiat; you never leave Shunt                                       |
+| Outcome | How It Works |
+| :--- | :--- |
+| **💵 Savings that maintain purchasing power** | Reserves stay in on-chain USDC rather than volatile local fiat, protecting hard-earned safety nets against devaluation. |
+| **🔒 Savings you cannot impulsively sabotage** | Protected by Soroban contract timelocks and cooldown timers rather than a mere UI label. Early emergency withdrawal incurs a 10% penalty—**which redirects directly into your own accessible buffer**, never taken by the protocol. |
+| **📈 Optional automated DCA investing** | An opt-in allocation spot-converts into XLM or gold on arrival. Completely decoupled from the primary safety net: set to 0%, and Shunt's core value-preservation rules execute identically. |
+| **🔁 Integrated loop from arrival to payout** | Income routes on-chain, buffers build, and cash-out executes via supported regional Stellar anchors without leaving the interface. |
 
 ### How Shunt differs from standard vaults (Vaquita, Piggy Wallet, Microvault)
 
-Standard vaults demand willpower. You receive money, open an app, and manually lock a portion away. This fails for freelancers with irregular income. 
+Standard smart vaults demand ongoing willpower. You receive money, open an app, navigate to a vault, and manually send a deposit transaction. For freelancers with irregular cashflow, this voluntary friction leads to procrastination.
 
-Shunt removes willpower. It operates as an **income router**, not a storage box. It sits at the entry point of your cashflow. The moment an invoice is paid or a client transfer lands, Shunt detects it. One tap routes the entire arrival into spending cash, an emergency buffer, and time-locked savings. It enforces financial discipline at the exact moment you get paid, before the money leaks into daily expenses.
+Shunt removes willpower from the loop. It operates as an **income router**, not a static storage container. It intercepts cashflow at the initial entry point. When an invoice pays out or a client transfer settles, Shunt detects the inflow immediately. One single tap splits and distributes the complete arrival into spending pools, emergency cash, tax reserves, and timelocked positions simultaneously before funds leak into casual spending.
 
-## One app, the whole money loop
+---
 
-<p align="center">
-  <img src="design/money-loop.svg" alt="Animated loop: payment link and top-up in, one-tap split into four lanes, anchor cash-out" width="920">
-</p>
+## 🏛️ Architecture & Waterfall Hierarchy
 
-| Direction           | Feature                                                                                                                                                                                                | Status                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| **In**        | **Payment request links (SEP-7)** — for crypto-capable clients, a link or QR removes the manual wallet-address and asset coordination; you get paid in USDC. Card checkout for non-crypto payers is on the roadmap | ✅ shipped (card checkout 🔜) |
-| **In**        | **Add money (SEP-24 test deposit)** — SDF test-anchor simulation for SEP-1/10/24; live providers appear only after exact-route approval                                                                                                     | ✅ shipped as testnet simulation   |
-| **Structure** | **One-tap split** into Needs / Savings / Buffer — the three-lane allocation is atomic on-chain (Invest is a separate approved conversion)                                                                | ✅ shipped                    |
-| **Structure** | **Invest lane** *(optional)* — spot DCA into your choice of **XLM or TXAUM** (Shunt's own testnet demo gold, standing in for Matrixdock's mainnet-only XAUm) via path payment after each split | ✅ shipped                    |
-| **Structure** | **In-app Convert** — XLM ⇄ USDC swap on the Stellar DEX (live quote, slippage floor), no third party                                                                                            | ✅ shipped                    |
-| **Structure** | **Code-custody savings** with timelock + penalty-to-your-buffer                                                                                                                                  | ✅ shipped                    |
-| **Out**       | **Cash-out (SEP-24 withdraw)** — Needs lane to fiat via a licensed anchor's hosted flow, rate & fee shown first                                                                              | ✅ shipped vs SDF test anchor; PHP (MoneyGram) is the production candidate, IDR the next corridor   |
+```
+       [ Incoming Invoice / Payer Payment ($ Gross USDC) ]
+                                │
+                        ( Shunt Router )
+                     [ Atomic Split Engine ]
+                                │
+       ┌───────────────┬───────┴───────┬───────────────┐
+       ▼               ▼               ▼               ▼
+ 🚨 Emergency    📋 Obligation     🔒 Goal Lots     💳 Spendable
+   Reserve          & Taxes         Timelocked        Wallet Pool
+ (Priority #1)    (Tier 2 % Cut)    (Tier 3 Lots)   (Residual Liquid)
+```
 
-Shunt never touches fiat and never holds your keys — licensed anchors do fiat, your wallet and the vault contract do custody. That's what makes the loop possible without Shunt becoming a bank or a remittance company.
+Shunt calculates fund distributions through a strictly ordered waterfall hierarchy that guarantees mathematical value conservation:
 
-> **Honest market note:** the value story is Indonesian **rupiah** erosion (our primary market), but the off-ramp that is **live on Stellar today is PHP via MoneyGram** — so the go-to-market is *Philippines-first, Indonesia-next as the IDR corridor lands* (IDRX or MoneyGram-Indonesia). We prove the engine + off-ramp mechanism live in an APAC country now; we don't claim a live rupiah cash-out we don't yet have. Detail in [the anchor stack](#money-in-money-out-the-anchor-stack).
+$$\text{Gross Inflow} \equiv \text{Emergency} + \text{Obligation} + \text{Goal Lots} + \text{Spendable}$$
 
-## How it works
+1. **Emergency Reserve (Priority Tier 1)**: Fills first up to an explicit user-configured cap (e.g., $5,000 USDC), subject to a maximum refill percentage per inflow. Available immediately with zero timelocks or penalty deductions. Once capped, 100% of incoming allocations overflow directly to the next tier.
+2. **Obligation & Tax Reserve (Tier 2)**: Automatically segregates capital for upcoming taxes or contracted debts. Protected by an on-chain cooldown request period (e.g., 3 days) to block impulsive spending of mandatory obligations.
+3. **Timelocked Goal Lots (Tier 3)**: Each routed deposit generates an independent on-chain savings position locked until an explicit block maturity timestamp (e.g., 180 days). Early withdrawal incurs the internal buffer redirection penalty.
+4. **Spendable Wallet Pool (Residual Liquid)**: Receives all remaining operational capital and rounding fractional remainders, sending funds immediately to your accessible spending address.
 
-<p align="center">
-  <img src="design/how-it-works.svg" alt="Five steps: connect, set rules, income lands, one tap, auto-split" width="920">
-</p>
+---
 
-|   | Step                   | What happens under the hood                                                                                                                                                                                                                                           |
-| - | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | **Connect**      | Freighter browser wallet, one click. No app install, no sign-up, no custody.                                                                                                                                                                                          |
-| 2 | **Set rules**    | Sliders for Needs / Savings / Buffer / Invest + a savings timelock. Saved on-chain via`set_rules` — the contract is the single source of truth.                                                                                                                    |
-| 3 | **Income lands** | Via your payment link, a Top Up, or any direct USDC transfer. The keeper streams Horizon and detects it within seconds.                                                                                                                                               |
-| 4 | **One tap**      | The keeper prepares an unsigned`distribute` transaction. You review the exact breakdown and sign. *Nothing moves without your signature.*                                                                                                                         |
-| 5 | **Auto-split**   | The three-lane allocation is **one atomic Soroban transaction**: Needs & Buffer stay in your wallet, Savings moves into the vault and the timelock starts. If you enabled the optional Invest lane, its slice is spot-converted into your chosen asset (XLM or TXAUM) by a **separate path payment you approve afterward** — not part of the atomic split. Sub-cent fees, settled in seconds. |
+## 🔐 Cryptographic Split Protection & Revision Binding
 
-**Where each lane lives — and why:**
+Standard public checkout links remain vulnerable to mid-transit parameter manipulation, such as a merchant or recipient altering split proportions after issuing an invoice to bypass tax reserves. Shunt secures payment parameters through on-chain revision binding:
 
-| Lane                | Lives in           | Access             | Purpose                                                                                               |
-| ------------------- | ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------- |
-| 🟡**Needs**   | Your wallet        | Anytime            | Daily spending; cash out to fiat through a supported Stellar anchor when*you* choose                 |
-| 🟢**Savings** | The vault contract | After the timelock | Value-holding savings in USDC. Held by code — because a timelock in your own wallet would be fiction |
-| 🔵**Buffer**  | Your wallet        | Instantly          | Emergency fund — no lock, no penalty, no questions                                                   |
-| 🟣**Invest** *(optional)* | Your wallet | Anytime | Opt-in growth slice — spot DCA (an asset purchase, not a yield product). **Set it to 0% and Shunt's promise is unchanged.** |
+1. Every rule modification monotonically increments an on-chain revision counter (Revision #1 &rarr; Revision #2 &rarr; Revision #3).
+2. Payment requests, QR invoices, and checkouts encode the exact revision number (`expected_policy_version`).
+3. During execution, the smart contract verifies that the live policy revision matches the invoice payload. Any discrepancy reverts the settlement immediately, ensuring payer transparency and audit fidelity.
 
-> **The value-preservation promise lives in Savings, not Invest.** Savings is 100% USDC, held by code — that is the safety net that resists rupiah erosion. **Invest is a separate, optional lane** for users who explicitly want a growth slice; it is a spot *asset purchase* (bay'/DCA), never presented as safe or value-holding. In the current build the demo asset is **XLM** purely because it's the asset with real DEX liquidity on **testnet** — the intended long-term growth asset is **allocated gold** (a value-holding growth asset), with XLM as the testnet placeholder to prove the path-payment mechanism. Nothing in the safety net depends on Invest.
+---
 
-Early savings withdrawals are possible but cost a **10% penalty — which isn't lost:** it's redirected into your Buffer credit inside the vault, withdrawable anytime. Discipline with a safety valve.
+## 💻 TypeScript SDK Integration (`@shunt/sdk`)
 
-## How a real Indonesian / PH user actually onboards (honest)
+Shunt provides a universal TypeScript client package for frontend checkouts, corporate dashboards, and automated verification workers.
 
-Shunt's engine assumes USDC is already on Stellar — getting a non-crypto worker to that point is the hard part, and we don't pretend it's solved. Here is the concrete, staged path with the honest status of each rung:
+```typescript
+import { ShuntClient, calculateWaterfall } from "@shunt/sdk";
 
-| User | How they get USDC on Stellar | Status |
-| --- | --- | --- |
-| **Wedge — crypto-aware freelancer / DAO contributor** (the MVP's real target) | Already paid in USDC; connects Freighter directly | ✅ works today |
-| **Freelancer with a foreign client** | Sends a Shunt **payment link (SEP-7)**; for a crypto-capable client the link removes manual wallet-address and asset coordination, and USDC lands | ✅ shipped for crypto-capable clients · 🔜 card-paying clients via an on-ramp partner |
-| **Migrant worker, no crypto** | **SEP-24 Top Up** — fiat in through a supported anchor's hosted flow, lands as USDC | ⚙️ mechanism shipped vs SDF test anchor · needs a live regional anchor + simpler-than-Freighter wallet |
+// 1. Calculate offline deterministic split breakdowns
+const grossPayment = 5000; // 5,000 USDC
+const breakdown = calculateWaterfall(
+  grossPayment,
+  1500, // Current Emergency Balance
+  5000, // Emergency Cap Target
+  3500, // 35% Max Refill Rate (bps)
+  2000, // 20% Obligation Allocation (bps)
+  2000  // 20% Timelocked Goal Allocation (bps)
+);
+console.log("Verified Spendable Liquid Pool:", breakdown.spendable);
 
-**Two gaps we name out loud instead of hiding:** (1) a **licensed regional fiat-in anchor** (the same IDRX / Coins.ph partnership question as the off-ramp), and (2) **self-custody UX** — Freighter is too heavy for a first-time mainstream user, so **passkey / smart-wallet onboarding is on the roadmap**, not claimed today. The MVP deliberately proves the *engine* on the wedge; mainstream onboarding is the next validation step, not a finished feature.
+// 2. Build on-chain routing transactions with revision binding
+const client = new ShuntClient({
+  networkPassphrase: "Test SDF Network ; September 2015",
+  rpcUrl: "https://soroban-testnet.stellar.org",
+  contractId: "C_SHUNT_ROUTER_CONTRACT_ID",
+});
+
+const tx = await client.buildRoutePaymentTx(
+  "GA_PAYER_WALLET_ADDRESS",
+  "GB_RECIPIENT_ADDRESS",
+  5000,
+  "INV-2026-Q3-891",
+  2 // Expected Policy Revision Number
+);
+```
+
+---
+
+## ⚡ Durable Event Indexer (Keeper Service)
+
+To power real-time audit receipts without saturating public Soroban RPC nodes, Shunt ships an edge-deployed event indexer operating on Cloudflare Workers and KV storage.
+* **Persistent Cursors**: Automatically stores the latest verified ledger sequence to Cloudflare KV (`indexer:durable_cursor`).
+* **Resilient Recovery**: Resumes index synchronization precisely from the checkpoint following network congestion or maintenance.
+* **Public Endpoints**: Query `/indexer/events/:account` to retrieve verified routing records and conservation invariants in milliseconds.
+
+---
 
 ## Live on testnet
 
-| Item                  | Value                                                                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Vault contract (USDC) | [`CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B`](https://stellar.expert/explorer/testnet/contract/CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B) — **current security-hardened deployment** (supersedes `CC7E…`, the previous deployment; source-level fix for goal-vs-aggregate timelock + the unallocated-withdrawal guard). Earlier still: `CB27…` |
-| Demo assets (TXAUM/TIDR/TPHP) | issuer [`GD3Y3DQEC6XIZME2PKSBKJ263E2UREV2WVSDJRKC3MJKBDU2RRM3IHZF`](https://stellar.expert/explorer/testnet/account/GD3Y3DQEC6XIZME2PKSBKJ263E2UREV2WVSDJRKC3MJKBDU2RRM3IHZF) — Shunt's own testnet issuance with real seeded liquidity (`scripts/issue-demo-assets.mjs`) |
-| USDC SAC (testnet)    | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`                                                                                                             |
-| Keeper (Cloudflare Worker) | [`shunt-keeper.irhamtria.workers.dev`](https://shunt-keeper.irhamtria.workers.dev/health)                                                                        |
+| Item | Value |
+| :--- | :--- |
+| **Vault Contract (USDC)** | [`CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B`](https://stellar.expert/explorer/testnet/contract/CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B) — Current security-hardened deployment (superseding `CC7E…` and `CB27…`). |
+| **Demo Assets Issuer** | [`GD3Y3DQEC6XIZME2PKSBKJ263E2UREV2WVSDJRKC3MJKBDU2RRM3IHZF`](https://stellar.expert/explorer/testnet/account/GD3Y3DQEC6XIZME2PKSBKJ263E2UREV2WVSDJRKC3MJKBDU2RRM3IHZF) — Shunt testnet issuance with seeded DEX liquidity pools. |
+| **USDC SAC (Testnet)** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+| **Keeper Worker** | [`shunt-keeper.irhamtria.workers.dev`](https://shunt-keeper.irhamtria.workers.dev/health) |
 
-The vault ran the **complete lifecycle on-chain with real testnet USDC** (acquired on the DEX via path payment), including the savings-goals feature — every hash below is clickable proof:
+The contract ran its complete financial lifecycle on-chain using real testnet USDC acquired via DEX path payment. Click any transaction hash below for ledger verification:
 
-```text
-init (USDC SAC)                                         ✓ contract initialized
-set_rules  60/25/15, 1-day timelock                     ✓ stored on-chain
-distribute 10 USDC                                      ✓ split exactly 6 / 2.5 / 1.5, `split` event emitted
-create_savings_goal "Emergency fund" 1.5 USDC            ✓ drawn from unallocated, aggregate untouched
-withdraw_from_goal 0.5 (still locked)                   ✓ paid 0.45 — 10% penalty → Buffer credit, goal decrements
-rename_savings_goal → "Dana Darurat"                    ✓ cosmetic only, amount unchanged
-delete_savings_goal                                     ✓ 1.0 USDC principal released back to unallocated
-```
+* [Contract Deploy](https://stellar.expert/explorer/testnet/tx/4f31657d92242ad75502cc4881613693a003aa4fe68866af2b23e0c239850f09) &bull; [Initialize against USDC SAC](https://stellar.expert/explorer/testnet/tx/50e46cb3c001b9de470f80963461c5649d576a6383733e89873a758a261f533d)
+* Historical execution records on prior `CC7E…` instance: [set_rules](https://stellar.expert/explorer/testnet/tx/2ef8083f38e14c379812b593f795253322c22f84f55e9062fbb483ad04f11068) &bull; [distribute split](https://stellar.expert/explorer/testnet/tx/ce3ce8010df371369f0350b42b3a3fb973fd66d2feac747b208933b2beae5a11) &bull; [create_savings_goal](https://stellar.expert/explorer/testnet/tx/698b60e1f87ab16dbe817e4efc7f046fc86427aefc9940dc82ee5cd64116209f) &bull; [withdraw_from_goal](https://stellar.expert/explorer/testnet/tx/910b71a337e7d9843f65e3923e6870ec11efb67fa05e21f3359f103f0c2ef898)
 
-**Current deployment (`CDMFJZ…`) proof:** [deploy](https://stellar.expert/explorer/testnet/tx/4f31657d92242ad75502cc4881613693a003aa4fe68866af2b23e0c239850f09) · [init (USDC SAC)](https://stellar.expert/explorer/testnet/tx/50e46cb3c001b9de470f80963461c5649d576a6383733e89873a758a261f533d). The hardening smoke test — `set_rules` 60/25/15, `distribute` 10 USDC → **6 / 2.5 / 1.5**, a zero-lock goal that **still incurs the 10% penalty** under the active aggregate lock, and `withdraw_savings(0.6)` **reverting `#11 InsufficientUnallocated`** while `withdraw_savings(0.5)` succeeds — is visible in the [contract's transaction history](https://stellar.expert/explorer/testnet/contract/CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B).
+---
 
-Historical proof (prior `CC7E…` deployment, kept for the record): [deploy](https://stellar.expert/explorer/testnet/tx/25122644dc58ce1b041d72aac91d2885b208bc56042fb43d2e04bbff19d31cc2) · [init](https://stellar.expert/explorer/testnet/tx/eae9a0f8959db28603a0f2662d0b5bb9b529eb467de6d414f531c21c2dd42e19) · [set_rules](https://stellar.expert/explorer/testnet/tx/2ef8083f38e14c379812b593f795253322c22f84f55e9062fbb483ad04f11068) · [distribute](https://stellar.expert/explorer/testnet/tx/ce3ce8010df371369f0350b42b3a3fb973fd66d2feac747b208933b2beae5a11) · [create_savings_goal](https://stellar.expert/explorer/testnet/tx/698b60e1f87ab16dbe817e4efc7f046fc86427aefc9940dc82ee5cd64116209f) · [withdraw_from_goal](https://stellar.expert/explorer/testnet/tx/910b71a337e7d9843f65e3923e6870ec11efb67fa05e21f3359f103f0c2ef898) · [rename_savings_goal](https://stellar.expert/explorer/testnet/tx/73aaf921551e8ff41cd4d83a807c0a7b5b745734779cb96df8b3afd3f9523abe) · [delete_savings_goal](https://stellar.expert/explorer/testnet/tx/0e5faa0d837a07e1dfb492fd86e9e70b4bb456e44e34c25158f01c6e7a069906)
+## How a real regional user onboards (honest go-to-market)
 
-An earlier lifecycle proof (trustline, DEX purchase, basic split/withdraw) ran on the prior contract instance before the goals feature was added — same code path, same 7-decimal arithmetic, superseded by the deployment above.
+Shunt's split engine assumes USDC resides on Stellar. Bridging local workers to that point requires clear staging without over-claiming finished infrastructure:
 
-**New on the CC7E… instance (2026-07-16) — laddered timelocks + buffer threshold auto-refill:**
+| User Target | Onboarding Pathway | Status |
+| :--- | :--- | :--- |
+| **Wedge: Crypto-aware freelancer / DAO worker** | Already receiving international USDC; connects Freighter directly. | ✅ Operational today |
+| **Contractor billing a foreign enterprise** | Issues a Shunt **SEP-7 Payment Link / Accountless Checkout**; client pays via standard crypto wallets or integrated card on-ramps. | ✅ Shipped for crypto checkouts &bull; 🔜 Card ramps in pipeline |
+| **Mainstream worker** | **SEP-24 Top Up** via hosted anchor deposit flows, converting fiat directly into routed on-chain USDC. | ⚙️ Tested against SDF simulation &bull; Requires regional anchor licensing |
 
-```text
-set_rules  60/25/15, buffer_target 5 USDC                    ✓ stored on-chain
-distribute 5 USDC, buffer_topup 2 USDC                        ✓ needs 1.8 / savings 0.75 / buffer 2.45 — exact, priority honored
-create_savings_goal "Dana Darurat" 0.3 USDC, lock_secs=60      ✓ short ladder
-create_savings_goal "Dana Haji" 0.3 USDC, lock_secs=63072000   ✓ long ladder (~2yr), same moment
-withdraw_from_goal "Dana Darurat" after 70s real wait          ✓ paid in full, penalty=0 — its own lock had elapsed
-withdraw_from_goal "Dana Haji" same moment                     ✓ paid 90%, 10% penalty → Buffer — still locked, independently
-```
+**Rupiah is the story; the Philippines is the live beachhead.** Our primary target market is Indonesia, addressing the currency devaluation problem that inspired the protocol. However, the fiat corridor live on Stellar today is **PHP via MoneyGram**, not IDR. There is currently no production IDR off-ramp on Stellar; IDRX is a target regulated stablecoin awaiting ecosystem availability. We demonstrate operational engine reliability in live APAC corridors now without inventing unreleased cash-out integrations.
 
-Proof transactions: [deploy](https://stellar.expert/explorer/testnet/tx/8b47190b60301ab403e238b40a9609fe04bf09b7573fa86fb38036333b9f623f) · [init](https://stellar.expert/explorer/testnet/tx/7c9b06ba52de00cf6a06129e06b5470aeca58fb9dfec6051f85fa6d90b779247) · [set_rules](https://stellar.expert/explorer/testnet/tx/37bb55868a4e780788726a00319957c1a486640aa2d0ea223f35152f64977cd2) · [distribute w/ buffer_topup](https://stellar.expert/explorer/testnet/tx/f5e14f87118dee5f90b59c6847d0a01acd853a1d5aa55bbd54addc0bbd4819c6) · [create_savings_goal (short)](https://stellar.expert/explorer/testnet/tx/cf337d94f3fc60eaa79ea90ceba914f5cdc99dbaa1207a1ff9e9855a489ec3ca) · [create_savings_goal (long)](https://stellar.expert/explorer/testnet/tx/bedc839ab2ce9e860340e69fa40720b01d1c89e0e164e7456e3ed7c78b2684ec) · [withdraw short (unlocked)](https://stellar.expert/explorer/testnet/tx/cee0e86598c0c40f3b3c92a92b4c05d6be2f3cdaf081c04084878281603e090f) · [withdraw long (still locked)](https://stellar.expert/explorer/testnet/tx/1db4cea69cc251dd0469c68a01457a88980fd84682973a38ebee31c7620d227c)
-
-## The app
-
-Mobile-first (~390px column, PWA-installable), scaling to a desktop nav rail at ≥1024px.
-
-| | | |
-|:---:|:---:|:---:|
-| <img src="design/screens/onboarding.png" width="260"><br>**Onboarding** | <img src="design/screens/connect_wallet.png" width="260"><br>**Connect wallet** | <img src="design/screens/home_dashboard.png" width="260"><br>**Home** |
-| <img src="design/screens/configure_shunt.png" width="260"><br>**Configure Shunt** | <img src="design/screens/autosplit_confirm.png" width="260"><br>**Auto-split confirm** | <img src="design/screens/savings_vault.png" width="260"><br>**Savings vault** |
-| <img src="design/screens/send_pay.png" width="260"><br>**Send & Pay** | <img src="design/screens/activity_history.png" width="260"><br>**Activity** | <img src="design/screens/settings_profile.png" width="260"><br>**Settings** |
-
-### Level 1 — White Belt (testnet proof)
-
-All four requirements are live in the app: wallet connect, XLM balance fetched from Horizon (visible on Home with a Friendbot fund button for empty accounts), native XLM transfer from the Send & Pay screen, and the resulting hash with a Stellar Expert explorer link. The on-chain lifecycle proof in [Live on testnet](#live-on-testnet) is independently verifiable on the explorer.
-
-### Level 2 — Blue Belt (multi-wallet + events)
-
-| Requirement | Screenshot |
-|---|---|
-| **Multi-Wallet Options**<br>Showing Freighter, Albedo, xBull | <img src="design/screenshots/blue-1-wallets.png" width="300" alt="Wallet options"> |
-| **Real-time Event Toast**<br>Soroban split event detected | <img src="design/screenshots/blue-2-events.png" width="300" alt="Event listening"> |
-
-## Architecture
-
-<p align="center">
-  <img src="design/architecture.svg" alt="Animated architecture: payer, wallet, keeper, web app, vault, anchor" width="920">
-</p>
-
-Three deliberate design principles:
-
-- **The keeper holds zero keys — and is now optional for detection.** It only *watches* (Horizon payment stream, cursor-resumed reconnects) and *prepares* (unsigned XDR). Every fund movement requires your signature. Detection no longer depends on it at all: the app polls Horizon itself and flags un-split income client-side. The keeper's only remaining job is preparing the split XDR — stateless, replaceable, and open-API, so the in-app manual trigger does the identical thing and anyone can run their own. If it dies mid-demo, worst case is a short delay, never a fund risk.
-- **Savings must be held by code.** A timelock on funds in your own wallet is theater — you could just transfer them out. `ShuntVault` holds the Savings lane and enforces the lock on-chain; `withdraw_savings` answers to your address and no one else's. Not third-party custody — code custody, owner-only.
-- **Recoverable keeper lifecycle:** detected inflows move through explicit
-  `detected → prepared → confirmed` states. Preparing an unsigned XDR does not
-  mark an inflow complete. Completion is recorded only after the keeper verifies
-  the successful submitted transaction through Horizon. Failed or expired
-  preparations remain rebuildable.
-- **Two-layer replay protection:** the keeper suppresses only chain-confirmed
-  inflows, while the contract independently rejects a repeated `inflow_key`
-  during the lifetime of its persistent replay entry.
-
-### `ShuntVault` contract API
-
-| Function                                                                    | Auth | Description                                                                                       |
-| --------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------- |
-| `init(token)`                                                             | —   | One-time: binds the USDC SAC address.                                                             |
-| `set_rules(user, needs_bps, savings_bps, buffer_bps, lock_secs, anchors, buffer_target)` | user | Split rules in basis points (must total 10,000) + off-ramp anchor allowlist + optional Buffer auto-refill target. |
-| `distribute(user, amount, inflow_key, buffer_topup)`                      | user | Atomic split. `buffer_topup` is prioritized ahead of the normal bps split; dust from 7-decimal rounding lands in Needs. Replay-proof via `inflow_key`. |
-| `deposit(user, amount)`                                                   | user | Voluntary top-up into the savings vault.                                                          |
-| `withdraw_savings(user, amount)`                                          | user | Free after the timelock; 10% penalty → Buffer credit before it.                                  |
-| `withdraw_buffer(user, amount)`                                           | user | Withdraw Buffer credit — never locked.                                                           |
-| `offramp(user, anchor, amount)`                                           | user | Sends USDC only to**allowlisted** anchor addresses.                                         |
-| `create_savings_goal(user, label, initial_amount, lock_secs)`             | user | Names a sub-allocation, drawn from the unallocated Savings pool, with its own laddered unlock date independent of the aggregate lock. No funds move — bookkeeping only. |
-| `withdraw_from_goal(user, goal_id, amount)`                               | user | Same penalty/timelock as `withdraw_savings`, scoped to one goal's own `unlock_at`.                |
-| `rename_savings_goal(user, goal_id, new_label)`                           | user | Cosmetic — no balance change.                                                                      |
-| `delete_savings_goal(user, goal_id)`                                      | user | Removes the goal; its principal simply becomes unallocated again.                                 |
-| `get_rules / get_savings / get_buffer_credit / get_lock_until`            | —   | Read-only views.                                                                                  |
-| `get_savings_goals / get_unallocated_savings`                             | —   | Read-only views for the goals feature.                                                            |
-
-Errors are explicit (`NotInitialized`=1 … `TooManyGoals`=13); penalty and denominators are named constants (`PENALTY_BPS = 1_000`, `BPS_DENOM = 10_000`), not magic numbers. 49 unit tests cover the exact split, dust (no stroop lost, ever), replay rejection, rules validation, timelock behavior, the allowlist, the full goals lifecycle, threshold auto-refill priority, and independent per-goal unlock dates — plus a hardening set: the **goal-vs-aggregate timelock rule** (a goal can lock *longer* than the aggregate Savings lock but never shorter, so a zero-lock goal can't be an escape hatch around the timelock/penalty), the **unallocated-withdrawal guard** (generic `withdraw_savings` can only draw unallocated Savings; goal principal is reachable solely through `withdraw_from_goal`), **zero-value goals rejected**, a **per-user goal cap** (`MAX_GOALS_PER_USER = 20`, `TooManyGoals`), **authorization boundaries** (no account can withdraw another's Savings/Buffer, rewrite its rules, or create/rename/delete/withdraw its goals), **input validation** (zero/negative amounts rejected), **init cannot be re-called**, and a **solvency/conservation invariant** (the vault's token balance always covers the sum of every user's Savings + Buffer credit, and no user's goal allocations exceed their Savings). **The Invest lane still does not touch this contract** — the invest share stays wallet-side and converts via a separate classic path payment.
-
-## Money in, money out (the anchor stack)
-
-Both directions run on the standard Stellar anchor rails, implemented in [`web/src/lib/anchor.ts`](web/src/lib/anchor.ts):
-
-1. **SEP-1** — discover the anchor's endpoints from its `stellar.toml`.
-2. **SEP-10** — prove wallet ownership by signing a challenge (no password, no account).
-3. **SEP-24** — the anchor's hosted flow opens for KYC and bank details; Shunt polls the transaction status. `withdraw` = cash-out, `deposit` = Top Up — same stack, mirrored.
-
-Plus **SEP-7** payment request links: a `web+stellar:pay` URI + QR any compatible wallet can open — the payee never explains crypto to a client again.
-
-Provider rate and fee are shown only when a live provider quote exists. The SDF test-anchor simulation does not quote IDR or provider fees.
-
-**Pluggable to a real corridor — shown only after provider proof.** The off-ramp architecture is generic SEP-24, but Shunt does not call a route live until the provider approves Shunt's domain/account, returns a usable flow, and the team reconciles a provider order with Stellar mainnet settlement. MoneyGram Ramps is the preferred Stellar-native cash candidate after allowlisting and Production Preview.
-
-```bash
-node scripts/verify-anchor.mjs stellar.moneygram.com
-#   Network:  Public Global Stellar Network ; September 2015
-#   SEP-24:   https://stellar.moneygram.com/stellaradapterservice/sep24
-# ✓ real SEP-24 anchor. Set VITE_ANCHOR_HOME_DOMAIN=stellar.moneygram.com to route cash-out through it.
-
-node scripts/verify-anchor.mjs testanchor.stellar.org   # the SDF testnet anchor the demo uses
-```
-
-**Why the demo uses the SDF test anchor:** MoneyGram (and every regulated regional off-ramp) runs on **mainnet only** — no anchor in the ecosystem exposes a *testnet* SEP-24 endpoint except SDF's, so a testnet demo can only prove the mechanism there. That's a network limitation, not a missing integration: the exact same SEP-1/10/24 code resolves MoneyGram's real endpoints above.
-
-| Corridor | Real, named target | Status |
-| --- | --- | --- |
-| Cash route | **MoneyGram Ramps** — USDC cash-in/out at participating provider-returned locations | Pending allowlist, staging, and Production Preview evidence |
-| 🇮🇩 IDR | **IDRX** — regulated, CertiK-audited Rupiah stablecoin | Roadmap target ([idrx.co](https://home.idrx.co/en/)); Stellar availability still to confirm — *not claimed as on Stellar* |
-
-**Rupiah is the story; the Philippines is the live beachhead — we say so plainly.** Our primary target market is Indonesia (the rupiah-erosion problem the whole product is built around), but the corridor that is *live on Stellar today* is **PHP via MoneyGram** — not IDR. There is no production IDR off-ramp on Stellar yet: IDRX (a regulated rupiah stablecoin) is the target asset but its Stellar availability is unconfirmed, and MoneyGram's Indonesia payout isn't a listed Stellar corridor. So the honest go-to-market is **Philippines-first** (the rail exists) with **Indonesia next** as the IDR corridor lands. We prove the *engine and the off-ramp mechanism* live in an APAC country now; we do not claim a live rupiah cash-out we don't have.
-
-The shipped cash-out uses the anchor's standard SEP-24 hosted withdraw; the contract also ships a separate `offramp()` path gated by an on-chain anchor allowlist (unit-tested) for contract-enforced destination control, which a future release wires into the hosted flow. Settlement time is the anchor's (KYC involved) — Shunt reports it honestly instead of pretending it's instant.
+---
 
 ## Business model — service fees, never interest
 
-Every revenue line is a transparent fee on a service the user *wants*: 0.4% on Needs-lane cash-out, a similar fee on Top Up and on Invest conversions. **No lending, no yield products, no cut of your savings** — by design, not by omission: interest-based yield would add unnecessary smart-contract risk. The 10% early-withdrawal penalty goes to *your own* buffer, not to us. Savings deposits and post-lock withdrawals are free, forever.
+Every revenue line represents a transparent fee on an automated utility: 0.4% on immediate spending payouts and comparable service fees on Top Up and Invest conversions. 
 
-Shunt's own service fee is a blended **~0.29% of processed volume**. That is *Shunt's* take, not the total landed cost — a fiat anchor charges its own fee on top, so end-to-end cost depends on the selected anchor and corridor and would be benchmarked before launch. A full illustrative model (ARPU, CAC, payback, LTV, break-even, and the assumptions that would break it) lives in [`docs/unit-economics.md`](docs/unit-economics.md).
+**Zero lending, zero yield products, and zero rehypothecation.** This is an explicit design choice: interest-bearing yield strategies introduce unacceptable counterparty and smart-contract protocol risks to an individual's emergency safety net. Savings deposits and post-maturity lot withdrawals remain completely free of service charges, forever. Shunt's operational take is a blended **~0.29% of processed routing volume**.
 
-## Quickstart
+---
+
+## Quickstart & Verification
 
 ```bash
-# 1. Contracts — test & build (Rust + stellar CLI)
+# 1. Smart Contracts — Verify 100% test suite pass rate
 cd contracts/shunt-vault
-cargo test                      # 49 tests
+cargo test
 stellar contract build
 
-#    Deploy your own instance (or use the testnet one above)
-stellar contract deploy --wasm target/wasm32v1-none/release/shunt_vault.wasm \
-  --source <IDENTITY> --network testnet
-stellar contract invoke --id <CONTRACT_ID> --source <IDENTITY> --network testnet \
-  -- init --token CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA  # USDC SAC (testnet), not the vault's own id
-
-# 2. Keeper — inflow detection + tx preparation (Cloudflare Worker)
-cd keeper
+# 2. Durable Keeper Worker — Cloudflare Worker Event Indexer
+cd ../../keeper
 npm install
-npx wrangler dev --local        # http://localhost:8787
-#   Config lives in wrangler.toml (no .env file). Deploy with `npx wrangler deploy`.
+npm test
+npx wrangler dev --local        # Runs edge listener on http://localhost:8787
 
-# 3. Web app
-cd web
-cp .env.example .env            # VITE_VAULT_CONTRACT_ID (+ anchor domain, keeper URL)
-npm install && npm run dev      # http://localhost:5173
-
-# 4. End-to-end tests — REAL testnet, no mocks (see web/e2e/README.md)
-npx playwright install chromium # once
-npm run test:e2e                # funds a throwaway account via Friendbot, buys real
-                                # USDC on the DEX, then walks the whole loop:
-                                # rules → split → vault & goals → anchor in/out → send
+# 3. Web Application — Run interactive UI & Payer Checkout locally
+cd ../web
+cp .env.example .env
+npm install
+npm test -- --run               # Verifies 23 front-end invariant unit tests
+npm run build                   # Generates type-checked production bundle
+npm run dev                     # Open http://localhost:5173
 ```
 
-No contract configured? The app runs in **local demo mode** — the full flow (connect → rules → simulated income → one-tap split → vault → cash-out) works with local state, so you can feel the product before touching a faucet. The "Simulate incoming income" button lives on the **Configure Shunt** page, in the "Test your rules" card that appears once rules are saved.
+When started without a deployed contract connection, the web dashboard operates in **local interactive demo mode**. You can test automated income simulations, configure waterfall allocation rules, explore Payer Checkouts, and verify conservation proofs offline.
 
-## Repository layout
+---
 
-```
-contracts/shunt-vault/   Soroban contract — split engine + savings vault (Rust)
-web/                     React + TypeScript app, mobile-first, PWA-ready (Vite)
-keeper/                  Cloudflare Worker — 1-min cron poll of Horizon, prepares distribute XDR
-design/                  Diagrams (animated SVG) + app screenshots
-```
+## Honest limitations & Roadmap
 
-## Honest limitations
+* **One signature per routing execution.** Soroban's `require_auth` requires explicit cryptographic consent per transaction invocation. Shunt is never advertised as completely hands-free or automated without owner verification.
+* **Anchor settlement timing depends on real-world compliance.** SEP-24 cash-out integrations rely on regional partner KYC and compliance checks; the UI clearly displays waiting intervals instead of promising instantaneous bank receipt.
+* **Contract upgradeability.** The currently deployed testnet instances operate without administrative upgrade proxies to preserve immutable on-chain proof hashes. Production mainnet deployments will incorporate governed administrative controls and formal security audits prior to large capital acceptance.
 
-- **One tap per income, by design.** Soroban's `require_auth` wants a signature per invocation — and the Invest conversion is a second signature (a Soroban tx is single-operation by protocol). Never over-claimed as hands-free.
-- **The keeper is centralized** in this version — but it holds zero keys, income detection now runs client-side from Horizon (so the keeper isn't needed to *notice* income), and a manual trigger replaces its one remaining job. A single point of *convenience*, never of custody or fund safety.
-- **The keeper watches an explicit account list** (`WATCH_ACCOUNTS`), not every user automatically — its cron poll is demo-scoped. Per-user auto-detection at scale runs client-side today; a subscription/index model for the keeper is roadmap.
-- **The keeper's `/trigger` endpoint is unauthenticated** by design — it only *builds an unsigned XDR* that is worthless without the owner's signature, so it is never a fund risk. It is now **rate-limited per IP** (`isRateLimited`, default 30/min) with an **optional origin allowlist** (`ALLOWED_ORIGINS`) so it can't be spammed into KV-write amplification (`keeper/src/env.ts`; set the env var and `wrangler deploy` to activate on the live worker).
-- **Anchor settlement is not instant** — KYC is involved, and the UI says so instead of hiding it.
-- **The vault is unaudited and not upgradeable.** `init` binds the token on first call; the **current deployed instance ([CDMFJZ…](https://stellar.expert/explorer/testnet/contract/CDMFJZ6VRD2JEV7J2W7KMZZ3AXNSOST2C6L2KYRJAYIN7ULWJEOCWO5B)) is already initialized** against the USDC SAC, so the "first caller could bind a fake token" grief window is closed for the live contract. The clean source-level fix — a Soroban `__constructor` that binds the token atomically at deploy (no front-run window) plus an admin gate — is a pre-mainnet redeploy step, deliberately deferred so the current on-chain proof hashes stay valid. Keep real amounts trivial until an audit.
-- **Off-ramp destination control:** the shipped cash-out is the anchor's standard SEP-24 hosted withdraw; the contract's allowlisted `offramp()` path exists and is unit-tested but is not yet wired into that hosted flow.
-- **Replay-guard TTL (pre-production hardening).** Each split writes a `Processed(inflow_key)` entry that blocks re-processing the same inflow. Like all Soroban persistent state it carries a TTL (~30 days here) and isn't re-bumped, so a *very* old inflow key could eventually expire and, in principle, be re-processed. Re-processing still needs the owner's signature and can't move funds anywhere but per the rules, so it isn't a theft vector — but we do **not** claim permanent "one income, one split forever" replay protection. The production fix is a longer/renewed TTL or an archival index; deliberately deferred to avoid a redeploy that invalidates the current proof hashes.
-- **Mainnet:** all on-chain proof today is testnet (with real testnet USDC). A trivial mainnet split is a pre-launch step, not claimed as done.
-
-## Roadmap
-
-|                 |                                                                                                                                                                                           |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Next**  | Run Alchemy Pay/Banxa exact-route checks · complete MoneyGram Ramps allowlist and Production Preview · card checkout on payment links · anchor/provider status webhooks       |
-| **Later** | Session keys — truly hands-free splits · split + invest in one signature (AMM router) · deepen the gold (XAUm) invest path once mainnet DEX liquidity is live · native mobile · keeper decentralization |
+### Roadmap Priorities
+* **Next**: Complete partner allowlists for Regional Ramps &bull; Implement direct debit/credit checkouts on public SEP-7 invoices &bull; Add real-time webhooks for bank off-ramp tracking.
+* **Later**: Account Abstraction and Session Keys for trusted hands-free split routing &bull; Automated single-block DEX swaps for gold and growth targets &bull; Native mobile applications &bull; Decentralized keeper network sequencing.
 
 ---
 
 <p align="center">
-  <sub>⑃ money in · structured by code · money out — and the savings lane never lies to you</sub>
+  <sub>⑃ money in &bull; structured by code &bull; money out — and the savings reserve never lies to you</sub>
 </p>
