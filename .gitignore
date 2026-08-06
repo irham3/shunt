@@ -21,3 +21,11 @@ web/playwright-report/
 /.tmp-*/
 /scripts/
 /videos/
+/video/
+/test-results/
+
+# Documentation & submission archives
+DESIGN.md
+PRD.md
+SUBMISSION.md
+CHANGELOG.md
