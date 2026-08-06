@@ -43,7 +43,7 @@ export function Home() {
         style={{
           background: "#101112",
           border: "1px solid #1c1d20",
-          borderRadius: 24,
+          borderRadius: 12,
           padding: "32px 36px",
           marginBottom: 32,
           position: "relative",
@@ -112,7 +112,7 @@ export function Home() {
           style={{
             background: "#101112",
             border: "1px solid #1c1d20",
-            borderRadius: 16,
+            borderRadius: 12,
             padding: "20px",
             textDecoration: "none",
             display: "flex",
@@ -135,7 +135,7 @@ export function Home() {
           style={{
             background: "#101112",
             border: "1px solid #1c1d20",
-            borderRadius: 16,
+            borderRadius: 12,
             padding: "20px",
             textDecoration: "none",
             display: "flex",
@@ -158,7 +158,7 @@ export function Home() {
           style={{
             background: "#101112",
             border: "1px solid #1c1d20",
-            borderRadius: 16,
+            borderRadius: 12,
             padding: "20px",
             textDecoration: "none",
             display: "flex",
@@ -181,7 +181,7 @@ export function Home() {
           style={{
             background: "#101112",
             border: "1px solid #1c1d20",
-            borderRadius: 16,
+            borderRadius: 12,
             padding: "20px",
             textDecoration: "none",
             display: "flex",
@@ -208,7 +208,7 @@ export function Home() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 40 }}>
         {/* Bento 1: Emergency Reserve */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
@@ -233,7 +233,7 @@ export function Home() {
         </div>
 
         {/* Bento 2: Obligation & Tax Reserve */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
@@ -258,7 +258,7 @@ export function Home() {
         </div>
 
         {/* Bento 3: Timelocked Goal Lots */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
@@ -283,7 +283,7 @@ export function Home() {
         </div>
 
         {/* Bento 4: Spendable Wallet Pool */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8c9099", letterSpacing: "0.05em" }}>
@@ -309,7 +309,7 @@ export function Home() {
       </div>
 
       {/* Recent Routing & Split Activity */}
-      <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+      <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#f4f5f6", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <i className="ph-fill ph-pulse" style={{ color: "#cdf14a" }} />

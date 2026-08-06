@@ -47,7 +47,7 @@ export function SavingsVault() {
       {/* Grid of 3 Reserve Sections */}
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
         {/* Section 1: Emergency Reserve Instant Withdraw */}
-        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #1c1d20", paddingBottom: 20, marginBottom: 20 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -107,7 +107,7 @@ export function SavingsVault() {
         </section>
 
         {/* Section 2: Obligation Reserve with Cooldown */}
-        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #1c1d20", paddingBottom: 20, marginBottom: 20 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -129,7 +129,7 @@ export function SavingsVault() {
 
           {v2ObligationWithdrawal ? (
             /* Pending Cooldown Card */
-            <div style={{ background: "#0c0d0f", border: "1px solid #1c1d20", borderRadius: 16, padding: 22 }}>
+            <div style={{ background: "#0c0d0f", border: "1px solid #1c1d20", borderRadius: 12, padding: 22 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                 <div>
                   <span style={{ color: "#f4f5f6", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
@@ -218,7 +218,7 @@ export function SavingsVault() {
         </section>
 
         {/* Section 3: Timelocked Goal Lots */}
-        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+        <section style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, borderBottom: "1px solid #1c1d20", paddingBottom: 20, marginBottom: 20 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>

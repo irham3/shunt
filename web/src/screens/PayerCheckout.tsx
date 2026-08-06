@@ -51,7 +51,7 @@ export function PayerCheckout() {
       {/* Brand & Security Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 44, height: 44, borderRadius: 8, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <i className="ph-fill ph-arrows-split" style={{ color: "#cdf14a", fontSize: 24 }} />
           </div>
           <div>
@@ -66,13 +66,13 @@ export function PayerCheckout() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#101112", border: "1px solid #1c1d20", padding: "6px 14px", borderRadius: 99 }}>
           <i className="ph-fill ph-lock" style={{ color: "#cdf14a" }} />
-          <span style={{ fontSize: 12, color: "#8c9099", fontWeight: 600 }}>Soroban Verified</span>
+          <span style={{ fontSize: 12, color: "#8c9099", fontWeight: 600 }}>Soroban Network</span>
         </div>
       </div>
 
       {completedReceipt ? (
         /* Success Receipt Card */
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 24, padding: "36px 32px", textAlign: "center", boxShadow: "0 16px 40px rgba(0, 0, 0, 0.5)" }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: "36px 32px", textAlign: "center", boxShadow: "0 16px 40px rgba(0, 0, 0, 0.5)" }}>
           <div style={{ width: 64, height: 64, borderRadius: 99, background: "#191a1e", border: "2px solid #cdf14a", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <i className="ph-fill ph-check" style={{ color: "#cdf14a", fontSize: 32 }} />
           </div>
@@ -84,7 +84,7 @@ export function PayerCheckout() {
             The protocol distributed the deposit across the recipient's reserve pools in a single transaction.
           </p>
 
-          <div style={{ background: "#0c0d0f", border: "1px solid #1a1b20", borderRadius: 16, padding: 24, marginBottom: 28, textAlign: "left", fontFamily: "monospace" }}>
+          <div style={{ background: "#0c0d0f", border: "1px solid #1a1b20", borderRadius: 12, padding: 24, marginBottom: 28, textAlign: "left", fontFamily: "monospace" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, borderBottom: "1px dashed #1e2026", paddingBottom: 12 }}>
               <span style={{ color: "#8c9099" }}>Transaction Hash</span>
               <span style={{ color: "#f4f5f6", fontWeight: 700 }}>{completedReceipt.txHash}</span>
@@ -116,7 +116,7 @@ export function PayerCheckout() {
               onClick={handleReset}
               style={{
                 padding: "12px 28px",
-                borderRadius: 12,
+                borderRadius: 8,
                 background: "#cdf14a",
                 color: "#0a0c07",
                 fontWeight: 700,
@@ -133,7 +133,7 @@ export function PayerCheckout() {
         /* Checkout Interactive Form */
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 24 }}>
           {/* Invoice Parameter Input Panel */}
-          <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26 }}>
+          <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#f4f5f6", marginBottom: 20, display: "flex", alignItems: "center", gap: 8, margin: "0 0 20px 0" }}>
               <i className="ph-fill ph-receipt" style={{ color: "#cdf14a" }} />
               Invoice Payment Details
@@ -143,7 +143,7 @@ export function PayerCheckout() {
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#8c9099", marginBottom: 6 }}>
                 Payment Amount ($ USDC)
               </label>
-              <div style={{ display: "flex", alignItems: "center", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 12, padding: "4px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 8, padding: "4px 16px" }}>
                 <span style={{ fontSize: 20, fontWeight: 800, color: "#cdf14a" }}>$</span>
                 <input
                   type="number"
@@ -162,7 +162,7 @@ export function PayerCheckout() {
                 type="text"
                 value={memoInput}
                 onChange={(e) => setMemoInput(e.target.value)}
-                style={{ width: "100%", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 12, padding: "12px 14px", color: "#f4f5f6", fontSize: 14, outline: "none" }}
+                style={{ width: "100%", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 8, padding: "12px 14px", color: "#f4f5f6", fontSize: 14, outline: "none" }}
               />
             </div>
 
@@ -174,16 +174,16 @@ export function PayerCheckout() {
                 type="text"
                 value={payerAddress}
                 onChange={(e) => setPayerAddress(e.target.value)}
-                style={{ width: "100%", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 12, padding: "12px 14px", color: "#f4f5f6", fontFamily: "monospace", fontSize: 13, outline: "none" }}
+                style={{ width: "100%", background: "#0c0d0f", border: "1px solid #27282b", borderRadius: 8, padding: "12px 14px", color: "#f4f5f6", fontFamily: "monospace", fontSize: 13, outline: "none" }}
               />
             </div>
 
-            {/* Cryptographic Policy Protection Notice */}
-            <div style={{ background: "#0c0d0f", border: "1px solid #282a2f", borderRadius: 12, padding: "14px 16px", marginTop: 20 }}>
+            {/* Policy Protection Notice */}
+            <div style={{ background: "#0c0d0f", border: "1px solid #282a2f", borderRadius: 8, padding: "14px 16px", marginTop: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: isVersionMatch ? "#f4f5f6" : "#ef4444", display: "flex", alignItems: "center", gap: 6 }}>
                   <i className={`ph-fill ${isVersionMatch ? "ph-shield-check" : "ph-warning"}`} style={{ fontSize: 16, color: isVersionMatch ? "#cdf14a" : "#ef4444" }} />
-                  {isVersionMatch ? "Cryptographic Split Protection Active" : "Policy Revision Mismatch!"}
+                  {isVersionMatch ? "Policy Revision Lock Active" : "Policy Revision Mismatch!"}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#8c9099" }}>
                   Expected Revision #{expectedPolicyVersion} (Live: #{v2Policy.version})
@@ -198,7 +198,7 @@ export function PayerCheckout() {
           </div>
 
           {/* Real-Time Split Preview Panel */}
-          <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 20, padding: 26, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#f4f5f6", marginBottom: 16, display: "flex", alignItems: "center", gap: 8, margin: "0 0 16px 0" }}>
                 <i className="ph-fill ph-chart-pie-slice" style={{ color: "#cdf14a" }} />
@@ -209,7 +209,7 @@ export function PayerCheckout() {
               </p>
 
               {/* Breakdown Table */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, background: "#0c0d0f", padding: 18, borderRadius: 16, border: "1px solid #1a1b20" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, background: "#0c0d0f", padding: 18, borderRadius: 12, border: "1px solid #1a1b20" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ width: 8, height: 8, borderRadius: 99, background: "#cdf14a" }} />
@@ -248,7 +248,7 @@ export function PayerCheckout() {
               style={{
                 width: "100%",
                 padding: "16px 24px",
-                borderRadius: 14,
+                borderRadius: 8,
                 fontWeight: 800,
                 fontSize: 16,
                 background: isProcessing || !isVersionMatch ? "#191a1e" : "#cdf14a",

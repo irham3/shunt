@@ -65,7 +65,7 @@ export function PolicyEditor() {
           alignItems: "flex-start",
           background: "#101112",
           border: "1px solid #1c1d20",
-          borderRadius: 16,
+          borderRadius: 12,
           padding: "24px 28px",
           marginBottom: 32,
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
@@ -129,7 +129,7 @@ export function PolicyEditor() {
         style={{
           background: "#101112",
           border: "1px solid #1c1d20",
-          borderRadius: 20,
+          borderRadius: 12,
           padding: "28px",
           marginBottom: 36,
           position: "relative",
@@ -338,7 +338,7 @@ export function PolicyEditor() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {/* Card 1: Emergency Reserve */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 16, padding: 24 }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -400,7 +400,7 @@ export function PolicyEditor() {
         </div>
 
         {/* Card 2: Obligation Reserve */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 16, padding: 24 }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -462,7 +462,7 @@ export function PolicyEditor() {
         </div>
 
         {/* Card 3: Goal Lots Reserve */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 16, padding: 24 }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -524,7 +524,7 @@ export function PolicyEditor() {
         </div>
 
         {/* Card 4: Spend Destination */}
-        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 16, padding: 24 }}>
+        <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: "#191a1e", border: "1px solid #282a2f", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <i className="ph-fill ph-wallet" style={{ color: "#f4f5f6", fontSize: 22 }} />
