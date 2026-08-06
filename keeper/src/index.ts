@@ -8,6 +8,21 @@ import {
   confirmedTtlSeconds,
   type Env,
 } from "./env";
+import {
+  getDurableCursor,
+  setDurableCursor,
+  listIndexedEvents,
+  pollSorobanContractEvents,
+  type IndexedEvent,
+} from "./indexer";
+
+export {
+  getDurableCursor,
+  setDurableCursor,
+  listIndexedEvents,
+  pollSorobanContractEvents,
+  type IndexedEvent,
+};
 
 export type KeeperJobStatus =
   | "detected"
@@ -367,6 +382,7 @@ export async function confirmJob(
 export default {
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(poll(env));
+    ctx.waitUntil(pollSorobanContractEvents(env));
   },
 
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -395,6 +411,27 @@ export default {
           "failed",
         ],
       }, 200, cors);
+    }
+
+    const indexerEventsMatch = url.pathname.match(/^\/indexer\/events\/([^/]+)$/);
+    if (indexerEventsMatch && request.method === "GET") {
+      return json(await listIndexedEvents(env, indexerEventsMatch[1]), 200, cors);
+    }
+
+    if (url.pathname === "/indexer/cursor") {
+      if (request.method === "GET") {
+        return json(await getDurableCursor(env), 200, cors);
+      }
+      if (request.method === "POST") {
+        const body = (await request.json().catch(() => ({}))) as { cursor?: string };
+        if (!body.cursor) return json({ error: "cursor required" }, 400, cors);
+        return json(await setDurableCursor(env, body.cursor), 200, cors);
+      }
+    }
+
+    if (url.pathname === "/indexer/poll" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as { contractId?: string };
+      return json(await pollSorobanContractEvents(env, body.contractId), 200, cors);
     }
 
     const pendingMatch = url.pathname.match(/^\/pending\/([^/]+)$/);
