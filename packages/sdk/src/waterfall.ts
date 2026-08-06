@@ -36,11 +36,14 @@ export function calculateWaterfall(
   // Tier 2: Obligation & Tax Reserve
   const obligation = Math.floor((afterEmergency * obligationBps) / 10000);
 
+  // Remaining after obligation withholding
+  const afterObligation = afterEmergency - obligation;
+
   // Tier 3: Timelocked Goal Lots
-  const goal = Math.floor((afterEmergency * goalBps) / 10000);
+  const goal = Math.floor((afterObligation * goalBps) / 10000);
 
   // Residual Spendable Pool (absorbs rounding division remainder)
-  const spendable = Math.max(0, afterEmergency - obligation - goal);
+  const spendable = Math.max(0, afterObligation - goal);
 
   return {
     gross,

@@ -49,16 +49,16 @@ export function computeWaterfallAllocation(
   goalBps: number
 ) {
   const gap = Math.max(0, emergencyTarget - emergencyBalance);
-  const cap = (gross * emergencyTopupBps) / 10000;
+  const cap = Math.floor((gross * emergencyTopupBps) / 10000);
   const emergency = Math.min(gap, cap);
 
   const afterEmergency = gross - emergency;
-  const obligation = (afterEmergency * obligationBps) / 10000;
+  const obligation = Math.floor((afterEmergency * obligationBps) / 10000);
 
   const afterObligation = afterEmergency - obligation;
-  const goal = (afterObligation * goalBps) / 10000;
+  const goal = Math.floor((afterObligation * goalBps) / 10000);
 
-  const spendable = Math.max(0, gross - emergency - obligation - goal);
+  const spendable = Math.max(0, afterObligation - goal);
   return { gross, emergency, obligation, goal, spendable };
 }
 

@@ -14,9 +14,10 @@ describe("Shunt v2 SDK Deterministic Waterfall Calculations", () => {
     
     expect(alloc.emergency).toBe(875); // 35% of 2500
     const remaining = 2500 - 875; // 1625
-    expect(alloc.obligation).toBe(Math.floor(remaining * 0.20)); // 325
-    expect(alloc.goal).toBe(Math.floor(remaining * 0.20)); // 325
-    expect(alloc.spendable).toBe(remaining - 325 - 325); // 975
+    expect(alloc.obligation).toBe(325); // 20% of 1625
+    const afterObligation = 1625 - 325; // 1300
+    expect(alloc.goal).toBe(260); // 20% of 1300
+    expect(alloc.spendable).toBe(1300 - 260); // 1040
 
     const totalSum = alloc.emergency + alloc.obligation + alloc.goal + alloc.spendable;
     expect(totalSum).toBe(gross);
