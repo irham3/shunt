@@ -16,7 +16,7 @@ export function AllocationBar({ buckets }: { buckets: Bucket[] }) {
         aria-label={buckets.map((b) => `${b.name} ${b.pct}%`).join(", ")}
       >
         {buckets.map((b) => (
-          <div key={b.id} style={{ width: `${b.pct}%`, background: b.color, transition: "width .3s" }} />
+          <div key={b.id} style={{ width: `${b.pct}%`, background: b.color }} />
         ))}
       </div>
       <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>

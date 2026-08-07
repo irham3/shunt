@@ -205,7 +205,6 @@ export function PolicyEditor() {
                 fontSize: 11,
                 fontWeight: 800,
                 color: "#0a0c07",
-                transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
               title={`Emergency: $${preview.emergency.toFixed(2)}`}
             >
@@ -223,7 +222,6 @@ export function PolicyEditor() {
                 fontSize: 11,
                 fontWeight: 800,
                 color: "#0a0c07",
-                transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
               title={`Obligation: $${preview.obligation.toFixed(2)}`}
             >
@@ -241,7 +239,6 @@ export function PolicyEditor() {
                 fontSize: 11,
                 fontWeight: 800,
                 color: "#f4f5f6",
-                transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
               title={`Goal Lots: $${preview.goal.toFixed(2)}`}
             >
@@ -259,7 +256,6 @@ export function PolicyEditor() {
                 fontSize: 11,
                 fontWeight: 800,
                 color: "#8c9099",
-                transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
               title={`Spendable Pool: $${preview.spendable.toFixed(2)}`}
             >

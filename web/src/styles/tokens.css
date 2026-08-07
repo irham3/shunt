@@ -520,16 +520,9 @@ input[type="number"]:focus {
   z-index: 0;
   pointer-events: none;
 }
-/* Barely-there dot grid — one flat neutral texture, faded top-to-bottom so
-   it never competes with content. Pure CSS, no canvas. */
+/* Decorative dot grid removed as per design standards (AI slop) */
 .ab-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 34px 34px;
-  -webkit-mask-image: radial-gradient(120% 70% at 50% 0%, #000 0%, transparent 72%);
-  mask-image: radial-gradient(120% 70% at 50% 0%, #000 0%, transparent 72%);
-  opacity: 0.7;
+  display: none;
 }
 
 /* Interactive Threads field (reactbits) — pinned to the top like a hero
@@ -777,13 +770,15 @@ input[type="number"]:focus {
   position: absolute;
   left: 0;
   bottom: -4px;
-  width: 0;
+  width: 100%;
   height: 1px;
   background: var(--color-accent-primary);
-  transition: width 0.25s var(--ease-standard);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s var(--ease-standard);
 }
 .lp-nav-links a:hover::after {
-  width: 100%;
+  transform: scaleX(1);
 }
 @media (max-width: 760px) {
   .lp-nav-links a {
@@ -915,10 +910,11 @@ input[type="number"]:focus {
   width: 34px;
   border-radius: 999px;
   margin-bottom: 16px;
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-standard);
 }
 .lp-lane-card:hover .lp-lane-rule {
-  width: 52px;
-  transition: width 0.3s var(--ease-standard);
+  transform: scaleX(1.529); /* 52 / 34 = 1.529 */
 }
 .lp-step {
   display: flex;
