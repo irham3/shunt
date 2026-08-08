@@ -131,7 +131,7 @@ export function PayerCheckout() {
         </div>
       ) : (
         /* Checkout Interactive Form */
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: 24 }}>
           {/* Invoice Parameter Input Panel */}
           <div style={{ background: "#101112", border: "1px solid #1c1d20", borderRadius: 12, padding: 26 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#f4f5f6", marginBottom: 20, display: "flex", alignItems: "center", gap: 8, margin: "0 0 20px 0" }}>

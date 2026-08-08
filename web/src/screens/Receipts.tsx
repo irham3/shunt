@@ -98,7 +98,7 @@ export function Receipts() {
       </section>
 
       {/* Main Layout: Receipt List and Detail Drawer */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 24 }}>
         {/* Receipt History List */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f4f5f6", margin: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

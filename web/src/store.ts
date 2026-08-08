@@ -159,7 +159,7 @@ interface ShuntState {
   /** Splits completed since the last auto-escalation bump. */
   splitsSinceEscalation: number;
   activity: ActivityItem[];
-  toast: string | null;
+  toast: { msg: string; type: "success" | "error" } | null;
 
   setAddress: (a: string | null) => void;
   setWalletId: (w: string | null) => void;
@@ -669,7 +669,7 @@ export const useShunt = create<ShuntState>()(
         }),
 
       setLockUntil: (lockUntil) => set({ lockUntil }),
-      showToast: (toast) => set({ toast }),
+      showToast: (msg, type: "success" | "error" = "success") => set({ toast: { msg, type } }),
       clearToast: () => set({ toast: null }),
 
       syncFromChain: async (address: string) => {
@@ -821,7 +821,7 @@ export const useShunt = create<ShuntState>()(
             ...patch,
             version: prev.version + 1,
           },
-          toast: "Income routing policy updated successfully (v" + (prev.version + 1) + ")",
+          toast: { msg: "Income routing policy updated successfully (v" + (prev.version + 1) + ")", type: "success" },
         });
       },
 
@@ -883,7 +883,7 @@ export const useShunt = create<ShuntState>()(
             },
             ...get().activity,
           ],
-          toast: `Payment of ${grossUsdc} USDC routed cleanly across reserves!`,
+          toast: { msg: `Payment of ${grossUsdc} USDC routed cleanly across reserves!`, type: "success" },
         });
 
         return receipt;
@@ -892,7 +892,7 @@ export const useShunt = create<ShuntState>()(
       withdrawV2Emergency: (amountUsdc) => {
         const balances = get().v2Balances;
         if (amountUsdc > balances.emergency) {
-          set({ toast: "Insufficient Emergency reserve balance!" });
+          set({ toast: { msg: "Insufficient Emergency reserve balance!", type: "error" } });
           return;
         }
         set({
@@ -912,14 +912,14 @@ export const useShunt = create<ShuntState>()(
             },
             ...get().activity,
           ],
-          toast: `Withdrew ${amountUsdc} USDC instantly from Emergency reserve`,
+          toast: { msg: `Withdrew ${amountUsdc} USDC instantly from Emergency reserve`, type: "success" },
         });
       },
 
       requestV2ObligationWithdrawal: (amountUsdc) => {
         const balances = get().v2Balances;
         if (amountUsdc > balances.obligation) {
-          set({ toast: "Insufficient Obligation reserve balance!" });
+          set({ toast: { msg: "Insufficient Obligation reserve balance!", type: "error" } });
           return 0;
         }
         const wid = Date.now();
@@ -930,7 +930,7 @@ export const useShunt = create<ShuntState>()(
             createdAt: Date.now(),
             executeAfter: Date.now() + get().v2Policy.obligationCooldownSeconds * 1000,
           },
-          toast: `Obligation withdrawal requested. Cooldown period started.`,
+          toast: { msg: `Obligation withdrawal requested. Cooldown period started.`, type: "success" },
         });
         return wid;
       },
@@ -938,7 +938,7 @@ export const useShunt = create<ShuntState>()(
       cancelV2ObligationWithdrawal: (_withdrawalId) => {
         set({
           v2ObligationWithdrawal: null,
-          toast: `Pending obligation withdrawal cancelled.`,
+          toast: { msg: `Pending obligation withdrawal cancelled.`, type: "success" },
         });
       },
 
@@ -946,7 +946,7 @@ export const useShunt = create<ShuntState>()(
         const req = get().v2ObligationWithdrawal;
         if (!req) return;
         if (Date.now() < req.executeAfter) {
-          set({ toast: "Cooldown period has not elapsed yet!" });
+          set({ toast: { msg: "Cooldown period has not elapsed yet!", type: "error" } });
           return;
         }
         const balances = get().v2Balances;
@@ -968,7 +968,7 @@ export const useShunt = create<ShuntState>()(
             },
             ...get().activity,
           ],
-          toast: `Obligation withdrawal of ${req.amountUsdc} USDC executed successfully!`,
+          toast: { msg: `Obligation withdrawal of ${req.amountUsdc} USDC executed successfully!`, type: "success" },
         });
       },
 
@@ -984,7 +984,7 @@ export const useShunt = create<ShuntState>()(
         });
 
         if (totalClaimed === 0) {
-          set({ toast: "No matured goal lots ready to claim." });
+          set({ toast: { msg: "No matured goal lots ready to claim.", type: "error" } });
           return;
         }
 
@@ -1007,7 +1007,7 @@ export const useShunt = create<ShuntState>()(
             },
             ...get().activity,
           ],
-          toast: `Successfully claimed ${totalClaimed} USDC from matured goal lots!`,
+          toast: { msg: `Successfully claimed ${totalClaimed} USDC from matured goal lots!`, type: "success" },
         });
       },
       addV2Receipt: (receipt) => {
