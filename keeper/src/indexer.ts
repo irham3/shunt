@@ -1,4 +1,5 @@
 import type { Env } from "./env";
+import { xdr, scValToNative } from "@stellar/stellar-sdk";
 
 export interface IndexedEvent {
   id: string;
@@ -120,16 +121,50 @@ export async function pollSorobanContractEvents(
 
     // Map RPC raw events to Shunt IndexedEvent format
     const parsedEvents: IndexedEvent[] = rpcEvents.map((evt: any) => {
-      // Decoding xdr.scVal() payload logic goes here.
-      // For immediate compatibility with web parsing expectations:
+      let payload: Record<string, any> = {};
+      let evtType = "Unknown";
+      
+      try {
+        if (evt.topic && evt.topic.length > 0) {
+          const topic0Val = xdr.ScVal.fromXDR(evt.topic[0], "base64");
+          if (topic0Val.switch() === xdr.ScValType.scvSymbol()) {
+            evtType = topic0Val.sym().toString();
+          }
+        }
+
+        if (evt.value && evt.value.xdr) {
+          const val = xdr.ScVal.fromXDR(evt.value.xdr, "base64");
+          const native = scValToNative(val) as Record<string, any>;
+          
+          // Convert any Uint8Arrays or Buffers (like request_id or hashes) to hex strings
+          // and any BigInts to strings for JSON serialization
+          for (const [k, v] of Object.entries(native)) {
+            if (v instanceof Uint8Array || Buffer.isBuffer(v)) {
+              payload[k] = Buffer.from(v).toString("hex");
+            } else if (typeof v === "bigint") {
+              payload[k] = v.toString();
+            } else {
+              payload[k] = v;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to parse event XDR:", err);
+      }
+
+      let account = "UNKNOWN_ACCOUNT";
+      if (payload.recipient) account = payload.recipient as string;
+      else if (payload.owner) account = payload.owner as string;
+      else if (payload.payer) account = payload.payer as string;
+
       return {
         id: evt.id,
-        type: "PaymentRouted",
-        account: "GA_PRIMARY_RECIPIENT_WALLET_INDEXER", 
+        type: evtType as any,
+        account, 
         contractId: evt.contractId,
         ledger: parseInt(evt.ledger, 10),
         timestamp: evt.ledgerClosedAt || new Date().toISOString(),
-        payload: { gross: 3500, emergency: 1225, obligation: 455, goal: 455, spendable: 1365, policyVersion: 2 }, 
+        payload, 
       };
     });
 
