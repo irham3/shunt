@@ -4,6 +4,7 @@ import type {
   WaterfallAllocation,
   RoutingReceipt,
 } from "./types.js";
+import { Contract, nativeToScVal } from "@stellar/stellar-sdk";
 import { calculateWaterfall } from "./waterfall.js";
 
 export interface ShuntClientConfig {
@@ -83,10 +84,28 @@ export class ShuntClient {
     grossAmount: number,
     requestId: string,
     expectedPolicyVersion: number
-  ): Promise<{ operation: string; xdrPayloadStub: string }> {
+  ): Promise<{ operation: string; xdrPayload: string }> {
+    const contract = new Contract(this.config.contractId);
+    
+    let reqIdBuf = Buffer.alloc(32);
+    if (requestId.startsWith("0x")) {
+      reqIdBuf = Buffer.from(requestId.slice(2).padEnd(64, "0").slice(0, 64), "hex");
+    } else {
+      reqIdBuf.write(requestId, 0, 32, "utf8");
+    }
+
+    const op = contract.call(
+      "route_payment",
+      nativeToScVal(payer, { type: "address" }),
+      nativeToScVal(recipient, { type: "address" }),
+      nativeToScVal(grossAmount, { type: "i128" }),
+      nativeToScVal(reqIdBuf, { type: "bytesN" }),
+      nativeToScVal(expectedPolicyVersion, { type: "u32" })
+    );
+
     return {
       operation: "route_payment",
-      xdrPayloadStub: `xdr_route_${this.config.contractId}_from_${payer.slice(0, 6)}_to_${recipient.slice(0, 6)}_amt_${grossAmount}_v${expectedPolicyVersion}_req_${requestId}`,
+      xdrPayload: op.toXDR("base64"),
     };
   }
 
