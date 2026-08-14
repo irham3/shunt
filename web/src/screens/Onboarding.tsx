@@ -10,6 +10,8 @@ import { DEFAULT_BUCKETS } from "../store";
 import { AnimatedBackground } from "../components/AnimatedBackground";
 import { Reveal } from "../components/Reveal";
 
+import { Logo } from "../components/Logo";
+
 /** Problem → outcome, paired — one compact scan, real product language. */
 const PROBLEM_OUTCOME = [
   { problem: "One balance, all of it feels spendable", outcome: "Split into lanes the moment it lands" },
@@ -49,15 +51,6 @@ const FEES = [
   { label: "Invest / Convert", rate: "0.40%" },
   { label: "Savings, in and out", rate: "Free" },
 ];
-
-function Logo({ size = 30 }: { size?: number }) {
-  const pad = Math.round(size * 0.2);
-  return (
-    <span className="lp-brand-mark" style={{ width: size, height: size, padding: pad }}>
-      <img src="/logomark.svg" width={size - pad * 2} height={size - pad * 2} alt="" />
-    </span>
-  );
-}
 
 function StatCard({ stat }: { stat: (typeof STATS)[number] }) {
   return (
