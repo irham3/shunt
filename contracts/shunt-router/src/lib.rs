@@ -185,7 +185,9 @@ impl ShuntRouter {
     }
 
     /// Upgrade the contract WASM. Admin-only.
-    /// Does NOT give admin power over user funds (PRD §9.7).
+    /// Upgrade authority is an explicit trust surface: the admin can replace
+    /// the contract WASM, so production deployments must disclose and govern
+    /// this capability before users deposit funds.
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
         let config = storage::get_config(&env);
         config.admin.require_auth();
